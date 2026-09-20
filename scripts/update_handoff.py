@@ -53,6 +53,7 @@ def main() -> int:
     git_status = run("git status --short")
     in_progress = []
     done = []
+    archive_done: list[str] = []
     if TICKETS_DIR.exists():
         import re
         for f in sorted(TICKETS_DIR.glob("T-*.md")):
@@ -61,6 +62,9 @@ def main() -> int:
                 in_progress.append(f.name)
             if "status: done" in text:
                 done.append(f.name)
+    archive_dir = TICKETS_DIR.parent / "archive"
+    if archive_dir.exists():
+        archive_done = sorted([f.name for f in archive_dir.glob("T-*.md")])
     recent_d = load_recent_ledger(LEDGER_DECISIONS, 3)
     recent_f = load_recent_ledger(LEDGER_FINDINGS, 3)
 
@@ -92,6 +96,11 @@ status: {git_status or 'clean'}
 ## Что сделано ({len(done)})
 
 {chr(10).join('- ' + t for t in done) or '_пусто_'}
+
+## Архив (done за всё время): {len(archive_done)}
+
+{chr(10).join('- ' + t for t in archive_done[-5:]) if archive_done else '_пока пусто_'}
+{('_(показаны последние 5 из ' + str(len(archive_done)) + ')_') if len(archive_done) > 5 else ''}
 
 ## Следующая задача
 

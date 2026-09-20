@@ -244,10 +244,7 @@ pyscn-compare: pyscn ## Compare current report vs baseline (CI gate)
 
 pyscn-baseline: pyscn ## Overwrite baseline from current report (use sparingly, ADR required)
 	@printf "\033[33m→ Updating pyscn baseline (commit message should reference ADR)...\033[0m\n"
-	$(UV) run python -c "
-import json, datetime
-from pyscn_summary import extract
-" 2>/dev/null || cp .pyscn/report.json ai/analysis/pyscn-baseline.json
+	@cp .pyscn/report.json ai/analysis/pyscn-baseline.json
 	@printf "\033[32m✓ Baseline updated\033[0m\n"
 
 # ---------------------------------------------------------------------------
