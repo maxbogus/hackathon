@@ -1,0 +1,21 @@
+{
+  "model_id": "baseline_v1",
+  "kind": "baseline",
+  "version": "v0.1.0",
+  "trained_at": "2026-09-20T12:00:00Z",
+  "git_commit": "e3d7abb",
+  "train_data_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "seed": 42,
+  "horizons": ["day", "month"],
+  "granularities": ["hour", "day"],
+  "metrics": {
+    "rmsle": 0.28,
+    "mae": 20.87,
+    "mape": 24.59
+  },
+  "files": {
+    "model": "model.pkl",
+    "preprocessor": "preprocessor.pkl",
+    "feature_names": "feature_names.txt"
+  }
+}

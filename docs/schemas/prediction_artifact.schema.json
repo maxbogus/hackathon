@@ -1,0 +1,124 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://transit-ai.local/schemas/prediction_artifact.schema.json",
+  "title": "ModelArtifact",
+  "description": "Metadata for an ML model artifact produced by ml/transit_ai/training/registry.py and consumed by apps/backend/forecast/loader.py.",
+  "type": "object",
+  "required": [
+    "model_id",
+    "kind",
+    "version",
+    "trained_at",
+    "metrics",
+    "files"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "model_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_-]+$",
+      "description": "Lowercase kebab identifier, e.g. 'baseline_v1', 'xgboost_v2'."
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["baseline", "xgboost", "gru", "hybrid", "montecarlo"],
+      "description": "Algorithm family."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^v\\d+\\.\\d+\\.\\d+$",
+      "description": "Semver, e.g. 'v0.1.0'."
+    },
+    "trained_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 UTC timestamp of training completion."
+    },
+    "git_commit": {
+      "type": "string",
+      "description": "Short or full SHA of the git commit the model was trained on (anti-fraud, R8 hackathon-rules)."
+    },
+    "train_data_hash": {
+      "type": "string",
+      "description": "sha256 of the training dataset (parquet/csv) for reproducibility (R3)."
+    },
+    "seed": {
+      "type": "integer",
+      "description": "Random seed used for training (R3)."
+    },
+    "horizons": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["day", "month", "year"]
+      },
+      "description": "Prediction horizons this artifact supports."
+    },
+    "granularities": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["hour", "day", "month"]
+      },
+      "description": "Time granularities this artifact supports."
+    },
+    "metrics": {
+      "type": "object",
+      "required": ["rmsle"],
+      "additionalProperties": true,
+      "properties": {
+        "rmsle": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Root Mean Squared Log Error on validation set. Primary metric."
+        },
+        "mae": {
+          "type": "number",
+          "minimum": 0
+        },
+        "mape": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "calibration": {
+      "type": "object",
+      "description": "Per-bucket bias correction (optional).",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["bucket", "segmental", "shrink"]
+        },
+        "edges": {
+          "type": "array",
+          "items": {"type": "number"}
+        },
+        "biases": {
+          "type": "array",
+          "items": {"type": "number"}
+        }
+      }
+    },
+    "files": {
+      "type": "object",
+      "required": ["model"],
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "type": "string",
+          "description": "Path (relative to artifact dir) of the serialized model, e.g. 'model.pkl'."
+        },
+        "preprocessor": {
+          "type": "string",
+          "description": "Optional path to a fitted preprocessor (scaler/encoder), e.g. 'preprocessor.pkl'."
+        },
+        "feature_names": {
+          "type": "string",
+          "description": "Optional newline-separated list of feature column names, e.g. 'feature_names.txt'."
+        }
+      }
+    }
+  }
+}

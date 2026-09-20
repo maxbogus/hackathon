@@ -117,7 +117,7 @@ ignore_missing_imports = true
 # === Pytest ===
 [tool.pytest.ini_options]
 minversion = "8.0"
-testpaths = ["tests"]
+testpaths = ["tests", "apps/backend/tests", "apps/assistant/tests", "apps/mcp/tests", "ml/tests"]
 addopts = [
     "-ra",
     "--strict-markers",
