@@ -14,9 +14,13 @@ name = "transit-ai-ml"
 version = "0.1.0"
 description = "ML pipeline: train, predict, calibrate, montecarlo — вне Docker"
 requires-python = ">=3.12"
-readme = "../README.md"
+# readme убран (полная версия будет в T-023 с локальным README.md)
 
-dependencies = []
+dependencies = [
+    # Benchmark pipeline требует pandas/numpy для synthetic data + метрик
+    "numpy>=1.26.0",
+    "pandas>=2.2.0",
+]
 
 [project.optional-dependencies]
 dev = [

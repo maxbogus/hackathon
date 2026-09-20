@@ -18,7 +18,7 @@ ML-модели обучаются скриптами (вне Docker), API чи�
 | Заказчик | Хакатон (трамвайный трек) |
 | Команда | Максим Богуславский (Backend+ML), Максим Баев (Frontend), Света Драчева (Analyst/QA/Docs) |
 | Стек | Python 3.12, FastAPI, PostgreSQL+Timescale, ML: torch/xgboost/lightgbm/catboost, Frontend: Vite/React/TS |
-| Toolchain | uv + ruff + mypy strict + vite + vitest + tsc + eslint + Orval |
+| Toolchain | uv + ruff + mypy strict + vite + vitest + tsc + eslint + Orval + **pyscn** (structural quality) + **DBML** (schema tracking) |
 | Методология | TDD, contract-first, data-agnostic, knowledge capture (ledger) |
 
 ## Architecture (1-минутная версия)
@@ -95,6 +95,11 @@ hackathon/
 | Обновить HANDOFF | `make handoff-update` |
 | Добавить решение в ledger | `make ledger-add` |
 | Запустить MCP | `make mcp-run` |
+| pyscn структурный анализ | `make pyscn` → `.pyscn/report.{json,html}` |
+| pyscn vs baseline (CI gate) | `make pyscn-compare` |
+| DBML schema из моделей | `make arch-dbml` → `docs/architecture/schema.{dbml,tables.md}` |
+| Smoke benchmark BaselineMean | `make benchmark-baseline` |
+| Полный benchmark grid | `make benchmark-all` |
 | Запустить assistant smoke | `make assistant-test` |
 
 ## Quick Rules (полный список — в `.clinerules/`)

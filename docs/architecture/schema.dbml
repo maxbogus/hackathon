@@ -1,0 +1,13 @@
+// Schema generated from apps/backend/app/models (SQLAlchemy).
+// Update models and run: make arch-dbml
+// Visualize at https://dbdiagram.io
+
+Project transit_ai {
+  database_type: 'PostgreSQL'
+  Note: 'Transit-AI — пассажиропоток трамваев Москвы. Backend: apps/backend, ML: ml/.'
+}
+
+// No models registered yet. Phase 1 in progress.
+// First model: apps/backend/app/models/stop.py (T-038+)
+//
+// После добавления первой модели запусти: make arch-dbml

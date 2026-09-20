@@ -89,3 +89,10 @@ repos:
         language: system
         pass_filenames: false
         stages: [pre-commit]
+
+      - id: dbml-drift
+        name: DBML drift check (commit, when models changed)
+        entry: bash -c 'git diff --cached --name-only | grep -qE "^apps/backend/app/models/" && make arch-dbml-check || true'
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]

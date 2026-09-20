@@ -6,7 +6,7 @@
 |---|---|---|
 | 0 — Toolchain + Clinerules + Ledger | 🟢 done | 100% (13/13 тикетов в archive) |
 | 1 — Backend skeleton (FastAPI + Alembic + OpenAPI) | 🟡 in-progress | 1 in-progress, 8 ready |
-| 2 — ML pipeline (scripts + artefacts) | 🟡 ready | 15 ready, 0 in-progress |
+| 2 — ML pipeline (scripts + artefacts) | 🟡 ready | 17 ready, 0 in-progress |
 | 3 — Backend ↔ ML contract (loader + endpoints) | 🟡 ready | 0/10 |
 | 4 — Frontend (Vite + Orval + Map + Dashboard) | 🟡 ready | 0/14 |
 | 5 — LLM Assistant (lawcopilot-паттерн) | 🟡 ready | 0/9 |
@@ -14,7 +14,14 @@
 | 7 — Docs + QA (Света) | 🟡 ready | 0/11 |
 | 8 — CI + polish | 🟡 ready | 0/5 |
 
-**Готово: 13/90 тикетов (14%). 24 тикета в `tickets/` (Phase 1: T-014..T-022, Phase 2: T-023..T-037).**
+**Готово: 13/90 тикетов (14%). 26 тикетов в `tickets/` (Phase 1: T-014..T-022, Phase 2: T-023..T-039).**
+
+## Tooling добавлено в Phase 1 (chore/tooling commit)
+
+- ✅ **pyscn** 1.32.0 (structural quality gate): clinerule 17, Makefile targets `pyscn` / `pyscn-compare` / `pyscn-baseline`, pre-push hook, MCP server для Cline
+- ✅ **DBML schema tracking**: clinerule 18, Makefile `arch-dbml` / `arch-dbml-check`, scripts/generate_dbml.py, docs/architecture/{schema.dbml,schema-tables.md}
+- ✅ **ML benchmark pipeline**: clinerule 19, ml/transit_ai/benchmark/{configs,runner,cli,report,compare}.py, scripts/{benchmark_baseline,benchmark_all}.py, scripts/run_benchmark.py, тикеты T-038 + T-039
+- ✅ **Docker**: docker-compose.yml (postgres+timescale+redis+backend+frontend), apps/backend/{Dockerfile,pyproject.toml}, apps/frontend/Dockerfile
 
 ## Критический путь
 

@@ -1,0 +1,104 @@
+# ============================================================================
+# Transit-AI — docker-compose для dev-окружения
+# ----------------------------------------------------------------------------
+# Сервисы:
+#   postgres  — PostgreSQL 16 + TimescaleDB (гипертаблицы для predictions)
+#   redis     — кэш для API responses
+#   backend   — FastAPI :8000 (uvicorn)
+#   frontend  — Vite build → nginx :80 → проксирует /api/* на backend:8000
+#
+# ML artefacts + data монтируются read-only из хоста (не в Docker — clinerule 10).
+#
+# Usage:
+#   make up      # docker compose up -d
+#   make down    # docker compose down
+#   make logs    # docker compose logs -f
+# ============================================================================
+
+name: transit-ai
+
+services:
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: transit_dev
+      POSTGRES_USER: transit
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-transit_dev_only}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U transit -d transit_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - transit-net
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - transit-net
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://transit:${POSTGRES_PASSWORD:-transit_dev_only}@postgres:5432/transit_dev
+      REDIS_URL: redis://redis:6379/0
+      ML_ARTIFACTS_DIR: /app/ml/artifacts
+      ML_DATA_DIR: /app/data
+      ENV: dev
+      DEBUG: "true"
+    volumes:
+      # ML artefacts + data с хоста (ML обучается скриптами, см. clinerule 10)
+      - ./ml/artifacts:/app/ml/artifacts:rw
+      - ./data:/app/data:rw
+      # alembic directory для будущих миграций (T-015+)
+      - ./apps/backend/alembic:/app/apps/backend/alembic:ro
+    networks:
+      - transit-net
+    # Прямой доступ к API через localhost:8000 (dev-mode).
+    # В проде — за reverse proxy.
+    ports:
+      - "${BACKEND_HOST_PORT:-8000}:8000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+      args:
+        # Vite API URL в Docker: nginx проксирует /api/* на backend:8000
+        VITE_API_URL: /api
+        VITE_MAP_IMPL: ${VITE_MAP_IMPL:-osm}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - transit-net
+    ports:
+      - "${FRONTEND_HOST_PORT:-5173}:80"
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  transit-net:
+    driver: bridge

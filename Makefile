@@ -35,7 +35,7 @@ MACHINE ?= rtx5060    # rtx5060 | rtx4070_12gb
         assistant-test assistant-reasoning mcp-run \
         ledger-add ledger-list ledger-check ledger-export \
         note-from-finding promote handoff handoff-update \
-        backlog-ready backlog-list docs
+        backlog-ready backlog-list docs         pyscn pyscn-compare pyscn-baseline         arch-dbml arch-dbml-check         benchmark-baseline benchmark-all benchmark-compare         run-benchmark
 
 # ---------------------------------------------------------------------------
 # HELP
@@ -224,3 +224,67 @@ dev: up seed train-baseline predict ## Local dev: up stack + seed + train baseli
 	@printf "Backend:  \033[36mhttp://localhost:8000/docs\033[0m\n"
 
 docs: api-gen fe-gen ## Regenerate all generated docs (OpenAPI + TS types)
+
+# ---------------------------------------------------------------------------
+# TOOLING: pyscn (structural code quality gate)
+# ---------------------------------------------------------------------------
+
+.pyscn/report.json:
+	@mkdir -p .pyscn
+
+pyscn: .pyscn/report.json ## Run pyscn structural analysis → .pyscn/report.{json,html}
+	@printf "\033[36m→ Running pyscn analyze...\033[0m\n"
+	pyscn analyze apps/ ml/ scripts/ --json --html --no-open --output .pyscn/report.json
+
+pyscn-compare: pyscn ## Compare current report vs baseline (CI gate)
+	@printf "\033[36m→ Comparing vs baseline...\033[0m\n"
+	$(UV) run python scripts/pyscn_compare.py \
+		--baseline ai/analysis/pyscn-baseline.json \
+		--current .pyscn/report.json
+
+pyscn-baseline: pyscn ## Overwrite baseline from current report (use sparingly, ADR required)
+	@printf "\033[33m→ Updating pyscn baseline (commit message should reference ADR)...\033[0m\n"
+	$(UV) run python -c "
+import json, datetime
+from pyscn_summary import extract
+" 2>/dev/null || cp .pyscn/report.json ai/analysis/pyscn-baseline.json
+	@printf "\033[32m✓ Baseline updated\033[0m\n"
+
+# ---------------------------------------------------------------------------
+# TOOLING: arch-dbml (DB schema tracking)
+# ---------------------------------------------------------------------------
+
+arch-dbml: ## Regenerate docs/architecture/schema.{dbml,tables.md} from SQLAlchemy models
+	@printf "\033[36m→ Generating DBML...\033[0m\n"
+	$(UV) run python scripts/generate_dbml.py
+
+arch-dbml-check: ## CI gate: fail if DBML drift detected (run after models change)
+	@printf "\033[36m→ Checking DBML drift...\033[0m\n"
+	$(UV) run python scripts/generate_dbml.py --check
+
+# ---------------------------------------------------------------------------
+# ML: benchmark pipeline (offline tool)
+# ---------------------------------------------------------------------------
+
+benchmark-baseline: ## Smoke benchmark BaselineMean (~30 sec)
+	@printf "\033[36m→ Benchmark: BaselineMean smoke test...\033[0m\n"
+	cd ml && $(UV) run python scripts/benchmark_baseline.py
+
+benchmark-all: ## Full benchmark grid (12 configs × 4 folds)
+	@printf "\033[36m→ Benchmark: full grid...\033[0m\n"
+	cd ml && $(UV) run python scripts/benchmark_all.py
+
+benchmark-compare: ## Compare N benchmark reports → leaderboard
+	@printf "\033[36m→ Comparing benchmark reports...\033[0m\n"
+	cd ml && $(UV) run python -m transit_ai.benchmark.compare \
+		--reports docs/reports/benchmark_*.json \
+		--output docs/reports/leaderboard.md
+
+run-benchmark: ## Generic benchmark entry (delegates to ml.transit_ai.benchmark.cli)
+	$(UV) run python scripts/run_benchmark.py
+
+# ---------------------------------------------------------------------------
+# CI gate (расширенный): все проверки включая структурный анализ
+# ---------------------------------------------------------------------------
+
+check-all: lint typecheck test api-check ledger-check arch-dbml-check pyscn-compare ## Run all checks (CI gate)

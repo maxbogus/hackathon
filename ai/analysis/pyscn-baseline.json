@@ -1,0 +1,13 @@
+{
+  "health_score": 68,
+  "grade": "C",
+  "complexity_avg": 4.25,
+  "cognitive_complexity_avg": 6.535714285714286,
+  "duplication_pct": 56.52173913043478,
+  "dead_code": 0,
+  "high_coupling": 0,
+  "high_complexity_count": 2,
+  "arch_compliance": 1,
+  "date": "2026-09-20",
+  "note": "Initial baseline from pyscn 1.32.0 on empty scaffold (T-001..T-013 + ml stub + 24 tickets). High duplication from repeated __init__.py docstrings."
+}

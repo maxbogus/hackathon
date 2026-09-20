@@ -49,7 +49,33 @@ if git diff --stat origin/HEAD..HEAD --name-only 2>/dev/null | grep -qE '^apps/f
   printf "${GREEN}✓ frontend checks passed${NC}\n"
 fi
 
-# 4. Orval sync (если менялся OpenAPI или orval.config)
+# 4. pyscn quality gate (если менялся Python-код или скрипты)
+if git diff --stat origin/HEAD..HEAD --name-only 2>/dev/null | grep -qE "^(apps|ml|scripts)/.*\.py$"; then
+  printf "${YELLOW}→ pyscn quality gate...${NC}
+"
+  uv run python scripts/pyscn_compare.py     --baseline ai/analysis/pyscn-baseline.json     --current .pyscn/report.json 2>&1 | tail -15 || {
+    printf "${RED}✗ pyscn regression. Run 'make pyscn' to see details.${NC}
+"
+    exit 1
+  }
+  printf "${GREEN}✓ pyscn passed${NC}
+"
+fi
+
+# 5. DBML drift gate (если менялись SQLAlchemy-модели)
+if git diff --stat origin/HEAD..HEAD --name-only 2>/dev/null | grep -qE "^apps/backend/app/models/"; then
+  printf "${YELLOW}→ DBML drift check...${NC}
+"
+  uv run python scripts/generate_dbml.py --check 2>&1 | tail -10 || {
+    printf "${RED}✗ DBML drift. Run 'make arch-dbml' and commit.${NC}
+"
+    exit 1
+  }
+  printf "${GREEN}✓ DBML in sync${NC}
+"
+fi
+
+# 6. Orval sync (если менялся OpenAPI или orval.config)
 if git diff --stat origin/HEAD..HEAD --name-only 2>/dev/null | grep -qE '^(docs/api/openapi\.json|apps/backend/app/.*\.py|apps/frontend/orval\.config\.ts)$'; then
   printf "${YELLOW}→ orval sync check...${NC}\n"
   cd apps/frontend && yarn orval --config orval.config.ts 2>&1 | tail -10
