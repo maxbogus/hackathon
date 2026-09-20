@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
+import sys
 
 # Ensure repository root is importable (so 'apps.*', 'ml.*', 'tests.fixtures' resolve)
 ROOT = Path(__file__).resolve().parent.parent

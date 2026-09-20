@@ -64,8 +64,8 @@
     },
     "metrics": {
       "type": "object",
-      "required": ["rmsle"],
       "additionalProperties": true,
+      "description": "Validation metrics. rmsle is the primary metric (clinerule 19). May be empty {} for dev artifacts before evaluation.",
       "properties": {
         "rmsle": {
           "type": "number",

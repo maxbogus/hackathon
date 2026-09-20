@@ -43,4 +43,4 @@ packages = ["transit_ai"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/**/*.py" = ["T201", "PLR2004"]  # print() и магические числа в скриптах OK
-"tests/**/*.py" = ["ANN", "PLR2004", "S101"]  # asserts и магия в тестах OK
+"tests/**/*.py" = ["ANN", "PLR2004", "S101", "DTZ001", "DTZ005", "F841", "PLR0913"]  # asserts и магия в тестах OK

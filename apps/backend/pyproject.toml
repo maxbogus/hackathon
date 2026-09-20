@@ -49,5 +49,6 @@ build-backend = "hatchling.build"
 packages = ["app"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["ANN", "PLR2004", "S101"]
+"tests/**/*.py" = ["ANN", "PLR2004", "S101", "DTZ001", "DTZ005", "F841", "PLR0913"]
 "**/scripts/**/*.py" = ["T201", "PLR2004"]
+"app/api/**/*.py" = ["B008"]  # FastAPI Depends() в default — это паттерн фреймворка

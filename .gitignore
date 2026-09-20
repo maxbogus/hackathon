@@ -80,6 +80,7 @@ data/real/*.zip
 data/real/*.json
 data/validation_reports/*.json
 ml/artifacts/*/
+ml/artifacts/active.json
 !ml/artifacts/.gitkeep
 predictions/*.parquet
 predictions/*.csv
