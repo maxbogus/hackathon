@@ -1,0 +1,155 @@
+# ============================================================================
+# Transit-AI — root pyproject.toml
+# ----------------------------------------------------------------------------
+# uv workspace. Members: apps/backend, apps/assistant, apps/mcp, ml
+# Frontend (apps/frontend) использует yarn.
+# ============================================================================
+
+[project]
+name = "transit-ai"
+version = "0.1.0"
+description = "Hackathon: прогноз загрузки трамваев Москвы"
+requires-python = ">=3.12"
+readme = "README.md"
+
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.5.7",
+    "mypy>=1.10.1",
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.23.7",
+    "pytest-cov>=5.0.0",
+    "jsonschema>=4.23.0",
+    "pyyaml>=6.0.1",
+    "ipython>=8.20.0",
+]
+
+# === uv workspace ===
+[tool.uv.workspace]
+members = [
+    "apps/backend",
+    "apps/assistant",
+    "apps/mcp",
+    "ml",
+]
+
+# === Ruff (линт + формат) ===
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = [
+    ".venv",
+    "node_modules",
+    "dist",
+    "build",
+    "**/__pycache__",
+    "apps/frontend/src/generated",
+]
+
+[tool.ruff.lint]
+# Полный набор: E (pycodestyle errors), F (pyflakes), I (isort),
+# W (warnings), UP (pyupgrade), B (bugbear), C4 (comprehensions),
+# SIM (simplify), RUF (ruff-specific), N (pep8-naming), ANN (annotations),
+# ARG (unused arguments), PL (pylint), TRY (tryceratops), PERF (perf)
+select = [
+    "E", "F", "I", "W", "UP", "B", "C4", "SIM",
+    "RUF", "N", "ANN", "ARG", "PL", "TRY", "PERF",
+]
+ignore = [
+    "E501",   # line too long (line-length настроен, но игнорим длинные строки в тестах и комментах)
+    "PLR0913", # too many arguments (для Pydantic моделей и сигнатур FastAPI это нормально)
+    "PLR2004", # magic value (для порогов и эвристик)
+    "TRY003",  # raise with long message (для доменных ошибок)
+    "ANN101",  # missing type annotation for self (Pydantic style)
+    "ANN102",  # missing type annotation for cls
+    "ARG002",  # unused method argument (для abstract methods)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["ANN", "PLR2004", "S101"]  # assert OK в тестах, магические числа
+"**/scripts/**/*.py" = ["T201", "PLR2004"]   # print() в скриптах OK
+"__init__.py" = ["F401", "F403"]             # re-exports OK
+
+[tool.ruff.lint.isort]
+known-first-party = ["transit_ai", "apps", "ml"]
+combine-as-imports = true
+force-sort-within-sections = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+# === Mypy (strict) ===
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_ignores = true
+warn_return_any = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+exclude = [
+    "tests/",
+    "**/__pycache__",
+    ".venv",
+    "apps/frontend",
+    "node_modules",
+    "dist",
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "torch.*",
+    "torch_geometric.*",
+    "lightgbm.*",
+    "xgboost.*",
+    "catboost.*",
+    "polars.*",
+    "pyarrow.*",
+    "pytest.*",
+]
+ignore_missing_imports = true
+
+# === Pytest ===
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--tb=short",
+]
+markers = [
+    "unit: unit tests (no external deps)",
+    "integration: integration tests (Docker required)",
+    "slow: slow tests (>5s)",
+    "gpu: requires CUDA",
+]
+asyncio_mode = "auto"
+
+# === Coverage ===
+[tool.coverage.run]
+source = ["apps", "ml"]
+omit = [
+    "**/__pycache__",
+    "*/tests/*",
+    "*/scripts/*",
+    "*/migrations/*",
+    "*/.venv/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "\\.\\.\\.",
+]
+show_missing = true
+fail_under = 70

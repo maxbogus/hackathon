@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# ============================================================================
+# Transit-AI — commit-msg hook
+# ----------------------------------------------------------------------------
+# Проверяет Conventional Commits формат:
+#   <type>(<scope>): <subject>
+#   <blank line>
+#   <body>
+#
+# Types: feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert
+# Scope: backend | frontend | ml | mcp | assistant | docs | ledger | notes | deps
+# ============================================================================
+
+set -e
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+commit_msg_file="$1"
+commit_msg=$(cat "$commit_msg_file")
+
+# Разрешить merge commits и revert
+first_line=$(echo "$commit_msg" | head -1)
+if echo "$first_line" | grep -qE '^Merge (branch|remote-tracking)|^(Revert|fixup!|squash!)'; then
+  exit 0
+fi
+
+# Conventional Commits regex (как в commitlint)
+# feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert
+pattern='^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\([a-z0-9_-]+\))?!?: .{3,}$'
+
+if ! echo "$first_line" | grep -qE "$pattern"; then
+  printf "${RED}✗ Commit message does not match Conventional Commits format${NC}\n\n"
+  printf "${YELLOW}Expected:${NC}\n"
+  printf "  <type>(<scope>): <subject>\n\n"
+  printf "${YELLOW}Types:${NC}      feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert\n"
+  printf "${YELLOW}Scope (opt):${NC} backend, frontend, ml, mcp, assistant, docs, ledger, notes, deps\n\n"
+  printf "${YELLOW}Examples:${NC}\n"
+  printf "  feat(backend): add predictions endpoint\n"
+  printf "  fix(ml): handle missing values in GRU preprocessor\n"
+  printf "  docs(ledger): add D-001 decision about contract-first\n"
+  printf "  chore(deps): bump ruff to 0.5.7\n\n"
+  printf "${YELLOW}Your message:${NC}\n"
+  printf "  %s\n\n" "$first_line"
+  printf "${YELLOW}Tip:${NC} use 'git commit --amend' to fix the message.\n"
+  exit 1
+fi
+
+printf "${GREEN}✓ commit message OK${NC}\n"

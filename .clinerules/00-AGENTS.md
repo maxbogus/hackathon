@@ -1,0 +1,83 @@
+# Cline Project Rules — Transit-AI (hackathon)
+
+Этот проект использует **contract-first**, **data-agnostic**, **ML-вне-Docker**, **knowledge capture (ledger)**.
+Перед началом работы прочитай все файлы в `.clinerules/`.
+
+## Index of clinerules
+
+| # | File | Purpose |
+|---|---|---|
+| 00 | `00-AGENTS.md` (this) | Мастер-индекс + entry point |
+| 01 | `01-philosophy.md` | Data-driven, minimal scope, MVP first |
+| 02 | `02-architecture.md` | Монорепо apps/*, контракты артефактов, ML вне Docker |
+| 03 | `03-backlog-format.md` | YAML frontmatter spec + RICE + workflow |
+| 04 | `04-secret-handling.md` | Секреты НИКОГДА в git, .env.example с плейсхолдерами |
+| 05 | `05-hackathon-rules.md` | Hard rules хакатона (T-001..T-090, no LLM >4B, etc.) |
+| 06 | `06-tooling.md` | uv + ruff + mypy + yarn 4 + vite + vitest + tsc + orval |
+| 07 | `07-workflows.md` | Commit / PR / handoff / promotion |
+| 08 | `08-contracts-and-artifacts.md` | JSON Schema, OpenAPI, MCP контракты |
+| 09 | `09-map-strategy.md` | OSM ↔ Yandex переключение через env |
+| 10 | `10-ml-as-scripts.md` | Почему ML не в Docker, контракт через файлы |
+| 11 | `11-assistant-pattern.md` | lawcopilot-паттерн, LiteLLM, Reasoning, tools |
+| 12 | `12-mcp-draft.md` | Что в черновике MCP, что нет, как подключать |
+| 13 | `13-context-transfer.md` | HANDOFF.md, блок CONTEXT HANDOFF, трансфер сессии |
+| 14 | `14-decisions-ledger.md` | Фиксация решений в ledger (RICE > 5) |
+| 15 | `15-promote-finding.md` | Находка → note → rule → skill |
+| 16 | `16-tdd-cycle.md` | RED → GREEN → REFACTOR |
+| — | `MEMORY-BUDGET.md` | Анти-краш: не читать >1MB JSON |
+
+## Quick rules
+
+1. **Workspace:** `apps/*` ↔ `ml/` ↔ `scripts/`. Не делать циклические импорты.
+2. **Python:** ruff + mypy strict + pytest-asyncio. Перед handoff — `make lint`.
+3. **TypeScript:** strict mode, no implicit `any`, ESLint flat config.
+4. **Node:** Yarn 4 (Berry) через corepack. **NO npm install, NO pnpm install**.
+5. **Commits:** Conventional Commits (enforced `.githooks/commit-msg`).
+6. **Tasks:** Работать только с `docs/backlog/tickets/T-NNN.md` где `status: ready`.
+   При старте менять на `status: in-progress`.
+7. **Contracts:** Backend-first. `apps/frontend/src/generated/**` — read-only вывод.
+   Менять FastAPI routes/schemas, потом `make api-gen` + `make fe-gen`.
+8. **Docs:** Всё в `docs/`. Backlog с YAML frontmatter. ADR в `docs/backlog/decisions/`.
+9. **Ledger:** Каждое решение RICE > 5 → `docs/ledger/decisions.jsonl`.
+   Каждая находка → `docs/ledger/findings.jsonl`. Через `make ledger-add`.
+10. **Handoff:** В конце каждого ответа — блок `## CONTEXT HANDOFF` (6 строк)
+    или обновление `docs/HANDOFF.md` (источник истины для новой сессии).
+
+## How Cline should work on this project
+
+1. **Перед стартом задачи:** прочитай `docs/HANDOFF.md` (если есть) и `docs/backlog/STATUS.md`.
+2. **Прочитай нужный clinerule** (не все 16 сразу — это сожрёт контекст).
+3. **Найди топ-3 тикета** через `make backlog-ready`.
+4. **Пометь `status: in-progress`** в YAML frontmatter выбранного тикета.
+5. **Реализуй** по правилам архитектуры (см. `02-architecture.md`).
+6. **RED → GREEN → REFACTOR** (см. `16-tdd-cycle.md`).
+7. **Запусти `make check-all`** перед handoff.
+8. **Закоммить** с Conventional Commits (см. `commit-msg` hook).
+9. **Обнови ADR** если архитектура меняется (`docs/backlog/decisions/0XX-*.md`).
+10. **Обнови HANDOFF.md** через `make handoff-update` или блоком в ответе.
+
+## Memory Budget (КРИТИЧНО — прочитай `MEMORY-BUDGET.md`)
+
+> Лимит контекста: ~192K токенов. System prompt ~66KB (~20K токенов).
+> **Бюджет на работу: ~170K токенов.**
+
+| Rule | Action |
+|------|--------|
+| ❌ **NEVER** | `read_file()` на JSON > 1MB (история чата, логи) |
+| ❌ **NEVER** | `read_file()` на `yarn.lock`, `uv.lock` |
+| ⚠️ **Use** | `execute_command("python3 ...")` + grep/jq для больших файлов |
+| ⚠️ **Use** | `use_skill` для длинных инструкций (RED→GREEN, sweep) |
+| ✅ **SAVE** | Промежуточные результаты в файлы, не в контекст |
+
+## Don't do
+
+- ❌ Использовать `npm install` или `pnpm install` (только `yarn` через corepack)
+- ❌ Использовать `pip install` напрямую (только `uv`)
+- ❌ Писать реальные ключи в `.env.example` (только плейсхолдеры)
+- ❌ Коммитить `.env`, `ml/artifacts/`, `predictions/`, `data/` (в .gitignore)
+- ❌ Патчить сгенерированный код (`apps/frontend/src/generated/`)
+- ❌ Skip `--no-verify` без причины
+- ❌ Читать `yarn.lock` или `uv.lock` в контекст
+- ❌ Обучать модели в Docker (только скриптами)
+- ❌ Использовать LLM > 4B параметров для inference (есть правило R2 в hackathon-rules)
+- ❌ Делать PR без обновлённого HANDOFF.md (если сессия длинная)

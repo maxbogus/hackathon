@@ -1,0 +1,133 @@
+# === Editor / OS ===
+.DS_Store
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.iml
+*.code-workspace
+.history/
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# === uv / virtualenvs ===
+.venv/
+venv/
+env/
+ENV/
+
+# === Node / Yarn ===
+node_modules/
+.yarn/cache
+.yarn/install-state.gz
+.yarn/build-state.yml
+.yarn/unplugged
+.pnp.*
+*.tsbuildinfo
+.eslintcache
+
+# === Yarn ===
+yarn-error.log
+npm-debug.log*
+yarn-debug.log*
+
+# === Vite / Vitest ===
+dist/
+.vite/
+coverage/
+*.lcov
+
+# === Test / Coverage ===
+htmlcov/
+.coverage
+.coverage.*
+.tox/
+.nox/
+.cache
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# === ML артефакты и данные ===
+data/synthetic/*.parquet
+data/synthetic/*.csv
+data/real/*.parquet
+data/real/*.csv
+data/real/*.zip
+data/real/*.json
+data/validation_reports/*.json
+ml/artifacts/*/
+!ml/artifacts/.gitkeep
+predictions/*.parquet
+predictions/*.csv
+!predictions/.gitkeep
+
+# === Кэши ML ===
+ml/.cache/
+ml/data/.cache/
+ml/data/sequences/
+
+# === Docker ===
+.docker/
+docker-compose.override.yml
+
+# === Secrets / Env ===
+.env
+.env.local
+.env.*.local
+.env.production
+*.pem
+*.key
+secrets/
+
+# === Logs ===
+logs/
+*.log
+
+# === OS / временные ===
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+
+# === Jupyter ===
+.ipynb_checkpoints/
+
+# === Reports / графики (генерируются) ===
+docs/reports/figures/*.png
+docs/reports/figures/*.pdf
+
+# === Документация build ===
+docs/_build/
+site/
+
+# === pre-commit ===
+.pre-commit-cache/
+
+# === MCP / Cline кэши ===
+.mcp_config*
+.cline/

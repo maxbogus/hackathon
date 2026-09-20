@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# ============================================================================
+# Transit-AI — pre-commit hook
+# ----------------------------------------------------------------------------
+# Запускает: ruff --fix, prettier --write, проверка ledger, запрет на
+# коммит .env, артефактов и т.д.
+# ============================================================================
+
+set -e
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+printf "\n${YELLOW}→ pre-commit: starting checks...${NC}\n"
+
+# 1. Запрет на коммит .env и артефактов
+printf "${YELLOW}→ checking for forbidden files...${NC}\n"
+forbidden=$(git diff --cached --name-only | grep -E '\.env$|\.env\.local$|ml/artifacts/[^/]+/(model|pickle|bin|pt|onnx|json|npz)$|predictions/[^/]+\.(parquet|csv)$|data/real/' || true)
+if [ -n "$forbidden" ]; then
+  printf "${RED}✗ Found forbidden files in commit:${NC}\n"
+  echo "$forbidden"
+  printf "${RED}Add them to .gitignore or remove from staging.${NC}\n"
+  exit 1
+fi
+printf "${GREEN}✓ no forbidden files${NC}\n"
+
+# 2. Ruff lint + format (только staged Python файлы)
+staged_py=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.py$' || true)
+if [ -n "$staged_py" ]; then
+  printf "${YELLOW}→ ruff check on $(echo "$staged_py" | wc -l) Python files...${NC}\n"
+  uv run ruff check --fix $staged_py 2>&1 | tail -20 || {
+    printf "${RED}✗ ruff check failed. Run 'make lint' for details.${NC}\n"
+    exit 1
+  }
+  uv run ruff format $staged_py 2>&1 | tail -5 || true
+  printf "${GREEN}✓ ruff passed${NC}\n"
+fi
+
+# 3. Prettier (только staged TS/JSON/YAML/MD, кроме generated/)
+staged_fmt=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx|js|jsx|json|ya?ml|md)$' | grep -v '^apps/frontend/src/generated/' || true)
+if [ -n "$staged_fmt" ]; then
+  printf "${YELLOW}→ prettier on $(echo "$staged_fmt" | wc -l) files...${NC}\n"
+  cd apps/frontend && yarn prettier --write $staged_fmt 2>&1 | tail -5 || {
+    printf "${RED}✗ prettier failed. Run 'cd apps/frontend && yarn format'.${NC}\n"
+    exit 1
+  }
+  cd ../..
+  printf "${GREEN}✓ prettier passed${NC}\n"
+fi
+
+# 4. Проверка ledger (если есть изменения в docs/ledger/decisions.jsonl)
+if git diff --cached --name-only | grep -q '^docs/ledger/decisions.jsonl$'; then
+  printf "${YELLOW}→ validating ledger entry...${NC}\n"
+  uv run python scripts/ledger.py check || {
+    printf "${RED}✗ ledger entry is invalid. Run 'make ledger-add'.${NC}\n"
+    exit 1
+  }
+  printf "${GREEN}✓ ledger entry valid${NC}\n"
+fi
+
+# 5. Проверка что OpenAPI свежий (если менялся backend)
+if git diff --cached --name-only | grep -q '^apps/backend/app/.*\.py$'; then
+  printf "${YELLOW}→ checking OpenAPI freshness...${NC}\n"
+  cd apps/backend && uv run python scripts/check_openapi.py 2>&1 || {
+    printf "${YELLOW}⚠ OpenAPI is stale. Run 'make api-gen' to refresh.${NC}\n"
+    cd ../..
+  }
+  cd ../.. 2>/dev/null || cd /home/maxbogus/Repositories/hackathon
+fi
+
+# 6. Gitleaks (если установлен)
+if command -v gitleaks > /dev/null 2>&1; then
+  printf "${YELLOW}→ gitleaks scan...${NC}\n"
+  gitleaks protect --staged --no-banner --redact 2>&1 | tail -5 || {
+    printf "${RED}✗ gitleaks found secrets. Remove them.${NC}\n"
+    exit 1
+  }
+  printf "${GREEN}✓ gitleaks clean${NC}\n"
+fi
+
+printf "${GREEN}✓ pre-commit passed${NC}\n\n"

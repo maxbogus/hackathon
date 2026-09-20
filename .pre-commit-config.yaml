@@ -1,0 +1,91 @@
+# ============================================================================
+# Transit-AI — .pre-commit-config.yaml
+# ----------------------------------------------------------------------------
+# Pre-commit hooks (в дополнение к .githooks/).
+# Установка: `make hooks-install` + `pre-commit install`.
+# ============================================================================
+
+repos:
+  # === Python: ruff lint + format ===
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.7
+    hooks:
+      - id: ruff
+        name: ruff lint (Python)
+        args: [--fix, --exit-non-zero-on-fix]
+        files: '^(apps|ml|scripts)/.*\.py$'
+
+      - id: ruff-format
+        name: ruff format (Python)
+        files: '^(apps|ml|scripts)/.*\.py$'
+
+  # === Python: mypy (best-effort, не блокирует) ===
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.10.1
+    hooks:
+      - id: mypy
+        name: mypy strict (Python)
+        files: '^apps/backend/app/.*\.py$'
+        additional_dependencies: [pydantic, types-redis, types-aiofiles]
+        args: [--ignore-missing-imports, --no-strict-optional]
+
+  # === Frontend: prettier + eslint ===
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.3.3
+    hooks:
+      - id: prettier
+        name: prettier format (TypeScript/JSON/YAML/MD)
+        files: '^(apps/frontend/src|docs|.*\.(json|ya?ml|md))$'
+        exclude: '^apps/frontend/src/generated/'
+
+  - repo: https://github.com/eslint/eslint
+    rev: v9.10.0
+    hooks:
+      - id: eslint
+        name: eslint (TypeScript)
+        files: '^apps/frontend/src/.*\.(ts|tsx)$'
+        exclude: '^apps/frontend/src/generated/'
+        additional_dependencies:
+          - eslint@9.10.0
+          - typescript@5.5.4
+
+  # === Secrets: gitleaks ===
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.4
+    hooks:
+      - id: gitleaks
+        name: gitleaks (scan secrets)
+
+  # === File hygiene ===
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.md$'
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  # === Project-specific: ledger check ===
+  - repo: local
+    hooks:
+      - id: ledger-check
+        name: ledger check (decision for each merge)
+        entry: make ledger-check
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: orval-sync
+        name: orval sync check (OpenAPI → TS types)
+        entry: bash -c 'cd apps/backend && uv run python scripts/check_openapi.py 2>&1 || true'
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
