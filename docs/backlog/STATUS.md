@@ -5,8 +5,8 @@
 | Phase | Статус | Готовность |
 |---|---|---|
 | 0 — Toolchain + Clinerules + Ledger | 🟢 done | 100% (13/13 тикетов в archive) |
-| 1 — Backend skeleton (FastAPI + Alembic + OpenAPI) | 🟡 ready | 0/9 |
-| 2 — ML pipeline (scripts + artefacts) | 🟡 ready | 0/15 |
+| 1 — Backend skeleton (FastAPI + Alembic + OpenAPI) | 🟡 in-progress | 1 in-progress, 8 ready |
+| 2 — ML pipeline (scripts + artefacts) | 🟡 ready | 15 ready, 0 in-progress |
 | 3 — Backend ↔ ML contract (loader + endpoints) | 🟡 ready | 0/10 |
 | 4 — Frontend (Vite + Orval + Map + Dashboard) | 🟡 ready | 0/14 |
 | 5 — LLM Assistant (lawcopilot-паттерн) | 🟡 ready | 0/9 |
@@ -14,7 +14,7 @@
 | 7 — Docs + QA (Света) | 🟡 ready | 0/11 |
 | 8 — CI + polish | 🟡 ready | 0/5 |
 
-**Готово: 13/90 тикетов (14%).**
+**Готово: 13/90 тикетов (14%). 24 тикета в `tickets/` (Phase 1: T-014..T-022, Phase 2: T-023..T-037).**
 
 ## Критический путь
 
@@ -45,7 +45,17 @@ Phase 0 (DONE) → Phase 1 (backend skeleton) → Phase 2 (ML) → Phase 4 (fron
 
 ## Готовые к старту (топ-5 по RICE)
 
-_(создадутся в начале Phase 1: T-014, T-015, T-023, T-048, T-051)_
+| ID | Title | Score | Phase |
+|---|---|---|---|
+| T-023 | ml/ pyproject.toml full deps (torch, polars, xgboost, lightgbm, catboost) | 3.500 | 2 |
+| T-019 | apps/backend forecast module stub + loader interface | 2.625 | 1 |
+| T-028 | ml transit_ai models xgboost predictor | 2.625 | 2 |
+| T-031 | ml transit_ai training registry meta.json artifact contract | 2.625 | 2 |
+| T-035 | ml transit_ai training evaluate.py metrics (RMSLE, MAE, MAPE) | 2.625 | 2 |
+
+## В работе (in-progress)
+
+- **T-014** — apps/backend pyproject.toml + main.py + config.py
 
 ## Блокеры
 
