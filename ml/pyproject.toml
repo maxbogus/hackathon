@@ -1,12 +1,13 @@
 # ============================================================================
 # Transit-AI — ml/ pyproject.toml
 # ----------------------------------------------------------------------------
-# STUB-версия для Phase 0 (нужна для `uv sync`, чтобы workspace-члены
-# `apps/backend`, `apps/assistant`, `apps/mcp` не падали с warning'ами
-# "missing workspace member").
+# Полный ML-стек для Phase 2 (T-023). Вне Docker (см. .clinerules/10-ml-as-scripts.md).
 #
-# Полные зависимости (torch, polars, lightgbm, xgboost, catboost) и
-# entry-points будут добавлены в T-023 ("ml/ pyproject.toml + train scripts").
+# Зависимости:
+#   - torch / polars / pyarrow — данные + нейронки (GRU, T-029)
+#   - xgboost / lightgbm / catboost — табличные модели (T-028, T-030)
+#   - scikit-learn — метрики RMSLE/MAE/MAPE (T-035)
+#   - numpy / pandas — обвязка + benchmark (T-038)
 # ============================================================================
 
 [project]
@@ -14,12 +15,24 @@ name = "transit-ai-ml"
 version = "0.1.0"
 description = "ML pipeline: train, predict, calibrate, montecarlo — вне Docker"
 requires-python = ">=3.12"
-# readme убран (полная версия будет в T-023 с локальным README.md)
+readme = "README.md"
 
 dependencies = [
-    # Benchmark pipeline требует pandas/numpy для synthetic data + метрик
+    # --- Core numerics ---
     "numpy>=1.26.0",
     "pandas>=2.2.0",
+    "pyarrow>=16.0.0",          # parquet I/O в predict.py (T-033)
+    # --- Tabular ML ---
+    "xgboost>=2.1.0",           # T-028 XGBoost predictor (GPU через device='cuda')
+    "lightgbm>=4.3.0",          # T-030 Hybrid blend
+    "catboost>=1.2.0",          # category features в T-028 (опционально)
+    "scikit-learn>=1.5.0",      # T-035 метрики RMSLE/MAE/MAPE + preprocessing
+    # --- Neural ---
+    "torch>=2.3.0",             # T-029 GRU с attention pooling
+    # --- DataFrame ---
+    "polars>=0.20.0",           # быстрее pandas на больших parquet (>1M строк)
+    # --- Validation ---
+    "pydantic>=2.9.0",          # контракты артефактов
 ]
 
 [project.optional-dependencies]
@@ -28,6 +41,8 @@ dev = [
     "ruff>=0.5.7",
     "pytest>=8.3.0",
     "pytest-asyncio>=0.23.7",
+    "pytest-cov>=5.0.0",
+    "ipython>=8.20.0",          # notebook EDA
 ]
 
 [build-system]
@@ -39,7 +54,6 @@ packages = ["transit_ai"]
 
 # === ruff (lint + format) для ml/ пакета ===
 # Настройки наследуются из корневого pyproject.toml.
-# Дополнительно ограничиваем проверку только нашими модулями.
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/**/*.py" = ["T201", "PLR2004"]  # print() и магические числа в скриптах OK
