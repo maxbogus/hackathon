@@ -2,6 +2,7 @@
 
 Запускается из scripts/run_benchmark.py.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -19,6 +20,7 @@ from transit_ai.benchmark.configs import (
     BenchmarkResult,
 )
 from transit_ai.benchmark.runner import run_single_benchmark as run_one
+from transit_ai.benchmark.synthetic_data import load_synthetic_benchmark_data
 
 logger = logging.getLogger("benchmark.cli")
 
@@ -26,28 +28,33 @@ logger = logging.getLogger("benchmark.cli")
 def _git_commit() -> str:
     """Get current short git commit, or 'unknown' if not a git repo."""
     try:
-        return subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"],
-            stderr=subprocess.DEVNULL,
-            cwd=Path(__file__).resolve().parents[3],
-        ).decode().strip()
+        return (
+            subprocess.check_output(
+                ["git", "rev-parse", "--short", "HEAD"],
+                stderr=subprocess.DEVNULL,
+                cwd=Path(__file__).resolve().parents[3],
+            )
+            .decode()
+            .strip()
+        )
     except (subprocess.CalledProcessError, FileNotFoundError, OSError):
         return "unknown"
 
 
 def _synthetic_data(n_rows: int = 1000, seed: int = 42) -> pd.DataFrame:
-    """Generate synthetic passenger flow data for benchmark smoke test.
+    """Synthetic ridership aggregated to daily totals (T-039).
 
-    Будет заменён на RealSource в T-026.
+    Delegates to `load_synthetic_benchmark_data()` which uses the project's
+    canonical `SyntheticSource`. Kept as a thin alias for backwards-compat
+    with any external callers that may import this name.
+
+    Args:
+        n_rows: ignored — kept for signature compatibility.
+        seed: random seed (R6 reproducibility).
     """
-    import numpy as np
-    rng = np.random.default_rng(seed)
-    dates = pd.date_range("2024-01-01", periods=n_rows, freq="D")
-    # Synthetic: 100 ± 30 пассажиров + weekly seasonality + noise
-    weekday = dates.dayofweek
-    seasonal = 30 * np.sin(weekday * np.pi / 3.5)
-    values = np.maximum(rng.normal(100 + seasonal, 15), 0)
-    return pd.DataFrame({"date": dates, "value": values})
+    # n_days chosen to be > n_rows but capped reasonably for smoke tests
+    n_days = max(35, n_rows // 10)
+    return load_synthetic_benchmark_data(n_days=n_days, seed=seed)
 
 
 def run_benchmark_sweep(
@@ -58,13 +65,16 @@ def run_benchmark_sweep(
     folds: int,
 ) -> int:
     """CLI entry: run grid or random search + write report."""
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
+    )
 
     # Select configs based on strategy
     if strategy == "grid":
         configs = PRESET_CONFIGS[:max_configs]
     else:  # random
         import random
+
         rng = random.Random(seed)
         all_hp = [
             {"n_estimators": 200, "max_depth": 6, "learning_rate": 0.05},
@@ -101,6 +111,7 @@ def run_benchmark_sweep(
 
     # Write report (delegated to report.py when called from compare)
     from transit_ai.benchmark.report import write_report
+
     write_report(results, output)
     logger.info(f"✅ Report written: {output}")
     return 0
@@ -110,7 +121,13 @@ def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--strategy", choices=["grid", "random"], default="grid")
     p.add_argument("--max-configs", type=int, default=12)
-    p.add_argument("--output", type=Path, default=Path(f"docs/reports/benchmark_{datetime.now(UTC).date().isoformat()}.md"))
+    p.add_argument(
+        "--output",
+        type=Path,
+        default=Path(
+            f"docs/reports/benchmark_{datetime.now(UTC).date().isoformat()}.md"
+        ),
+    )
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--folds", type=int, default=4)
     args = p.parse_args()

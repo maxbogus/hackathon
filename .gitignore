@@ -121,6 +121,11 @@ temp/
 # === Reports / графики (генерируются) ===
 docs/reports/figures/*.png
 docs/reports/figures/*.pdf
+docs/reports/benchmark_*.md
+docs/reports/benchmark_*.csv
+docs/reports/benchmark_baseline_smoke.md
+docs/reports/benchmark_baseline_smoke.csv
+docs/reports/evaluate_*.md
 
 # === Документация build ===
 docs/_build/
