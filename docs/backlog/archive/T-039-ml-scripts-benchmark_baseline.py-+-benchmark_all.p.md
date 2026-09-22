@@ -13,7 +13,7 @@ rice:
 depends_on: []
 blocks: []
 tags: [ml, benchmark, scripts]
-status: ready
+status: done
 created: 2026-09-20
 updated: 2026-09-20
 assignee: ""
