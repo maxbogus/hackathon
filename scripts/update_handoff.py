@@ -64,7 +64,19 @@ def main() -> int:
                 done.append(f.name)
     archive_dir = TICKETS_DIR.parent / "archive"
     if archive_dir.exists():
-        archive_done = sorted([f.name for f in archive_dir.glob("T-*.md")])
+        # Sort by T-NNN numeric ID, not by string (so T-021 comes after T-091).
+        def _ticket_num(name: str) -> int:
+            import re
+
+            m = re.match(r"T-(\d+)", name)
+            return int(m.group(1)) if m else 0
+
+        archive_done = sorted(
+            [f.name for f in archive_dir.glob("T-*.md")], key=_ticket_num
+        )
+    # "Что сделано" should reflect recently archived tickets (after git mv
+    # they no longer live in tickets/). Show last 5 by numeric T-NNN order.
+    recent_done = archive_done[-5:] if archive_done else []
     recent_d = load_recent_ledger(LEDGER_DECISIONS, 3)
     recent_f = load_recent_ledger(LEDGER_FINDINGS, 3)
 
@@ -93,9 +105,9 @@ status: {git_status or 'clean'}
 
 {chr(10).join('- ' + t for t in in_progress) or '_пусто_'}
 
-## Что сделано ({len(done)})
+## Что сделано ({len(recent_done)})
 
-{chr(10).join('- ' + t for t in done) or '_пусто_'}
+{chr(10).join('- ' + t for t in recent_done) or '_пусто_'}
 
 ## Архив (done за всё время): {len(archive_done)}
 
