@@ -2559,6 +2559,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "pyyaml" },
     { name = "ruff" },
+    { name = "types-jsonschema" },
 ]
 
 [package.metadata]
@@ -2571,6 +2572,7 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0.0" },
     { name = "pyyaml", marker = "extra == 'dev'", specifier = ">=6.0.1" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5.7" },
+    { name = "types-jsonschema", marker = "extra == 'dev'", specifier = ">=4.23.0" },
 ]
 provides-extras = ["dev"]
 

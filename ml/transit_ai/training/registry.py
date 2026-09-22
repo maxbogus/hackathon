@@ -90,7 +90,7 @@ class ModelRegistry:
         git_sha: str | None = None,
     ) -> SaveResult:
         """Save a fitted predictor to disk. Validates meta.json before writing."""
-        if not predictor.fitted_ if hasattr(predictor, "fitted_") else True:  # type: ignore[attr-defined]
+        if not getattr(predictor, "fitted_", False):
             raise ValueError(f"Predictor {predictor.model_id!r} is not fitted")
 
         artifact_dir = self.artifacts_dir / predictor.model_id

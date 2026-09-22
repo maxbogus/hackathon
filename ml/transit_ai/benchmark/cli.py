@@ -31,7 +31,7 @@ def _git_commit() -> str:
             stderr=subprocess.DEVNULL,
             cwd=Path(__file__).resolve().parents[3],
         ).decode().strip()
-    except Exception:
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError):
         return "unknown"
 
 

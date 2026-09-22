@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import argparse
 import sys
-from datetime import date
+from datetime import UTC, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]  # ml/
@@ -27,7 +27,7 @@ if __name__ == "__main__":
     p.add_argument("--seed", type=int, default=42)
     args = p.parse_args()
 
-    output = ROOT.parent / "docs" / "reports" / f"benchmark_{date.today().isoformat()}.md"
+    output = ROOT.parent / "docs" / "reports" / f"benchmark_{datetime.now(UTC).date().isoformat()}.md"
     sys.exit(run_benchmark_sweep(
         strategy=args.strategy,
         max_configs=args.max_configs,
