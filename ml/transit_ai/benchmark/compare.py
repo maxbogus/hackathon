@@ -11,8 +11,8 @@ import json
 import sys
 from pathlib import Path
 
-from transit_ai.benchmark.report import write_report
 from transit_ai.benchmark.configs import BenchmarkResult
+from transit_ai.benchmark.report import write_report
 
 
 def load_reports(patterns: list[str]) -> list[BenchmarkResult]:

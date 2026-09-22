@@ -13,13 +13,13 @@ def write_report(results: list[BenchmarkResult], output_md: Path) -> None:
     sorted_results = sorted(results, key=lambda r: r.metrics.get("rmsle", float("inf")))
 
     md_lines = [
-        f"# Benchmark Leaderboard",
-        f"",
+        "# Benchmark Leaderboard",
+        "",
         f"Generated: {sorted_results[0].timestamp if sorted_results else 'N/A'}",
         f"Total configs: {len(results)}",
-        f"",
-        f"| Rank | Model | Feature set | RMSLE | MAE | MAPE % | Time (s) | Config hash |",
-        f"|------|-------|-------------|-------|-----|--------|----------|-------------|",
+        "",
+        "| Rank | Model | Feature set | RMSLE | MAE | MAPE % | Time (s) | Config hash |",
+        "|------|-------|-------------|-------|-----|--------|----------|-------------|",
     ]
     for i, r in enumerate(sorted_results, start=1):
         md_lines.append(
@@ -29,9 +29,9 @@ def write_report(results: list[BenchmarkResult], output_md: Path) -> None:
             f"`{r.config.config_hash()}` |"
         )
     md_lines.extend([
-        f"",
-        f"## Per-fold scores (RMSLE)",
-        f"",
+        "",
+        "## Per-fold scores (RMSLE)",
+        "",
     ])
     for r in sorted_results:
         scores_str = ", ".join(f"{s:.4f}" for s in r.fold_scores)

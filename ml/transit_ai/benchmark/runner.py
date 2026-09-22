@@ -8,14 +8,14 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Iterator
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import numpy as np
 import pandas as pd
 
 from transit_ai.benchmark.configs import BenchmarkConfig, BenchmarkResult
+from transit_ai.reports.metrics import mae, mape, rmsle
 
 logger = logging.getLogger("benchmark.runner")
 
@@ -59,24 +59,7 @@ def walk_forward_splits(
     return splits
 
 
-def rmsle(y_true: np.ndarray, y_pred: np.ndarray) -> float:
-    """Root Mean Squared Log Error. Robust to count data with right tail."""
-    y_true = np.maximum(y_true, 0)
-    y_pred = np.maximum(y_pred, 0)
-    return float(np.sqrt(np.mean((np.log1p(y_pred) - np.log1p(y_true)) ** 2)))
-
-
-def mae(y_true: np.ndarray, y_pred: np.ndarray) -> float:
-    """Mean Absolute Error — для диспетчера (люди, не логарифмы)."""
-    return float(np.mean(np.abs(y_true - y_pred)))
-
-
-def mape(y_true: np.ndarray, y_pred: np.ndarray) -> float:
-    """Mean Absolute Percentage Error (%)."""
-    mask = y_true != 0
-    if not mask.any():
-        return 0.0
-    return float(np.mean(np.abs((y_true[mask] - y_pred[mask]) / y_true[mask])) * 100)
+# Метрики импортированы из transit_ai.reports.metrics (T-035: единый источник правды).
 
 
 def run_single_benchmark(
@@ -134,6 +117,6 @@ def run_single_benchmark(
         train_time_sec=elapsed,
         git_commit="unknown",  # будет заполнено в cli.py
         train_data_hash="unknown",
-        timestamp=datetime.now(timezone.utc).isoformat(),
+        timestamp=datetime.now(UTC).isoformat(),
         notes="BaselineMean placeholder (T-038 in progress)",
     )

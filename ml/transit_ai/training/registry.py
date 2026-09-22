@@ -137,5 +137,72 @@ class ModelRegistry:
         active_path = self.artifacts_dir / ACTIVE_FILE
         active_path.write_text(json.dumps({"model_id": model_id}), encoding="utf-8")
 
+    def load(self, model_id: str) -> Predictor:
+        """Restore a fitted Predictor from artifact (dispatches by meta['kind']).
+
+        Kind dispatch (T-035):
+          - "baseline" → BaselineMean.load
+          - "xgboost"  → XGBoostPredictor.load
+          - "gru"/"hybrid"/"montecarlo" → NotImplementedError (tracker: T-029/T-030/T-036)
+
+        Raises:
+            FileNotFoundError: artifact dir or meta.json missing.
+            NotImplementedError: kind not yet supported.
+        """
+        from transit_ai.models.baseline import BaselineMean
+        from transit_ai.models.xgboost_pred import XGBoostPredictor
+
+        artifact_dir = self.artifacts_dir / model_id
+        if not artifact_dir.is_dir():
+            raise FileNotFoundError(f"Artifact dir missing: {artifact_dir}")
+
+        meta_path = artifact_dir / "meta.json"
+        if not meta_path.is_file():
+            raise FileNotFoundError(f"meta.json missing: {meta_path}")
+
+        meta = json.loads(meta_path.read_text())
+        kind = meta.get("kind", "")
+        model_file = artifact_dir / meta["files"]["model"]
+
+        dispatch: dict[str, type[Predictor]] = {
+            "baseline": BaselineMean,
+            "xgboost": XGBoostPredictor,
+        }
+        if kind not in dispatch:
+            raise NotImplementedError(
+                f"Predictor kind {kind!r} not yet supported in registry.load(). "
+                f"Tracker: T-029 (gru), T-030 (hybrid), T-036 (montecarlo)."
+            )
+
+        predictor_cls = dispatch[kind]
+        return predictor_cls.load(str(model_file))
+
+    def update_metrics(self, model_id: str, metrics: dict[str, float]) -> None:
+        """Update meta.json['metrics'] in place (preserves git_commit/seed/trained_at).
+
+        Используется в evaluate_artifact() — после compute_metrics записывает
+        результат в артефакт без пересохранения модели.
+        """
+        artifact_dir = self.artifacts_dir / model_id
+        meta_path = artifact_dir / "meta.json"
+        if not meta_path.is_file():
+            raise FileNotFoundError(f"meta.json missing: {meta_path}")
+
+        meta = json.loads(meta_path.read_text())
+        jsonschema.validate(instance=meta, schema=self.schema)  # defensive pre-check
+        meta["metrics"] = dict(metrics)
+        meta_path.write_text(
+            json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
+
+    def get_active_id(self) -> str | None:
+        """Return model_id from active.json, or None if not set."""
+        active_path = self.artifacts_dir / ACTIVE_FILE
+        if not active_path.is_file():
+            return None
+        data: Any = json.loads(active_path.read_text())
+        value: Any = data.get("model_id")
+        return value if isinstance(value, str) else None
+
 
 __all__ = ["ModelRegistry", "SaveResult", "git_commit", "hash_dataframe"]

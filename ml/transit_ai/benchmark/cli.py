@@ -8,12 +8,16 @@ import argparse
 import logging
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pandas as pd
 
-from transit_ai.benchmark.configs import BenchmarkConfig, BenchmarkResult, PRESET_CONFIGS
+from transit_ai.benchmark.configs import (
+    PRESET_CONFIGS,
+    BenchmarkConfig,
+    BenchmarkResult,
+)
 from transit_ai.benchmark.runner import run_single_benchmark as run_one
 
 logger = logging.getLogger("benchmark.cli")
@@ -106,7 +110,7 @@ def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--strategy", choices=["grid", "random"], default="grid")
     p.add_argument("--max-configs", type=int, default=12)
-    p.add_argument("--output", type=Path, default=Path(f"docs/reports/benchmark_{datetime.now(timezone.utc).date().isoformat()}.md"))
+    p.add_argument("--output", type=Path, default=Path(f"docs/reports/benchmark_{datetime.now(UTC).date().isoformat()}.md"))
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--folds", type=int, default=4)
     args = p.parse_args()

@@ -15,7 +15,6 @@ sys.path.insert(0, str(ROOT))
 
 from transit_ai.benchmark.cli import run_benchmark_sweep
 
-
 if __name__ == "__main__":
     output = ROOT.parent / "docs" / "reports" / "benchmark_baseline_smoke.md"
     sys.exit(run_benchmark_sweep(

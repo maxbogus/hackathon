@@ -19,7 +19,6 @@ sys.path.insert(0, str(ROOT))
 
 from transit_ai.benchmark.cli import run_benchmark_sweep
 
-
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--strategy", choices=["grid", "random"], default="grid")
