@@ -25,17 +25,22 @@ router = APIRouter(prefix="/api/v1", tags=["predictions"])
 def _get_predictor(loader: ArtifactLoader) -> BaselineMean:
     """Load the active artifact and reconstruct the Predictor.
 
-    Only BaselineMean is supported here in Phase 2.1. XGBoost/GRU plug in
-    via the artifact's `kind` field in T-028/T-029.
+    Supports baseline (T-027) and xgboost (T-028). GRU (T-029) and
+    Hybrid (T-030) plug in via the same dispatcher when they land.
     """
     artifact = loader.get_active()
-    if artifact.kind != "baseline":
-        raise HTTPException(
-            status_code=501,
-            detail=f"Model kind {artifact.kind!r} not yet wired into predictions endpoint (only 'baseline' supported in MVP)",
-        )
     model_path = artifact.path / artifact.files["model"]
-    return BaselineMean.load(str(model_path))
+
+    if artifact.kind == "baseline":
+        return BaselineMean.load(str(model_path))
+    if artifact.kind == "xgboost":
+        from transit_ai.models.xgboost_pred import XGBoostPredictor
+
+        return XGBoostPredictor.load(str(model_path))
+    raise HTTPException(
+        status_code=501,
+        detail=f"Model kind {artifact.kind!r} not yet wired into predictions endpoint",
+    )
 
 
 @router.get("/predictions/stop/{stop_id}", summary="Get ridership predictions for a stop")
