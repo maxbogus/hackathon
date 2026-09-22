@@ -1,0 +1,18 @@
+# baseline.yaml — config for BaselineMean trainer (T-032)
+# Used by: scripts/train_baseline.py --config ml/configs/baseline.yaml
+
+n_days: 35          # 28 train + 7 holdout
+seed: 42            # R6 reproducibility
+model_id: baseline_v1
+version: v0.1.0
+
+# Horizons and granularities supported by this artifact
+horizons:
+  - day
+
+granularities:
+  - hour
+
+# Predictor hyperparameters (passed as kwargs to BaselineMean.__init__)
+# Override via CLI: --hyperparam model_id=baseline_v2
+hyperparams: {}
