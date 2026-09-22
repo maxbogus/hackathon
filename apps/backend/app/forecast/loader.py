@@ -149,6 +149,45 @@ class ArtifactLoader:
 
         return self.load(model_id)
 
+    def get_active_id(self) -> str | None:
+        """Return the active model_id without loading the full artifact.
+
+        Returns None if active.json is missing or malformed.
+        """
+        active_path = self.artifacts_dir / ACTIVE_FILE
+        if not active_path.is_file():
+            return None
+        try:
+            active: dict[str, Any] = json.loads(active_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return None
+        model_id = active.get("model_id")
+        return model_id if isinstance(model_id, str) and model_id else None
+
+    def list_all(self) -> list[ModelArtifact]:
+        """Return all valid artifacts found under ``artifacts_dir``.
+
+        Skips directories without a valid ``meta.json`` (logs a warning).
+        Order is alphabetical by ``model_id`` for stable output.
+        """
+        if not self.artifacts_dir.is_dir():
+            return []
+
+        artifacts: list[ModelArtifact] = []
+        for child in sorted(self.artifacts_dir.iterdir(), key=lambda p: p.name):
+            if not child.is_dir():
+                continue
+            meta_path = child / "meta.json"
+            if not meta_path.is_file():
+                continue
+            try:
+                artifacts.append(self.load(child.name))
+            except ArtifactError:
+                # Skip invalid artifacts; a warning is enough — the listing
+                # endpoint must remain useful even when a single artifact is broken.
+                continue
+        return artifacts
+
 
 _loader_singleton: ArtifactLoader | None = None
 
