@@ -1,6 +1,6 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-22T20:40:10.599900+00:00
+> Последнее обновление: 2026-09-22T20:48:20.540895+00:00
 > Обновлено: автоматически через `make handoff-update`
 
 ## Цель
@@ -14,9 +14,8 @@ Phase 0 (toolchain + clinerules + ledger)
 ## Git state
 
 ```
-commit: acedb28
-status: R  docs/backlog/tickets/T-039-ml-scripts-benchmark_baseline.py-+-benchmark_all.p.md -> docs/backlog/archive/T-039-ml-scripts-benchmark_baseline.py-+-benchmark_all.p.md
-M  docs/ledger/findings.jsonl
+commit: f820028
+status: M docs/backlog/tickets/T-033-ml-transit_ai-training-predict.py-+-scripts-predic.md
 ```
 
 ## Что в работе (0)
@@ -25,20 +24,20 @@ _пусто_
 
 ## Что сделано (5)
 
-- T-031-ml-transit_ai-training-registry-meta.json-artifact.md
+- T-032-ml-transit_ai-training-train.py-+-scripts-train_ba.md
 - T-035-ml-transit_ai-training-evaluate.py-metrics-rmsle-m.md
 - T-039-ml-scripts-benchmark_baseline.py-+-benchmark_all.p.md
 - T-042-apps-backend-get-api-v1-predictions-stop-id-route-id.md
 - T-091-fix-mypy-exclude-regex-f-001.md
 
-## Архив (done за всё время): 27
+## Архив (done за всё время): 28
 
-- T-031-ml-transit_ai-training-registry-meta.json-artifact.md
+- T-032-ml-transit_ai-training-train.py-+-scripts-train_ba.md
 - T-035-ml-transit_ai-training-evaluate.py-metrics-rmsle-m.md
 - T-039-ml-scripts-benchmark_baseline.py-+-benchmark_all.p.md
 - T-042-apps-backend-get-api-v1-predictions-stop-id-route-id.md
 - T-091-fix-mypy-exclude-regex-f-001.md
-_(показаны последние 5 из 27)_
+_(показаны последние 5 из 28)_
 
 ## Следующая задача
 
