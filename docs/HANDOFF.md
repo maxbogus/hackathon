@@ -1,6 +1,6 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-20T11:57:47.991890+00:00
+> Последнее обновление: 2026-09-22T17:14:22.999975+00:00
 > Обновлено: автоматически через `make handoff-update`
 
 ## Цель
@@ -14,10 +14,10 @@ Phase 0 (toolchain + clinerules + ledger)
 ## Git state
 
 ```
-commit: 134def7
-status: M Makefile
- M docs/HANDOFF.md
- M scripts/update_handoff.py
+commit: cfa3ab8
+status: M docs/HANDOFF.md
+ M docs/backlog/archive/T-023-ml-pyproject.toml-full-deps-torch-polars-xgboost-l.md
+ M docs/backlog/archive/T-028-ml-transit_ai-models-xgboost-predictor.md
 ?? text.md
 ?? "\320\242\320\265\321\205\320\275\320\270\321\207\320\265\321\201\320\272\320\276\320\265 \320\267\320\260\320\264\320\260\320\275\320\270\320\265 (\320\242\320\227) \320\275\320\260 \321\200\320\260\320\267\321\200\320\260\320\261\320\276\321\202\320\272\321\203 \321\201\320\270\321\201\321\202\320\265\320\274\321\213 \320\277\321\200\320\276\320\263\320\275\320\276\320\267\320\270\321\200\320\276\320\262\320\260\320\275\320\270\321\217 \320\277\320\260\321\201\321\201\320\260\320\266\320\270\321\200\320\276\320\277\320\276\321\202\320\276\320\272\320\260 \321\202\321\200\320\260\320\274\320\262\320\260\320\265\320\262 \320\234\320\276\321\201\320\272\320\262\321\213.pdf"
 ```
@@ -26,18 +26,19 @@ status: M Makefile
 
 _пусто_
 
-## Что сделано (1)
+## Что сделано (2)
 
 - T-042-apps-backend-get-api-v1-predictions-stop-id-route-id.md
+- T-091-fix-mypy-exclude-regex-f-001.md
 
-## Архив (done за всё время): 20
+## Архив (done за всё время): 22
 
-- T-020-apps-backend-get-api-v1-healthz-version-readyz.md
 - T-024-ml-transit_ai-data-base-abc-datasource-contract.md
 - T-025-ml-transit_ai-data-synthetic-800-stops-40-routes-2.md
 - T-027-ml-transit_ai-models-baseline-mean-predictor.md
+- T-028-ml-transit_ai-models-xgboost-predictor.md
 - T-031-ml-transit_ai-training-registry-meta.json-artifact.md
-_(показаны последние 5 из 20)_
+_(показаны последние 5 из 22)_
 
 ## Следующая задача
 
@@ -52,6 +53,7 @@ _(показаны последние 5 из 20)_
 ## Последние находки
 
 - **F-001**: pyproject.toml mypy exclude has invalid regex pattern
+- **F-001-resolved**: F-001 resolved: mypy exclude regex fixed in T-091
 
 ## Открытые вопросы
 
