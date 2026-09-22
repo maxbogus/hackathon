@@ -31,6 +31,8 @@ dependencies = [
     "torch>=2.3.0",             # T-029 GRU с attention pooling
     # --- DataFrame ---
     "polars>=0.20.0",           # быстрее pandas на больших parquet (>1M строк)
+    # --- Plots (T-037) ---
+    "matplotlib>=3.5.0",        # reports/plots.py — headless Agg backend
     # --- Validation ---
     "pydantic>=2.9.0",          # контракты артефактов
 ]
