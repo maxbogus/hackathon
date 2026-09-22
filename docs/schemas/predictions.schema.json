@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://transit-ai.local/schemas/predictions.schema.json",
+  "title": "PredictionsParquet",
+  "description": "Schema for predictions/*.parquet written by ml/transit_ai/training/predict.py (T-033). Each element is one row (stop_id, period_start, value, ...).",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "period_start",
+      "period_end",
+      "stop_id",
+      "route_id",
+      "value",
+      "lower",
+      "upper",
+      "horizon",
+      "granularity",
+      "model_id"
+    ],
+    "properties": {
+      "period_start": {"type": "string", "format": "date-time"},
+      "period_end": {"type": "string", "format": "date-time"},
+      "stop_id": {"type": "integer", "minimum": 1},
+      "route_id": {"type": ["integer", "null"], "minimum": 1},
+      "value": {"type": "number", "minimum": 0},
+      "lower": {"type": "number", "minimum": 0},
+      "upper": {"type": "number", "minimum": 0},
+      "horizon": {"type": "string", "enum": ["day", "month", "year"]},
+      "granularity": {"type": "string", "enum": ["hour", "day", "month"]},
+      "model_id": {"type": "string", "pattern": "^[a-z0-9_-]+$"},
+      "scenario_id": {"type": ["string", "null"], "description": "Optional scenario label (Monte Carlo)."}
+    }
+  }
+}
