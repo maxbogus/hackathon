@@ -138,7 +138,7 @@ def fitted_artifact(tmp_path: Path) -> Path:
         try:
             pts = m.predict(int(row.stop_id), ts, next_h)
             pred = float(pts[0].value) if pts else 0.0
-        except Exception:
+        except (ValueError, RuntimeError):
             pred = 0.0
         records.append(
             {
