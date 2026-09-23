@@ -13,7 +13,7 @@ rice:
 depends_on: []
 blocks: []
 tags: [docs, handover, beneficiary, hackathon]
-status: ready
+status: backlog
 created: 2026-09-23
 updated: 2026-09-23
 assignee: "maxim"

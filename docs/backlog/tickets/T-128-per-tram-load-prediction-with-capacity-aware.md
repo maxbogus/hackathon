@@ -11,7 +11,7 @@ rice:
   C: 0.8
   score: 8.4
 depends_on: [T-127]
-blocks: [T-129, T-130]
+blocks: [T-129]
 tags: [backend, ml, load-prediction, beneficiary]
 status: ready
 created: 2026-09-23

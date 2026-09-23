@@ -1,6 +1,6 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-22T23:10:39.199938+00:00
+> Последнее обновление: 2026-09-23T00:09:24.622595+00:00
 > Обновлено: автоматически через `make handoff-update`
 
 ## Цель
@@ -14,8 +14,16 @@ Phase 0 (toolchain + clinerules + ledger)
 ## Git state
 
 ```
-commit: 297c4e4
-status: clean
+commit: 19d7c50
+status: D docs/TZ.pdf
+ M docs/backlog/STATUS.md
+ M docs/backlog/tickets/T-115-readme-with-beneficiaries-metrics-and-handover.md
+ D docs/backlog/tickets/T-116-contact-organizers-confirm-data-format-and-metr.md
+ M docs/backlog/tickets/T-127-backend-eta-endpoint-next-3-trams-with.md
+ M docs/backlog/tickets/T-128-per-tram-load-prediction-with-capacity-aware.md
+ M docs/backlog/tickets/T-129-streamlit-passenger-mode-with-eta-and-load-f.md
+ M docs/backlog/tickets/T-130-recommendation-engine-board-or-wait-decis.md
+ M docs/ledger/decisions.jsonl
 ```
 
 ## Что в работе (0)
@@ -45,9 +53,9 @@ _(показаны последние 5 из 31)_
 
 ## Последние решения в ledger
 
-- **D-004**: Knowledge Capture: ledger + handoff + promotion
 - **D-005**: Переиспользование кода из contest/ecup26-user-value
 - **D-006**: Metrics (RMSLE/MAE/MAPE) moved to transit_ai.reports.metrics (single source of truth)
+- **D-007**: Удалить T-116, отложить T-115 и T-130 до появления реальных данных
 
 ## Последние находки
 

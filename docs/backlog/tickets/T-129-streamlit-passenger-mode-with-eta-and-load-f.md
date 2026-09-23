@@ -11,7 +11,7 @@ rice:
   C: 0.9
   score: 13.5
 depends_on: [T-019, T-098]
-blocks: [T-127, T-128, T-130]
+blocks: [T-127, T-128]
 tags: [frontend, streamlit, passenger, beneficiary]
 status: ready
 created: 2026-09-23

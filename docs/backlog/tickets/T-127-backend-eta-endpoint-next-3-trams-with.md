@@ -11,7 +11,7 @@ rice:
   C: 0.8
   score: 6.4
 depends_on: [T-019, T-033, T-098]
-blocks: [T-128, T-129, T-130]
+blocks: [T-128, T-129]
 tags: [backend, api, eta, passenger, beneficiary]
 status: ready
 created: 2026-09-23
