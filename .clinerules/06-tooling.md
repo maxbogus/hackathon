@@ -1,5 +1,18 @@
 # 06-tooling.md — Toolchain
 
+## Tooling split (Python ↔ Frontend)
+
+| Стек | Package Manager | Где | Версия |
+|---|---|---|---|
+| **Python** (backend, ml, assistant, mcp, scripts) | **uv** | локально И в Docker backend | `uv==0.5.7` (зафиксировано) |
+| **Frontend** (apps/frontend) | **yarn 4** через corepack | локально И в Docker frontend | `yarn@4.5.0` (зафиксировано) |
+
+**Hard rule:** не смешивать. Никаких `pip install`, `python script.py` напрямую,
+`npm install`, `pnpm install`.
+
+Подробности и обоснование: `.clinerules/21-runtime-uv.md`. Скилл с командами:
+`ai/skills/01-uv-package-manager.md`.
+
 ## Python: uv + ruff + mypy + pytest
 
 ### uv (>= 0.5.7)
@@ -19,6 +32,36 @@ uv run mypy app/
 ```
 
 `uv.lock` коммитим. `pyproject.toml` — source of truth.
+
+### uv в Docker (apps/backend/Dockerfile)
+
+Backend Docker-контейнер работает через `uv`:
+
+```dockerfile
+# Зафиксировано в apps/backend/Dockerfile:
+RUN pip install --no-cache-dir uv==0.5.7
+RUN uv sync --frozen --no-dev --package transit-ai-backend
+CMD ["uv", "run", "--package", "transit-ai-backend", "uvicorn", "app.main:app", ...]
+```
+
+`pip` используется **один раз** — для установки самого `uv`. Дальше всё через `uv run`.
+Это даёт:
+- один источник правды (`pyproject.toml` + `uv.lock`)
+- reproducible build (`--frozen`)
+- те же версии локально и в Docker
+
+### Workspaces
+
+`pyproject.toml` (root) объединяет пакеты в workspace:
+
+```toml
+[tool.uv.workspace]
+members = ["apps/*", "ml"]
+```
+
+Это позволяет `uv sync` обновить все workspace-члены одной командой, а
+cross-package импорты (`transit-ai-ml` из `transit-ai-backend`) резолвятся через
+`{ workspace = true }` в `[tool.uv.sources]`.
 
 ### ruff (>= 0.5.7) — lint + format
 

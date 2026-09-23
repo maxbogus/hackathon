@@ -1,6 +1,6 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-23T12:19:44.673892+00:00
+> Последнее обновление: 2026-09-23T12:28:03.548925+00:00
 > Обновлено: автоматически через `make handoff-update`
 
 ## Цель
@@ -10,6 +10,13 @@ Track A: T-122 MapProvider (после T-142 config). Реальные данн�
 ## Прогресс
 
 Phase 4 (frontend): T-135, T-141, T-142 DONE. Phase 0/1/2/3 готовы. Готовимся к Track A и T-137 submission.
+
+**Tooling audit (D-016, 2026-09-23):**
+- ✅ Все Python-скрипты (17 шт, кроме фронтовых) подключены через Makefile.
+- ✅ WIP-цели (train-xgboost/gru/hybrid, seed, inventory, sweep, mc-scenario, assistant-reasoning) помечены [WIP: T-NNN].
+- ✅ scripts/new_ticket.py → `make ticket ID=... TITLE=...`.
+- ✅ Новый clinerule 21-runtime-uv.md + skill ai/skills/01-uv-package-manager.md.
+- ✅ Clinerules 00-AGENTS.md и 06-tooling.md обновлены (tooling split, Don't do).
 
 ## Git state
 
@@ -28,6 +35,7 @@ _пусто_
 - T-133-slide-pain-points-to-solution-mapping-for.md
 - T-135-frontend-tanstack-router-role-url-routing.md
 - T-141-frontend-text-constants-registry-hybrid.md
+- Tooling audit: Makefile cleanup + new clinerule 21-runtime-uv.md + skill 01-uv-package-manager.md (D-016)
 - T-142-frontend-typed-config-with-stub-fallback.md
 
 ## Архив (done за всё время): 40

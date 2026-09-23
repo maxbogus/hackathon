@@ -35,7 +35,7 @@ MACHINE ?= rtx5060    # rtx5060 | rtx4070_12gb
         assistant-test assistant-reasoning mcp-run \
         ledger-add ledger-list ledger-check ledger-export \
         note-from-finding promote handoff handoff-update \
-        backlog-ready backlog-list docs         pyscn pyscn-compare pyscn-baseline         arch-dbml arch-dbml-check         benchmark-baseline benchmark-all benchmark-compare         run-benchmark
+        backlog-ready backlog-list ticket docs         pyscn pyscn-compare pyscn-baseline         arch-dbml arch-dbml-check         benchmark-baseline benchmark-all benchmark-compare         run-benchmark
 
 # ---------------------------------------------------------------------------
 # HELP
@@ -87,26 +87,34 @@ logs: ## Tail docker logs
 # ML (NOT in Docker) — runs locally via uv
 # ---------------------------------------------------------------------------
 
-seed: ## Generate synthetic data → data/synthetic/
-	$(UV) --directory ml run python scripts/gen_synthetic.py
-	@printf "\033[32m✓ Synthetic data generated\033[0m\n"
+# WIP (T-019): synthetic gen script not yet implemented
+seed: ## Generate synthetic data → data/synthetic/  [WIP: T-019]
+	@echo "WIP: pending T-019 (synthetic generator). Skipped."
 
-inventory: ## Profile data (numbers, not hearsay) → reports/inventory.json
-	$(UV) --directory ml run python scripts/inventory.py
+# WIP: data profiling script not yet implemented
+inventory: ## Profile data (numbers, not hearsay) → reports/inventory.json  [WIP]
+	@echo "WIP: pending inventory script. Skipped."
 
 train-baseline: ## Train baseline (mean by hour/day/route)
 	$(UV) --directory ml run python scripts/train_baseline.py
 
-train-xgboost: ## Train XGBoost
-	$(UV) --directory ml run python scripts/train_xgboost.py
+# WIP (T-027): XGBoost trainer not yet implemented
+train-xgboost: ## Train XGBoost  [WIP: T-027]
+	@echo "WIP: pending T-027 (XGBoost trainer). Skipped."
 
-train-gru: ## Train GRU + attention pooling (from contest/...)
-	$(UV) --directory ml run python scripts/train_gru.py
+# WIP (T-029): GRU trainer not yet implemented
+train-gru: ## Train GRU + attention pooling (from contest/...)  [WIP: T-029]
+	@echo "WIP: pending T-029 (GRU trainer). Skipped."
 
-train-hybrid: ## Train hybrid (GRU + LGBM blend in log-space)
-	$(UV) --directory ml run python scripts/train_hybrid.py
+# WIP (T-031): Hybrid trainer not yet implemented
+train-hybrid: ## Train hybrid (GRU + LGBM blend in log-space)  [WIP: T-031]
+	@echo "WIP: pending T-031 (Hybrid trainer). Skipped."
 
-train-all: train-baseline train-xgboost train-gru train-hybrid ## Train all models
+# WIP (T-027, T-029, T-031): trainers not yet implemented
+# train-all: train-baseline train-xgboost train-gru train-hybrid ## Train all models
+train-all: ## Train all models  [WIP: only baseline works, others pending]
+	@echo "WIP: train-all currently only runs baseline. XGBoost/GRU/Hybrid pending (T-027, T-029, T-031)."
+	$(MAKE) train-baseline
 
 predict: ## Generate predictions with active model → predictions/*.parquet
 	$(UV) --directory ml run python scripts/predict.py
@@ -117,11 +125,13 @@ calibrate: ## Apply per-bucket calibration
 evaluate: ## Evaluate all models on holdout → reports/
 	$(UV) --directory ml run python scripts/evaluate.py
 
-sweep: ## Hyperparameter sweep
-	$(UV) --directory ml run python scripts/sweep.py
+# WIP: hyperparameter sweep script not yet implemented
+sweep: ## Hyperparameter sweep  [WIP]
+	@echo "WIP: pending sweep script. Skipped."
 
-mc-scenario: ## Run Monte Carlo scenario (1000 iterations)
-	$(UV) --directory ml run python scripts/monte_carlo_scenario.py --config ml/configs/scenarios/baseline.yaml
+# WIP: Monte Carlo scenario script not yet implemented
+mc-scenario: ## Run Monte Carlo scenario (1000 iterations)  [WIP]
+	@echo "WIP: pending Monte Carlo script. Skipped."
 
 # ---------------------------------------------------------------------------
 # API + FRONTEND GENERATION
@@ -191,6 +201,19 @@ backlog-ready: ## Top-5 ready tickets by RICE
 backlog-list: ## All tickets sorted by RICE
 	$(UV) run python scripts/ready_tickets.py --all
 
+ticket: ## Create new ticket (make ticket ID=T-NNN TITLE="..." PHASE=1 PRIORITY=P1)
+	@if [ -z "$(ID)" ] || [ -z "$(TITLE)" ]; then \
+		echo "Usage: make ticket ID=T-NNN TITLE=\"your title\" [PHASE=1] [PRIORITY=P1] [EFFORT=4] [TAGS=backend,api]" ; \
+		exit 1 ; \
+	fi
+	$(UV) run python scripts/new_ticket.py \
+		--id $(ID) \
+		--title $(TITLE) \
+		--phase $(or $(PHASE),1) \
+		--priority $(or $(PRIORITY),P1) \
+		--effort $(or $(EFFORT),4) \
+		--tags "$(or $(TAGS),)"
+
 ledger-add: ## Add decision to ledger (interactive)
 	$(UV) run python scripts/ledger.py add
 
@@ -223,8 +246,9 @@ handoff-update: ## Update HANDOFF.md (call at session end)
 assistant-test: ## Smoke test registry of LLM providers
 	cd apps/assistant && $(UV) run python -c "from app.providers.registry import REGISTRY; print(f'{len(REGISTRY)} models:', list(REGISTRY.keys()))"
 
-assistant-reasoning: ## Test reasoning (DeepSeek R1 via OpenRouter)
-	cd apps/assistant && $(UV) run python scripts/test_reasoning.py
+# WIP: assistant reasoning test script not yet implemented
+assistant-reasoning: ## Test reasoning (DeepSeek R1 via OpenRouter)  [WIP]
+	@echo "WIP: pending test_reasoning.py. Skipped."
 
 mcp-run: ## Start MCP server (stdio JSON-RPC)
 	cd apps/mcp && $(UV) run python server.py

@@ -24,7 +24,11 @@
 | 14 | `14-decisions-ledger.md` | Фиксация решений в ledger (RICE > 5) |
 | 15 | `15-promote-finding.md` | Находка → note → rule → skill |
 | 16 | `16-tdd-cycle.md` | RED → GREEN → REFACTOR |
+| 17 | `17-pyscn-quality-gate.md` | pyscn structural analyzer (CI gate) |
+| 18 | `18-dbml-schema-tracking.md` | DBML schema as code |
+| 19 | `19-ml-benchmark-pipeline.md` | ML benchmark pipeline (offline) |
 | 20 | `20-text-constants-registry.md` | Frontend hybrid t(key) text registry |
+| 21 | `21-runtime-uv.md` | uv как единый package manager (Python↔Docker↔ML) |
 | — | `MEMORY-BUDGET.md` | Анти-краш: не читать >1MB JSON |
 
 ## Quick rules
@@ -45,6 +49,11 @@
     или обновление `docs/HANDOFF.md` (источник истины для новой сессии).
 11. **Frontend text registry:** все UI-строки через `t(key)` из `apps/frontend/src/lib/i18n/`
     (см. clinerule 20). Запрет хардкода русских строк в `.tsx` вне `lib/i18n/`.
+12. **Tooling split:** Python (backend, ml, assistant, mcp, scripts) → **uv 0.5.7+**,
+    локально И в Docker backend (см. clinerule 21). Frontend → **yarn 4 corepack**.
+    Никакого `pip install`, `python script.py` напрямую, `npm install`, `pnpm install`.
+13. **Makefile — single entry point:** все Python-скрипты (кроме фронтовых) подключены
+    через `make <target>`. WIP-цели помечены `[WIP: T-NNN]` в help.
 
 ## How Cline should work on this project
 
@@ -84,3 +93,5 @@
 - ❌ Обучать модели в Docker (только скриптами)
 - ❌ Использовать LLM > 4B параметров для inference (есть правило R2 в hackathon-rules)
 - ❌ Делать PR без обновлённого HANDOFF.md (если сессия длинная)
+- ❌ Запускать Python-скрипты в обход Makefile (только через `make <target>`)
+- ❌ Использовать `python` или `pip` напрямую (только `uv run ...`)
