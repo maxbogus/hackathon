@@ -1,18 +1,21 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-23T12:10:00Z
-> Обновлено: Cline после T-131 (dispatcher alerts)
+> Последнее обновление: 2026-09-23T13:00:00Z
+> Обновлено: Cline после gap-analysis (8 tickets T-122/T-134..T-140 + T-135 YAML fix)
 
 ## Цель
 
 Завершить MVP для демо жюри: ✅ backend ETA + capacity-aware load_pct + ✅ dispatcher alerts + frontend PassengerMode готовы.
-Следующее — URL routing (T-135), README English (T-115).
+Следующее — submission checklist T-137 (P0), затем T-135 URL routing, T-115 README English.
 
 ## Git state
 
 ```
-status: pending commit (T-131 changes uncommitted — see git status)
-ahead of origin/master: +29 commits (после T-131 будет +31)
+status: clean
+new commits since T-131:
+  2d31d7a fix(backlog): quote title in T-135 to fix YAML parsing
+  bc58589 chore(backlog): add 7 gap-analysis tickets (T-122, T-134, T-136..T-140)
+ahead of origin/master: +31 commits
 ```
 
 ## Что сделано за последние сессии (10)
@@ -28,7 +31,7 @@ ahead of origin/master: +29 commits (после T-131 будет +31)
 - T-039 — ml benchmark scripts + api-gen scripts (5h)
 - T-037 — ml reports/plots.py matplotlib headless Agg (3h)
 
-## Архив (done за всё время): 37
+## Архив (done за всё время): 37 (unchanged this session)
 
 ## Что в работе
 
@@ -36,7 +39,9 @@ ahead of origin/master: +29 commits (после T-131 будет +31)
 
 ## Следующая задача
 
-**T-115:** README: добавить English version, раздел Handover, починить ссылки (RICE 10.00, 1h).
+**T-137 (P0, RICE 6.00, 2h):** `docs/HACKATHON_CHECKLIST.md` — R8 hackathon-rules перед сабмитом 03.10.
+Альтернатива: **T-115 (RICE 10.00, 1h)** — README English + Handover.
+Альтернатива: **T-135 (RICE 6.00, 2h)** — TanStack Router URL routing.
 
 > T-131 уже сделал Severity шкалу (info/warning/critical) — следующие тикеты могут
 > переиспользовать `app.insights.alerts.classify_load()` и `app.insights.alerts.SEVERITY_*`.
@@ -50,7 +55,7 @@ $EDITOR docs/README.md
 
 ## Открытые вопросы
 
-- (нет)
+- T-122 RICE в summary = 4.5, фактически 2.70 (effort=4h). Некритично — приоритезация по score выровнялась.
 
 ## Артефакты на диске
 
@@ -78,7 +83,17 @@ $EDITOR docs/README.md
 ### Архив
 - `docs/backlog/archive/T-131-dispatcher-alerts-overload-predictions-15.md` — done, 8/8 AC ✓
 - `docs/ledger/decisions.jsonl` — D-013 (setInterval + /insights/alerts URL rationale)
-- `docs/backlog/STATUS.md` — 37 archive / 15 ready / 13 decisions / 11 findings
+- `docs/backlog/STATUS.md` — 37 archive / 23 ready / 13 decisions / 11 findings
+
+### Gap-analysis (new in this session) ✨
+- `docs/backlog/tickets/T-122-...md` — MapProvider + LeafletMap + YandexMap (P1, RICE 2.70, baev)
+- `docs/backlog/tickets/T-134-...md` — backend /predictions/route/{id}?horizon=month (P1, RICE 1.40, maxim)
+- `docs/backlog/tickets/T-135-...md` — TanStack Router URL routing (P1, RICE 6.00, baev) [hotfix: title quoted]
+- `docs/backlog/tickets/T-136-...md` — backend /predictions/route/{id}?horizon=year + Monte Carlo (P1, RICE 1.20, maxim)
+- `docs/backlog/tickets/T-137-...md` — docs/HACKATHON_CHECKLIST.md R8 (P0, RICE 6.00, maxim+svetlana)
+- `docs/backlog/tickets/T-138-...md` — apps/assistant LiteLLM skeleton (P2, RICE 1.50, maxim)
+- `docs/backlog/tickets/T-139-...md` — apps/mcp stdio JSON-RPC server (P2, RICE 1.60, maxim)
+- `docs/backlog/tickets/T-140-...md` — ml GCN+LSTM spatiotemporal (P2, RICE 0.60, unassigned)
 
 ## Live verification (T-131)
 

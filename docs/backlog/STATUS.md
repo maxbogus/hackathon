@@ -1,14 +1,14 @@
 # STATUS.md — критический путь
 
-_Обновлено: 2026-09-23. После T-131: backend alerts endpoint + alerts.py + Dispatcher/AlertsPanel — 21 новый тест (16 unit + 5 integration), +3 frontend теста. OpenAPI/TS синхронизированы (9 paths, hook useGetOverloadAlertsApiV1InsightsAlertsGet). Зафиксировано: D-013 (setInterval vs streamlit-autorefresh + /insights/alerts URL). Очередь: T-115 (README), T-135 (URL routing)._
+_Обновлено: 2026-09-23 (gap-analysis). После T-131: backend alerts endpoint + alerts.py + Dispatcher/AlertsPanel — 21 новый тест (16 unit + 5 integration), +3 frontend теста. OpenAPI/TS синхронизированы (9 paths, hook useGetOverloadAlertsApiV1InsightsAlertsGet). Зафиксировано: D-013 (setInterval vs streamlit-autorefresh + /insights/alerts URL). Очередь: T-115 (README), T-135 (URL routing)._
 
 ## Сводка
 
 | Счётчик | Значение |
 |---|---|
 | Тикетов в `archive/` (done за всё время) | **37** |
-| Тикетов в `tickets/`: | **16** |
-| &nbsp;&nbsp;• `ready` (готовы к старту) | **15** |
+| Тикетов в `tickets/`: | **24** |
+| &nbsp;&nbsp;• `ready` (готовы к старту) | **23** |
 | &nbsp;&nbsp;• `backlog` (отложены) | **0** |
 | &nbsp;&nbsp;• `in-progress` | **0** |
 | Решений в ledger (`decisions.jsonl`) | **13** (D-001..D-013) |
@@ -19,14 +19,16 @@ _Обновлено: 2026-09-23. После T-131: backend alerts endpoint + ale
 | ID | RICE | Усилие | Что |
 |---|---|---|---|
 | **T-115** | 10.00 | 1h | README: добавить English version, раздел Handover, починить ссылки |
-| **T-135** | 6.0 | 2h | TanStack Router: перевести role-switcher на URL (зависит от T-129) |
-| **T-123** | 5.5 | 3h | Weather data integration (Open-Meteo) |
+| **T-137** | 6.00 | 2h | docs/HACKATHON_CHECKLIST.md (R8 submission, P0) |
+| **T-135** | 6.00 | 2h | TanStack Router: role-switcher → URL (зависит от T-129) |
+| **T-125** | 5.40 | 2h | Feature engineering: weather + traffic фичи |
+| **T-122** | 2.70 | 4h | MapProvider + LeafletMap + YandexMap |
 
 > Цепочка `T-127 → T-128 → T-129 → T-130 → T-131` — все архивированы. Демо жюри готово на backend+frontend стеке: ETA + capacity + alerts.
 
 ## Backlog (отложены)
 
-_Пусто — все тикеты либо в `ready`, либо в `archive`._
+_Пусто — все тикеты либо в `ready`, либо в `archive`. Из 23 ready в топ-15 попали 6 новых (T-122, T-134, T-135, T-137, T-138, T-139)._
 
 ## В работе (in-progress)
 
