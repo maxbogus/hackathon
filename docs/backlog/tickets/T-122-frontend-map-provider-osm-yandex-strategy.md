@@ -9,7 +9,7 @@ rice:
   R: 6
   I: 3.0
   C: 0.6
-  score: 4.5
+  score: 2.7
 depends_on: []
 blocks: []
 tags: [frontend, map, leaflet, yandex, strategy, beneficiary, hackathon]
