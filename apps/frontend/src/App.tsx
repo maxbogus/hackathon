@@ -19,6 +19,7 @@
 import { useState } from 'react';
 
 import { PassengerMode } from '@/pages/PassengerMode';
+import { AlertsPanel } from '@/components/Dispatcher/AlertsPanel';
 
 type Role = 'passenger' | 'dispatcher' | 'analyst' | 'planner';
 
@@ -123,7 +124,13 @@ export function App(): JSX.Element {
       </header>
 
       <main>
-        {active.id === 'passenger' ? <PassengerMode /> : <PlaceholderPanel role={active} />}
+        {active.id === 'passenger' ? (
+          <PassengerMode />
+        ) : active.id === 'dispatcher' ? (
+          <AlertsPanel />
+        ) : (
+          <PlaceholderPanel role={active} />
+        )}
       </main>
     </div>
   );

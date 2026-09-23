@@ -57,6 +57,61 @@ export interface HTTPValidationError {
   detail?: ValidationError[];
 }
 
+/**
+ * Bucketed risk level. info in [75,90), warning in [90,110), critical >=110.
+ */
+export type OverloadAlertSeverity =
+  (typeof OverloadAlertSeverity)[keyof typeof OverloadAlertSeverity];
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const OverloadAlertSeverity = {
+  info: 'info',
+  warning: 'warning',
+  critical: 'critical',
+} as const;
+
+/**
+ * One actionable overload prediction for the dispatcher UI.
+ */
+export interface OverloadAlert {
+  /** Numeric stop id (mirrors app.data.transit.STOP_ROUTES). */
+  stop_id: number;
+  /** Numeric route id. */
+  route_id: number;
+  /** Human-readable route label (e.g. '7', 'A', 'T1'). */
+  route_name: string;
+  /**
+   * Predicted load as % of tram capacity. Always >= 75 (the alert threshold) and <= 150 (the MAX_LOAD_PCT clamp). Server-side filtering has already removed sub-threshold predictions.
+   * @minimum 75
+   * @maximum 150
+   */
+  predicted_load_pct: number;
+  /**
+   * ETA in minutes of the specific tram this alert refers to (minutes until the tram leaves this stop). Each alert card in the dispatcher UI is rendered against its own time-to-overload.
+   * @minimum 0
+   * @maximum 120
+   */
+  time_to_overload_min: number;
+  /** Bucketed risk level. info in [75,90), warning in [90,110), critical >=110. */
+  severity: OverloadAlertSeverity;
+}
+
+/**
+ * Response body for `GET /api/v1/insights/alerts`.
+ */
+export interface OverloadAlertsResponse {
+  /** Server-side UTC timestamp of the alert scan. */
+  generated_at: string;
+  /**
+   * Look-ahead horizon used for this scan (minutes).
+   * @minimum 1
+   * @maximum 120
+   */
+  window_min: number;
+  /** Sorted alerts: critical first, then warning, then info. Within a severity, by time_to_overload_min ascending. */
+  alerts?: OverloadAlert[];
+}
+
 export type ValidationErrorLocItem = string | number;
 
 export type ValidationErrorCtx = { [key: string]: unknown };
@@ -69,42 +124,50 @@ export interface ValidationError {
   ctx?: ValidationErrorCtx;
 }
 
-export type HealthzApiV1HealthzGet200 = {[key: string]: string};
+export type HealthzApiV1HealthzGet200 = { [key: string]: string };
 
-export type VersionApiV1VersionGet200 = {[key: string]: string | null};
+export type VersionApiV1VersionGet200 = { [key: string]: string | null };
 
 export type ReadyzApiV1ReadyzGet200 = { [key: string]: unknown };
 
 export type GetPredictionsForStopApiV1PredictionsStopStopIdGetParams = {
-period_start: string;
-period_end: string;
+  period_start: string;
+  period_end: string;
 };
 
 export type GetPredictionsForStopApiV1PredictionsStopStopIdGet200 = { [key: string]: unknown };
 
 export type GetEtaPredictionsApiV1PredictionsEtaGetParams = {
-/**
- * Tram stop id (1..N).
- * @minimum 1
- */
-stop_id: number;
-/**
- * Number of upcoming trams to return. Clamped to [1, 5].
- * @minimum 1
- */
-n?: number;
+  /**
+   * Tram stop id (1..N).
+   * @minimum 1
+   */
+  stop_id: number;
+  /**
+   * Number of upcoming trams to return. Clamped to [1, 5].
+   * @minimum 1
+   */
+  n?: number;
 };
 
 export type GetActiveModelApiV1ModelsActiveGet200 = { [key: string]: unknown };
 
 export type ListModelsApiV1ModelsGetParams = {
-/**
- * If true, return only the currently active model.
- */
-active_only?: boolean;
+  /**
+   * If true, return only the currently active model.
+   */
+  active_only?: boolean;
 };
 
 export type ListModelsApiV1ModelsGet200 = { [key: string]: unknown };
 
-export type RootGet200 = {[key: string]: string};
+export type GetOverloadAlertsApiV1InsightsAlertsGetParams = {
+  /**
+   * Look-ahead horizon in minutes. Defaults to 30 (current peak commute). Hard cap 120 (4 hours) for dispatcher UI sanity.
+   * @minimum 1
+   * @maximum 120
+   */
+  window_min?: number;
+};
 
+export type RootGet200 = { [key: string]: string };

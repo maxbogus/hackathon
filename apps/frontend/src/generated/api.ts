@@ -5,9 +5,7 @@
  * Прогноз пассажиропотока трамваев Москвы (hackathon Transit-AI).
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useQuery
-} from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -17,28 +15,27 @@ import type {
   QueryKey,
   UndefinedInitialDataOptions,
   UseQueryOptions,
-  UseQueryResult
+  UseQueryResult,
 } from '@tanstack/react-query';
 
 import type {
   ETAResponse,
   GetActiveModelApiV1ModelsActiveGet200,
   GetEtaPredictionsApiV1PredictionsEtaGetParams,
+  GetOverloadAlertsApiV1InsightsAlertsGetParams,
   GetPredictionsForStopApiV1PredictionsStopStopIdGet200,
   GetPredictionsForStopApiV1PredictionsStopStopIdGetParams,
   HTTPValidationError,
   HealthzApiV1HealthzGet200,
   ListModelsApiV1ModelsGet200,
   ListModelsApiV1ModelsGetParams,
+  OverloadAlertsResponse,
   ReadyzApiV1ReadyzGet200,
   RootGet200,
-  VersionApiV1VersionGet200
+  VersionApiV1VersionGet200,
 } from './api.schemas';
 
 import { customInstance } from '../api/customInstance';
-
-
-
 
 /**
  * Returns 200 unconditionally — process is alive.
@@ -46,189 +43,237 @@ import { customInstance } from '../api/customInstance';
 No external dependencies are checked. Use `/readyz` for that.
  * @summary Liveness probe
  */
-export const healthzApiV1HealthzGet = (
-    
- signal?: AbortSignal
-) => {
-      
-      
-      return customInstance<HealthzApiV1HealthzGet200>(
-      {url: `/api/v1/healthz`, method: 'GET', signal
-    },
-      );
-    }
-  
-
-
+export const healthzApiV1HealthzGet = (signal?: AbortSignal) => {
+  return customInstance<HealthzApiV1HealthzGet200>({
+    url: `/api/v1/healthz`,
+    method: 'GET',
+    signal,
+  });
+};
 
 export const getHealthzApiV1HealthzGetQueryKey = () => {
-    return [
-    `/api/v1/healthz`
-    ] as const;
-    }
+  return [`/api/v1/healthz`] as const;
+};
 
-    
-export const getHealthzApiV1HealthzGetQueryOptions = <TData = Awaited<ReturnType<typeof healthzApiV1HealthzGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof healthzApiV1HealthzGet>>, TError, TData>>, }
-) => {
+export const getHealthzApiV1HealthzGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof healthzApiV1HealthzGet>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof healthzApiV1HealthzGet>>, TError, TData>
+  >;
+}) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getHealthzApiV1HealthzGetQueryKey();
 
-  const queryKey =  queryOptions?.queryKey ?? getHealthzApiV1HealthzGetQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof healthzApiV1HealthzGet>>> = ({ signal }) =>
+    healthzApiV1HealthzGet(signal);
 
-  
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof healthzApiV1HealthzGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof healthzApiV1HealthzGet>>> = ({ signal }) => healthzApiV1HealthzGet(signal);
+export type HealthzApiV1HealthzGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof healthzApiV1HealthzGet>>
+>;
+export type HealthzApiV1HealthzGetQueryError = unknown;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof healthzApiV1HealthzGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type HealthzApiV1HealthzGetQueryResult = NonNullable<Awaited<ReturnType<typeof healthzApiV1HealthzGet>>>
-export type HealthzApiV1HealthzGetQueryError = unknown
-
-
-export function useHealthzApiV1HealthzGet<TData = Awaited<ReturnType<typeof healthzApiV1HealthzGet>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof healthzApiV1HealthzGet>>, TError, TData>> & Pick<
+export function useHealthzApiV1HealthzGet<
+  TData = Awaited<ReturnType<typeof healthzApiV1HealthzGet>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof healthzApiV1HealthzGet>>, TError, TData>
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof healthzApiV1HealthzGet>>,
           TError,
           Awaited<ReturnType<typeof healthzApiV1HealthzGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useHealthzApiV1HealthzGet<TData = Awaited<ReturnType<typeof healthzApiV1HealthzGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof healthzApiV1HealthzGet>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useHealthzApiV1HealthzGet<
+  TData = Awaited<ReturnType<typeof healthzApiV1HealthzGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof healthzApiV1HealthzGet>>, TError, TData>
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof healthzApiV1HealthzGet>>,
           TError,
           Awaited<ReturnType<typeof healthzApiV1HealthzGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useHealthzApiV1HealthzGet<TData = Awaited<ReturnType<typeof healthzApiV1HealthzGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof healthzApiV1HealthzGet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useHealthzApiV1HealthzGet<
+  TData = Awaited<ReturnType<typeof healthzApiV1HealthzGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof healthzApiV1HealthzGet>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary Liveness probe
  */
 
-export function useHealthzApiV1HealthzGet<TData = Awaited<ReturnType<typeof healthzApiV1HealthzGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof healthzApiV1HealthzGet>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useHealthzApiV1HealthzGet<
+  TData = Awaited<ReturnType<typeof healthzApiV1HealthzGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof healthzApiV1HealthzGet>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getHealthzApiV1HealthzGetQueryOptions(options);
 
-  const queryOptions = getHealthzApiV1HealthzGetQueryOptions(options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData>;
+  };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
-
-
-
-
 
 /**
  * Returns app version + git commit hash.
  * @summary Build info
  */
-export const versionApiV1VersionGet = (
-    
- signal?: AbortSignal
-) => {
-      
-      
-      return customInstance<VersionApiV1VersionGet200>(
-      {url: `/api/v1/version`, method: 'GET', signal
-    },
-      );
-    }
-  
-
-
+export const versionApiV1VersionGet = (signal?: AbortSignal) => {
+  return customInstance<VersionApiV1VersionGet200>({
+    url: `/api/v1/version`,
+    method: 'GET',
+    signal,
+  });
+};
 
 export const getVersionApiV1VersionGetQueryKey = () => {
-    return [
-    `/api/v1/version`
-    ] as const;
-    }
+  return [`/api/v1/version`] as const;
+};
 
-    
-export const getVersionApiV1VersionGetQueryOptions = <TData = Awaited<ReturnType<typeof versionApiV1VersionGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof versionApiV1VersionGet>>, TError, TData>>, }
-) => {
+export const getVersionApiV1VersionGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof versionApiV1VersionGet>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof versionApiV1VersionGet>>, TError, TData>
+  >;
+}) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getVersionApiV1VersionGetQueryKey();
 
-  const queryKey =  queryOptions?.queryKey ?? getVersionApiV1VersionGetQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof versionApiV1VersionGet>>> = ({ signal }) =>
+    versionApiV1VersionGet(signal);
 
-  
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof versionApiV1VersionGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof versionApiV1VersionGet>>> = ({ signal }) => versionApiV1VersionGet(signal);
+export type VersionApiV1VersionGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof versionApiV1VersionGet>>
+>;
+export type VersionApiV1VersionGetQueryError = unknown;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof versionApiV1VersionGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type VersionApiV1VersionGetQueryResult = NonNullable<Awaited<ReturnType<typeof versionApiV1VersionGet>>>
-export type VersionApiV1VersionGetQueryError = unknown
-
-
-export function useVersionApiV1VersionGet<TData = Awaited<ReturnType<typeof versionApiV1VersionGet>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof versionApiV1VersionGet>>, TError, TData>> & Pick<
+export function useVersionApiV1VersionGet<
+  TData = Awaited<ReturnType<typeof versionApiV1VersionGet>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof versionApiV1VersionGet>>, TError, TData>
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof versionApiV1VersionGet>>,
           TError,
           Awaited<ReturnType<typeof versionApiV1VersionGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useVersionApiV1VersionGet<TData = Awaited<ReturnType<typeof versionApiV1VersionGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof versionApiV1VersionGet>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useVersionApiV1VersionGet<
+  TData = Awaited<ReturnType<typeof versionApiV1VersionGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof versionApiV1VersionGet>>, TError, TData>
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof versionApiV1VersionGet>>,
           TError,
           Awaited<ReturnType<typeof versionApiV1VersionGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useVersionApiV1VersionGet<TData = Awaited<ReturnType<typeof versionApiV1VersionGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof versionApiV1VersionGet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useVersionApiV1VersionGet<
+  TData = Awaited<ReturnType<typeof versionApiV1VersionGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof versionApiV1VersionGet>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary Build info
  */
 
-export function useVersionApiV1VersionGet<TData = Awaited<ReturnType<typeof versionApiV1VersionGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof versionApiV1VersionGet>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useVersionApiV1VersionGet<
+  TData = Awaited<ReturnType<typeof versionApiV1VersionGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof versionApiV1VersionGet>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getVersionApiV1VersionGetQueryOptions(options);
 
-  const queryOptions = getVersionApiV1VersionGetQueryOptions(options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData>;
+  };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
-
-
-
-
 
 /**
  * Returns 200 only if DB and Redis are reachable.
@@ -238,95 +283,113 @@ Note: actual DB/Redis clients will be wired in T-016 (SQLAlchemy) and T-018
 endpoint exists for k8s probes.
  * @summary Readiness probe
  */
-export const readyzApiV1ReadyzGet = (
-    
- signal?: AbortSignal
-) => {
-      
-      
-      return customInstance<ReadyzApiV1ReadyzGet200>(
-      {url: `/api/v1/readyz`, method: 'GET', signal
-    },
-      );
-    }
-  
-
-
+export const readyzApiV1ReadyzGet = (signal?: AbortSignal) => {
+  return customInstance<ReadyzApiV1ReadyzGet200>({ url: `/api/v1/readyz`, method: 'GET', signal });
+};
 
 export const getReadyzApiV1ReadyzGetQueryKey = () => {
-    return [
-    `/api/v1/readyz`
-    ] as const;
-    }
+  return [`/api/v1/readyz`] as const;
+};
 
-    
-export const getReadyzApiV1ReadyzGetQueryOptions = <TData = Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>, TError, TData>>, }
-) => {
+export const getReadyzApiV1ReadyzGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>, TError, TData>>;
+}) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getReadyzApiV1ReadyzGetQueryKey();
 
-  const queryKey =  queryOptions?.queryKey ?? getReadyzApiV1ReadyzGetQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>> = ({ signal }) =>
+    readyzApiV1ReadyzGet(signal);
 
-  
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>> = ({ signal }) => readyzApiV1ReadyzGet(signal);
+export type ReadyzApiV1ReadyzGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>
+>;
+export type ReadyzApiV1ReadyzGetQueryError = unknown;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type ReadyzApiV1ReadyzGetQueryResult = NonNullable<Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>>
-export type ReadyzApiV1ReadyzGetQueryError = unknown
-
-
-export function useReadyzApiV1ReadyzGet<TData = Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>, TError, TData>> & Pick<
+export function useReadyzApiV1ReadyzGet<
+  TData = Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>, TError, TData>
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>,
           TError,
           Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useReadyzApiV1ReadyzGet<TData = Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useReadyzApiV1ReadyzGet<
+  TData = Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>, TError, TData>
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>,
           TError,
           Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useReadyzApiV1ReadyzGet<TData = Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useReadyzApiV1ReadyzGet<
+  TData = Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary Readiness probe
  */
 
-export function useReadyzApiV1ReadyzGet<TData = Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useReadyzApiV1ReadyzGet<
+  TData = Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof readyzApiV1ReadyzGet>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getReadyzApiV1ReadyzGetQueryOptions(options);
 
-  const queryOptions = getReadyzApiV1ReadyzGetQueryOptions(options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData>;
+  };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
-
-
-
-
 
 /**
  * Return hourly predictions for [period_start, period_end] at one stop.
@@ -335,102 +398,165 @@ Returns list of `{period_start, period_end, value, lower, upper, model_id}`.
  * @summary Get ridership predictions for a stop
  */
 export const getPredictionsForStopApiV1PredictionsStopStopIdGet = (
-    stopId: number,
-    params: GetPredictionsForStopApiV1PredictionsStopStopIdGetParams,
- signal?: AbortSignal
+  stopId: number,
+  params: GetPredictionsForStopApiV1PredictionsStopStopIdGetParams,
+  signal?: AbortSignal,
 ) => {
-      
-      
-      return customInstance<GetPredictionsForStopApiV1PredictionsStopStopIdGet200>(
-      {url: `/api/v1/predictions/stop/${stopId}`, method: 'GET',
-        params, signal
-    },
-      );
-    }
-  
+  return customInstance<GetPredictionsForStopApiV1PredictionsStopStopIdGet200>({
+    url: `/api/v1/predictions/stop/${stopId}`,
+    method: 'GET',
+    params,
+    signal,
+  });
+};
 
-
-
-export const getGetPredictionsForStopApiV1PredictionsStopStopIdGetQueryKey = (stopId?: number,
-    params?: GetPredictionsForStopApiV1PredictionsStopStopIdGetParams,) => {
-    return [
-    `/api/v1/predictions/stop/${stopId}`, ...(params ? [params]: [])
-    ] as const;
-    }
-
-    
-export const getGetPredictionsForStopApiV1PredictionsStopStopIdGetQueryOptions = <TData = Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>, TError = HTTPValidationError>(stopId: number,
-    params: GetPredictionsForStopApiV1PredictionsStopStopIdGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>, TError, TData>>, }
+export const getGetPredictionsForStopApiV1PredictionsStopStopIdGetQueryKey = (
+  stopId?: number,
+  params?: GetPredictionsForStopApiV1PredictionsStopStopIdGetParams,
 ) => {
+  return [`/api/v1/predictions/stop/${stopId}`, ...(params ? [params] : [])] as const;
+};
 
-const {query: queryOptions} = options ?? {};
+export const getGetPredictionsForStopApiV1PredictionsStopStopIdGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>,
+  TError = HTTPValidationError,
+>(
+  stopId: number,
+  params: GetPredictionsForStopApiV1PredictionsStopStopIdGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+) => {
+  const { query: queryOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetPredictionsForStopApiV1PredictionsStopStopIdGetQueryKey(stopId,params);
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetPredictionsForStopApiV1PredictionsStopStopIdGetQueryKey(stopId, params);
 
-  
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>
+  > = ({ signal }) => getPredictionsForStopApiV1PredictionsStopStopIdGet(stopId, params, signal);
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>> = ({ signal }) => getPredictionsForStopApiV1PredictionsStopStopIdGet(stopId,params, signal);
+  return { queryKey, queryFn, enabled: !!stopId, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
-      
+export type GetPredictionsForStopApiV1PredictionsStopStopIdGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>
+>;
+export type GetPredictionsForStopApiV1PredictionsStopStopIdGetQueryError = HTTPValidationError;
 
-      
-
-   return  { queryKey, queryFn, enabled: !!(stopId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type GetPredictionsForStopApiV1PredictionsStopStopIdGetQueryResult = NonNullable<Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>>
-export type GetPredictionsForStopApiV1PredictionsStopStopIdGetQueryError = HTTPValidationError
-
-
-export function useGetPredictionsForStopApiV1PredictionsStopStopIdGet<TData = Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>, TError = HTTPValidationError>(
- stopId: number,
-    params: GetPredictionsForStopApiV1PredictionsStopStopIdGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>, TError, TData>> & Pick<
+export function useGetPredictionsForStopApiV1PredictionsStopStopIdGet<
+  TData = Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>,
+  TError = HTTPValidationError,
+>(
+  stopId: number,
+  params: GetPredictionsForStopApiV1PredictionsStopStopIdGetParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>,
           TError,
           Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetPredictionsForStopApiV1PredictionsStopStopIdGet<TData = Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>, TError = HTTPValidationError>(
- stopId: number,
-    params: GetPredictionsForStopApiV1PredictionsStopStopIdGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useGetPredictionsForStopApiV1PredictionsStopStopIdGet<
+  TData = Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>,
+  TError = HTTPValidationError,
+>(
+  stopId: number,
+  params: GetPredictionsForStopApiV1PredictionsStopStopIdGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>,
           TError,
           Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetPredictionsForStopApiV1PredictionsStopStopIdGet<TData = Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>, TError = HTTPValidationError>(
- stopId: number,
-    params: GetPredictionsForStopApiV1PredictionsStopStopIdGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useGetPredictionsForStopApiV1PredictionsStopStopIdGet<
+  TData = Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>,
+  TError = HTTPValidationError,
+>(
+  stopId: number,
+  params: GetPredictionsForStopApiV1PredictionsStopStopIdGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary Get ridership predictions for a stop
  */
 
-export function useGetPredictionsForStopApiV1PredictionsStopStopIdGet<TData = Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>, TError = HTTPValidationError>(
- stopId: number,
-    params: GetPredictionsForStopApiV1PredictionsStopStopIdGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useGetPredictionsForStopApiV1PredictionsStopStopIdGet<
+  TData = Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>,
+  TError = HTTPValidationError,
+>(
+  stopId: number,
+  params: GetPredictionsForStopApiV1PredictionsStopStopIdGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getPredictionsForStopApiV1PredictionsStopStopIdGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getGetPredictionsForStopApiV1PredictionsStopStopIdGetQueryOptions(
+    stopId,
+    params,
+    options,
+  );
 
-  const queryOptions = getGetPredictionsForStopApiV1PredictionsStopStopIdGetQueryOptions(stopId,params,options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData>;
+  };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
-
-
-
-
 
 /**
  * Return the next N trams calling at `stop_id`.
@@ -453,189 +579,272 @@ Errors:
  * @summary Get next N upcoming trams at a stop (ETA + predicted load)
  */
 export const getEtaPredictionsApiV1PredictionsEtaGet = (
-    params: GetEtaPredictionsApiV1PredictionsEtaGetParams,
- signal?: AbortSignal
+  params: GetEtaPredictionsApiV1PredictionsEtaGetParams,
+  signal?: AbortSignal,
 ) => {
-      
-      
-      return customInstance<ETAResponse>(
-      {url: `/api/v1/predictions/eta`, method: 'GET',
-        params, signal
-    },
-      );
-    }
-  
+  return customInstance<ETAResponse>({
+    url: `/api/v1/predictions/eta`,
+    method: 'GET',
+    params,
+    signal,
+  });
+};
 
-
-
-export const getGetEtaPredictionsApiV1PredictionsEtaGetQueryKey = (params?: GetEtaPredictionsApiV1PredictionsEtaGetParams,) => {
-    return [
-    `/api/v1/predictions/eta`, ...(params ? [params]: [])
-    ] as const;
-    }
-
-    
-export const getGetEtaPredictionsApiV1PredictionsEtaGetQueryOptions = <TData = Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>, TError = HTTPValidationError>(params: GetEtaPredictionsApiV1PredictionsEtaGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>, TError, TData>>, }
+export const getGetEtaPredictionsApiV1PredictionsEtaGetQueryKey = (
+  params?: GetEtaPredictionsApiV1PredictionsEtaGetParams,
 ) => {
+  return [`/api/v1/predictions/eta`, ...(params ? [params] : [])] as const;
+};
 
-const {query: queryOptions} = options ?? {};
+export const getGetEtaPredictionsApiV1PredictionsEtaGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>,
+  TError = HTTPValidationError,
+>(
+  params: GetEtaPredictionsApiV1PredictionsEtaGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+) => {
+  const { query: queryOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetEtaPredictionsApiV1PredictionsEtaGetQueryKey(params);
+  const queryKey =
+    queryOptions?.queryKey ?? getGetEtaPredictionsApiV1PredictionsEtaGetQueryKey(params);
 
-  
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>
+  > = ({ signal }) => getEtaPredictionsApiV1PredictionsEtaGet(params, signal);
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>> = ({ signal }) => getEtaPredictionsApiV1PredictionsEtaGet(params, signal);
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
-      
+export type GetEtaPredictionsApiV1PredictionsEtaGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>
+>;
+export type GetEtaPredictionsApiV1PredictionsEtaGetQueryError = HTTPValidationError;
 
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type GetEtaPredictionsApiV1PredictionsEtaGetQueryResult = NonNullable<Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>>
-export type GetEtaPredictionsApiV1PredictionsEtaGetQueryError = HTTPValidationError
-
-
-export function useGetEtaPredictionsApiV1PredictionsEtaGet<TData = Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>, TError = HTTPValidationError>(
- params: GetEtaPredictionsApiV1PredictionsEtaGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>, TError, TData>> & Pick<
+export function useGetEtaPredictionsApiV1PredictionsEtaGet<
+  TData = Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>,
+  TError = HTTPValidationError,
+>(
+  params: GetEtaPredictionsApiV1PredictionsEtaGetParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>,
           TError,
           Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetEtaPredictionsApiV1PredictionsEtaGet<TData = Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>, TError = HTTPValidationError>(
- params: GetEtaPredictionsApiV1PredictionsEtaGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useGetEtaPredictionsApiV1PredictionsEtaGet<
+  TData = Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>,
+  TError = HTTPValidationError,
+>(
+  params: GetEtaPredictionsApiV1PredictionsEtaGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>,
           TError,
           Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetEtaPredictionsApiV1PredictionsEtaGet<TData = Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>, TError = HTTPValidationError>(
- params: GetEtaPredictionsApiV1PredictionsEtaGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useGetEtaPredictionsApiV1PredictionsEtaGet<
+  TData = Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>,
+  TError = HTTPValidationError,
+>(
+  params: GetEtaPredictionsApiV1PredictionsEtaGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary Get next N upcoming trams at a stop (ETA + predicted load)
  */
 
-export function useGetEtaPredictionsApiV1PredictionsEtaGet<TData = Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>, TError = HTTPValidationError>(
- params: GetEtaPredictionsApiV1PredictionsEtaGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useGetEtaPredictionsApiV1PredictionsEtaGet<
+  TData = Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>,
+  TError = HTTPValidationError,
+>(
+  params: GetEtaPredictionsApiV1PredictionsEtaGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getEtaPredictionsApiV1PredictionsEtaGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getGetEtaPredictionsApiV1PredictionsEtaGetQueryOptions(params, options);
 
-  const queryOptions = getGetEtaPredictionsApiV1PredictionsEtaGetQueryOptions(params,options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData>;
+  };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
-
-
-
-
 
 /**
  * Return metadata of the currently active model artifact.
  * @summary Get active model info
  */
-export const getActiveModelApiV1ModelsActiveGet = (
-    
- signal?: AbortSignal
-) => {
-      
-      
-      return customInstance<GetActiveModelApiV1ModelsActiveGet200>(
-      {url: `/api/v1/models/active`, method: 'GET', signal
-    },
-      );
-    }
-  
-
-
+export const getActiveModelApiV1ModelsActiveGet = (signal?: AbortSignal) => {
+  return customInstance<GetActiveModelApiV1ModelsActiveGet200>({
+    url: `/api/v1/models/active`,
+    method: 'GET',
+    signal,
+  });
+};
 
 export const getGetActiveModelApiV1ModelsActiveGetQueryKey = () => {
-    return [
-    `/api/v1/models/active`
-    ] as const;
-    }
+  return [`/api/v1/models/active`] as const;
+};
 
-    
-export const getGetActiveModelApiV1ModelsActiveGetQueryOptions = <TData = Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>, TError, TData>>, }
-) => {
+export const getGetActiveModelApiV1ModelsActiveGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>, TError, TData>
+  >;
+}) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetActiveModelApiV1ModelsActiveGetQueryKey();
 
-  const queryKey =  queryOptions?.queryKey ?? getGetActiveModelApiV1ModelsActiveGetQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>> = ({
+    signal,
+  }) => getActiveModelApiV1ModelsActiveGet(signal);
 
-  
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>> = ({ signal }) => getActiveModelApiV1ModelsActiveGet(signal);
+export type GetActiveModelApiV1ModelsActiveGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>
+>;
+export type GetActiveModelApiV1ModelsActiveGetQueryError = unknown;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type GetActiveModelApiV1ModelsActiveGetQueryResult = NonNullable<Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>>
-export type GetActiveModelApiV1ModelsActiveGetQueryError = unknown
-
-
-export function useGetActiveModelApiV1ModelsActiveGet<TData = Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>, TError, TData>> & Pick<
+export function useGetActiveModelApiV1ModelsActiveGet<
+  TData = Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>, TError, TData>
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>,
           TError,
           Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetActiveModelApiV1ModelsActiveGet<TData = Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useGetActiveModelApiV1ModelsActiveGet<
+  TData = Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>, TError, TData>
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>,
           TError,
           Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetActiveModelApiV1ModelsActiveGet<TData = Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useGetActiveModelApiV1ModelsActiveGet<
+  TData = Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary Get active model info
  */
 
-export function useGetActiveModelApiV1ModelsActiveGet<TData = Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useGetActiveModelApiV1ModelsActiveGet<
+  TData = Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getActiveModelApiV1ModelsActiveGet>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getGetActiveModelApiV1ModelsActiveGetQueryOptions(options);
 
-  const queryOptions = getGetActiveModelApiV1ModelsActiveGetQueryOptions(options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData>;
+  };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
-
-
-
-
 
 /**
  * Return metadata of every valid ML artifact on disk.
@@ -647,186 +856,369 @@ artifact, `active_model_id` is null and every model reports
  * @summary List all known ML artifacts
  */
 export const listModelsApiV1ModelsGet = (
-    params?: ListModelsApiV1ModelsGetParams,
- signal?: AbortSignal
+  params?: ListModelsApiV1ModelsGetParams,
+  signal?: AbortSignal,
 ) => {
-      
-      
-      return customInstance<ListModelsApiV1ModelsGet200>(
-      {url: `/api/v1/models`, method: 'GET',
-        params, signal
-    },
-      );
-    }
-  
+  return customInstance<ListModelsApiV1ModelsGet200>({
+    url: `/api/v1/models`,
+    method: 'GET',
+    params,
+    signal,
+  });
+};
 
+export const getListModelsApiV1ModelsGetQueryKey = (params?: ListModelsApiV1ModelsGetParams) => {
+  return [`/api/v1/models`, ...(params ? [params] : [])] as const;
+};
 
-
-export const getListModelsApiV1ModelsGetQueryKey = (params?: ListModelsApiV1ModelsGetParams,) => {
-    return [
-    `/api/v1/models`, ...(params ? [params]: [])
-    ] as const;
-    }
-
-    
-export const getListModelsApiV1ModelsGetQueryOptions = <TData = Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>, TError = HTTPValidationError>(params?: ListModelsApiV1ModelsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>, TError, TData>>, }
+export const getListModelsApiV1ModelsGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListModelsApiV1ModelsGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>, TError, TData>
+    >;
+  },
 ) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListModelsApiV1ModelsGetQueryKey(params);
 
-  const queryKey =  queryOptions?.queryKey ?? getListModelsApiV1ModelsGetQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>> = ({
+    signal,
+  }) => listModelsApiV1ModelsGet(params, signal);
 
-  
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>> = ({ signal }) => listModelsApiV1ModelsGet(params, signal);
+export type ListModelsApiV1ModelsGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>
+>;
+export type ListModelsApiV1ModelsGetQueryError = HTTPValidationError;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type ListModelsApiV1ModelsGetQueryResult = NonNullable<Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>>
-export type ListModelsApiV1ModelsGetQueryError = HTTPValidationError
-
-
-export function useListModelsApiV1ModelsGet<TData = Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>, TError = HTTPValidationError>(
- params: undefined |  ListModelsApiV1ModelsGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>, TError, TData>> & Pick<
+export function useListModelsApiV1ModelsGet<
+  TData = Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>,
+  TError = HTTPValidationError,
+>(
+  params: undefined | ListModelsApiV1ModelsGetParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>, TError, TData>
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>,
           TError,
           Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useListModelsApiV1ModelsGet<TData = Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>, TError = HTTPValidationError>(
- params?: ListModelsApiV1ModelsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useListModelsApiV1ModelsGet<
+  TData = Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListModelsApiV1ModelsGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>, TError, TData>
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>,
           TError,
           Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useListModelsApiV1ModelsGet<TData = Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>, TError = HTTPValidationError>(
- params?: ListModelsApiV1ModelsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useListModelsApiV1ModelsGet<
+  TData = Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListModelsApiV1ModelsGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary List all known ML artifacts
  */
 
-export function useListModelsApiV1ModelsGet<TData = Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>, TError = HTTPValidationError>(
- params?: ListModelsApiV1ModelsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useListModelsApiV1ModelsGet<
+  TData = Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>,
+  TError = HTTPValidationError,
+>(
+  params?: ListModelsApiV1ModelsGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listModelsApiV1ModelsGet>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getListModelsApiV1ModelsGetQueryOptions(params, options);
 
-  const queryOptions = getListModelsApiV1ModelsGetQueryOptions(params,options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData>;
+  };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
 
+/**
+ * Return sorted overload alerts for the upcoming ``window_min`` minutes.
+ * @summary Get Overload Alerts
+ */
+export const getOverloadAlertsApiV1InsightsAlertsGet = (
+  params?: GetOverloadAlertsApiV1InsightsAlertsGetParams,
+  signal?: AbortSignal,
+) => {
+  return customInstance<OverloadAlertsResponse>({
+    url: `/api/v1/insights/alerts`,
+    method: 'GET',
+    params,
+    signal,
+  });
+};
 
+export const getGetOverloadAlertsApiV1InsightsAlertsGetQueryKey = (
+  params?: GetOverloadAlertsApiV1InsightsAlertsGetParams,
+) => {
+  return [`/api/v1/insights/alerts`, ...(params ? [params] : [])] as const;
+};
 
+export const getGetOverloadAlertsApiV1InsightsAlertsGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof getOverloadAlertsApiV1InsightsAlertsGet>>,
+  TError = HTTPValidationError,
+>(
+  params?: GetOverloadAlertsApiV1InsightsAlertsGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getOverloadAlertsApiV1InsightsAlertsGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+) => {
+  const { query: queryOptions } = options ?? {};
 
+  const queryKey =
+    queryOptions?.queryKey ?? getGetOverloadAlertsApiV1InsightsAlertsGetQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getOverloadAlertsApiV1InsightsAlertsGet>>
+  > = ({ signal }) => getOverloadAlertsApiV1InsightsAlertsGet(params, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getOverloadAlertsApiV1InsightsAlertsGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
+
+export type GetOverloadAlertsApiV1InsightsAlertsGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getOverloadAlertsApiV1InsightsAlertsGet>>
+>;
+export type GetOverloadAlertsApiV1InsightsAlertsGetQueryError = HTTPValidationError;
+
+export function useGetOverloadAlertsApiV1InsightsAlertsGet<
+  TData = Awaited<ReturnType<typeof getOverloadAlertsApiV1InsightsAlertsGet>>,
+  TError = HTTPValidationError,
+>(
+  params: undefined | GetOverloadAlertsApiV1InsightsAlertsGetParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getOverloadAlertsApiV1InsightsAlertsGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getOverloadAlertsApiV1InsightsAlertsGet>>,
+          TError,
+          Awaited<ReturnType<typeof getOverloadAlertsApiV1InsightsAlertsGet>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useGetOverloadAlertsApiV1InsightsAlertsGet<
+  TData = Awaited<ReturnType<typeof getOverloadAlertsApiV1InsightsAlertsGet>>,
+  TError = HTTPValidationError,
+>(
+  params?: GetOverloadAlertsApiV1InsightsAlertsGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getOverloadAlertsApiV1InsightsAlertsGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getOverloadAlertsApiV1InsightsAlertsGet>>,
+          TError,
+          Awaited<ReturnType<typeof getOverloadAlertsApiV1InsightsAlertsGet>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useGetOverloadAlertsApiV1InsightsAlertsGet<
+  TData = Awaited<ReturnType<typeof getOverloadAlertsApiV1InsightsAlertsGet>>,
+  TError = HTTPValidationError,
+>(
+  params?: GetOverloadAlertsApiV1InsightsAlertsGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getOverloadAlertsApiV1InsightsAlertsGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+/**
+ * @summary Get Overload Alerts
+ */
+
+export function useGetOverloadAlertsApiV1InsightsAlertsGet<
+  TData = Awaited<ReturnType<typeof getOverloadAlertsApiV1InsightsAlertsGet>>,
+  TError = HTTPValidationError,
+>(
+  params?: GetOverloadAlertsApiV1InsightsAlertsGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getOverloadAlertsApiV1InsightsAlertsGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getGetOverloadAlertsApiV1InsightsAlertsGetQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
 
 /**
  * @summary Root
  */
-export const rootGet = (
-    
- signal?: AbortSignal
-) => {
-      
-      
-      return customInstance<RootGet200>(
-      {url: `/`, method: 'GET', signal
-    },
-      );
-    }
-  
-
-
+export const rootGet = (signal?: AbortSignal) => {
+  return customInstance<RootGet200>({ url: `/`, method: 'GET', signal });
+};
 
 export const getRootGetQueryKey = () => {
-    return [
-    `/`
-    ] as const;
-    }
+  return [`/`] as const;
+};
 
-    
-export const getRootGetQueryOptions = <TData = Awaited<ReturnType<typeof rootGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof rootGet>>, TError, TData>>, }
-) => {
+export const getRootGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof rootGet>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof rootGet>>, TError, TData>>;
+}) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getRootGetQueryKey();
 
-  const queryKey =  queryOptions?.queryKey ?? getRootGetQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof rootGet>>> = ({ signal }) =>
+    rootGet(signal);
 
-  
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof rootGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof rootGet>>> = ({ signal }) => rootGet(signal);
-
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof rootGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type RootGetQueryResult = NonNullable<Awaited<ReturnType<typeof rootGet>>>
-export type RootGetQueryError = unknown
-
+export type RootGetQueryResult = NonNullable<Awaited<ReturnType<typeof rootGet>>>;
+export type RootGetQueryError = unknown;
 
 export function useRootGet<TData = Awaited<ReturnType<typeof rootGet>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof rootGet>>, TError, TData>> & Pick<
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof rootGet>>, TError, TData>> &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof rootGet>>,
           TError,
           Awaited<ReturnType<typeof rootGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 export function useRootGet<TData = Awaited<ReturnType<typeof rootGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof rootGet>>, TError, TData>> & Pick<
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof rootGet>>, TError, TData>> &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof rootGet>>,
           TError,
           Awaited<ReturnType<typeof rootGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 export function useRootGet<TData = Awaited<ReturnType<typeof rootGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof rootGet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof rootGet>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary Root
  */
 
 export function useRootGet<TData = Awaited<ReturnType<typeof rootGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof rootGet>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof rootGet>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getRootGetQueryOptions(options);
 
-  const queryOptions = getRootGetQueryOptions(options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData>;
+  };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
-
-
-
-
-

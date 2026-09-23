@@ -1,0 +1,105 @@
+/**
+ * AlertCard -- one actionable dispatch alert.
+ *
+ * T-131: rendered by `AlertsPanel`, fed by
+ * `GET /api/v1/insights/alerts` (Orval hook
+ * `useGetOverloadAlertsApiV1InsightsAlertsGet`).
+ *
+ * Visual contract:
+ *   - Severity controls the border colour (red shades, escalating).
+ *   - "minutes until departure" is the primary CTA -- dispatcher acts on time.
+ *   - "Выпустить вагон" button is a placeholder wired to onRelease so the
+ *     parent can hook it into a real backend flow later (not in T-131 scope).
+ */
+
+import type { OverloadAlert } from '@/generated/api.schemas';
+
+export interface AlertCardProps {
+  readonly alert: OverloadAlert;
+  readonly onRelease?: (alert: OverloadAlert) => void;
+}
+
+const SEVERITY_COLORS: Readonly<Record<OverloadAlert['severity'], string>> = {
+  critical: '#7f1d1d', // darkred
+  warning: '#b91c1c', // red
+  info: '#ca8a04', // yellow-700 (text-on-bg, not background)
+};
+
+const SEVERITY_LABELS: Readonly<Record<OverloadAlert['severity'], string>> = {
+  critical: '🚨 КРИТИЧНО',
+  warning: '⚠️  Внимание',
+  info: 'ℹ️  Инфо',
+};
+
+function severityBackground(severity: OverloadAlert['severity']): string {
+  switch (severity) {
+    case 'critical':
+      return '#fecaca'; // red-200
+    case 'warning':
+      return '#fde68a'; // amber-200
+    case 'info':
+      return '#fef9c3'; // yellow-100
+  }
+}
+
+export function AlertCard({ alert, onRelease }: AlertCardProps): JSX.Element {
+  return (
+    <article
+      data-testid="alert-card"
+      data-severity={alert.severity}
+      style={{
+        border: `2px solid ${SEVERITY_COLORS[alert.severity]}`,
+        borderRadius: 6,
+        padding: 12,
+        background: severityBackground(alert.severity),
+        marginBottom: 8,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6,
+      }}
+    >
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <strong style={{ fontSize: 16 }}>🚋 Маршрут {alert.route_name}</strong>
+        <span
+          data-testid="severity-pill"
+          style={{
+            fontSize: 12,
+            padding: '2px 8px',
+            borderRadius: 999,
+            background: SEVERITY_COLORS[alert.severity],
+            color: '#fff',
+          }}
+        >
+          {SEVERITY_LABELS[alert.severity]}
+        </span>
+      </header>
+
+      <p style={{ margin: 0, fontSize: 14 }}>
+        Остановка <strong>#{alert.stop_id}</strong> · прогноз загрузки:{' '}
+        <strong>{alert.predicted_load_pct.toFixed(1)}%</strong>
+      </p>
+
+      <p data-testid="time-to-overload" style={{ margin: 0, fontSize: 14, color: '#1f2937' }}>
+        ⏱ Перегруз через <strong>{alert.time_to_overload_min} мин</strong>
+      </p>
+
+      <button
+        type="button"
+        onClick={() => onRelease?.(alert)}
+        style={{
+          marginTop: 4,
+          alignSelf: 'flex-start',
+          padding: '6px 12px',
+          background: '#1d4ed8',
+          color: '#fff',
+          border: 'none',
+          borderRadius: 4,
+          cursor: 'pointer',
+          fontSize: 13,
+        }}
+      >
+        🚌 Выпустить вагон
+      </button>
+    </article>
+  );
+}

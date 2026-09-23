@@ -7,12 +7,26 @@
 
 import { describe, expect, it } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { App } from './App';
 
+function renderWithProviders(ui: React.ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        // Avoid real network in tests.
+        retry: false,
+        gcTime: 0,
+      },
+    },
+  });
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
+
 describe('<App>', () => {
   it('renders a role-switcher with four role buttons', () => {
-    render(<App />);
+    renderWithProviders(<App />);
     expect(screen.getByRole('button', { name: /пассажир/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /диспетчер/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /аналитик/i })).toBeInTheDocument();
@@ -20,15 +34,19 @@ describe('<App>', () => {
   });
 
   it('defaults to the passenger role', () => {
-    render(<App />);
+    renderWithProviders(<App />);
     // The passenger-mode <h2> is rendered by default.
     expect(screen.getByRole('heading', { name: /пассажир/i })).toBeInTheDocument();
   });
 
-  it('switches to dispatcher placeholder when the dispatcher button is clicked', () => {
-    render(<App />);
+  it('switches to dispatcher panel when the dispatcher button is clicked', () => {
+    renderWithProviders(<App />);
     fireEvent.click(screen.getByRole('button', { name: /диспетчер/i }));
-    // The dispatcher placeholder shows a description referencing T-131.
-    expect(screen.getByText(/T-131/)).toBeInTheDocument();
+    // The dispatcher panel is async (TanStack Query kicks off a fetch),
+    // so we wait for the heading OR the loading state to confirm the panel
+    // mounted. Full data rendering requires MSW or a backend mock (T-131-1).
+    const heading = screen.queryByRole('heading', { name: /диспетчер.*алерты/i });
+    const loading = screen.queryByTestId('alerts-loading');
+    expect(heading ?? loading).toBeTruthy();
   });
 });
