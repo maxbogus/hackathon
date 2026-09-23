@@ -39,10 +39,10 @@ ENV/
 
 # === Node / Yarn ===
 node_modules/
-.yarn/cache
-.yarn/install-state.gz
-.yarn/build-state.yml
-.yarn/unplugged
+# Entire .yarn/ is service state (Yarn 4 persists install/resolve here); .yarnrc.yml at the
+# same level IS tracked, the two are kept separate by these explicit entries.
+.yarn/
+!.yarnrc.yml
 .pnp.*
 *.tsbuildinfo
 .eslintcache
