@@ -24,7 +24,7 @@ OUTPUT_PATH = REPO_ROOT / "docs" / "api" / "openapi.json"
 
 def main() -> int:
     try:
-        from app.main import app  # noqa: PLC0415 — lazy import for clearer error
+        from app.main import app
     except ImportError as e:
         print(f"❌ Failed to import FastAPI app: {e}", file=sys.stderr)
         print(
