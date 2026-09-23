@@ -1,0 +1,6 @@
+// This directory is required by @tanstack/router-vite-plugin (file-based
+// routing). When route files are added here, the plugin will auto-generate
+// the route tree. Until then we keep the directory present so vitest/vite
+// don't fail with ENOENT during configResolved.
+//
+// See vite.config.ts:11 and F-009 in docs/ledger/findings.jsonl.

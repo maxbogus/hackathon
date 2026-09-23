@@ -131,10 +131,7 @@ function crowded(next: ETAPrediction | undefined): Recommendation {
   };
 }
 
-function greyZone(
-  current: ETAPrediction,
-  next: ETAPrediction | undefined,
-): Recommendation {
+function greyZone(current: ETAPrediction, next: ETAPrediction | undefined): Recommendation {
   const nextIsWorthWaiting =
     next !== undefined &&
     next.eta_min <= GREY_ZONE_NEXT_ETA_MAX &&

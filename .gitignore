@@ -140,3 +140,6 @@ site/
 # === MCP / Cline кэши ===
 .mcp_config*
 .cline/
+
+# === TanStack Router (generated) ===
+apps/frontend/src/routeTree.gen.ts
