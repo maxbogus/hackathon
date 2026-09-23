@@ -4,19 +4,25 @@
  * T-129: the most important role for the hackathon demo is the *passenger* —
  * they are the primary beneficiary ("когда приедет и будет ли место?"). The
  * switcher in the header lets the dispatcher switch between the four
- * personas defined in the AGENTS.md / hackathon brief:
+ * personas defined in AGENTS.md / hackathon brief:
  *
  *   🧍 Пассажир  → <PassengerMode>
- *   🎛️ Диспетчер → placeholder (T-131 will build alerts)
+ *   🎛️ Диспетчер → <AlertsPanel>  (T-131)
  *   📊 Аналитик  → placeholder
  *   🔮 Планировщик → placeholder
  *
  * Routing is intentionally trivial (useState) until TanStack Router file-
- * based routes land (F-009 + T-129 follow-up). At that point we'll convert
- * the four buttons into <Link>s and lift the role into the URL.
+ * based routes land (T-135). At that point we convert the four buttons
+ * into <Link>s and lift the role into the URL.
+ *
+ * T-141: every user-facing string now flows through `t()` from
+ * `lib/i18n`, not JSX literals. The dispatch table maps `Role.id` to the
+ * corresponding `TKey` triple, keeping this file free of raw Russian copy.
  */
 
 import { useState } from 'react';
+
+import { t } from '@/lib/i18n/t';
 
 import { PassengerMode } from '@/pages/PassengerMode';
 import { AlertsPanel } from '@/components/Dispatcher/AlertsPanel';
@@ -26,34 +32,51 @@ type Role = 'passenger' | 'dispatcher' | 'analyst' | 'planner';
 interface RoleDef {
   id: Role;
   emoji: string;
-  label: string;
-  description: string;
+  /** TKey whose value is the role button label (any of the four). */
+  labelKey: 'app.rolePassenger.label' | 'app.roleDispatcher.label' | 'app.roleAnalyst.label' | 'app.rolePlanner.label';
+  /** TKey whose value is the description shown in the placeholder panel. */
+  descriptionKey:
+    | 'app.rolePassenger.description'
+    | 'app.roleDispatcher.description'
+    | 'app.roleAnalyst.description'
+    | 'app.rolePlanner.description';
+  /** TKey whose value is the "coming soon" body. Shared across roles. */
+  placeholderKey: 'app.rolePassenger.placeholder';
 }
 
+/**
+ * Static role table — pure data, no React. Labels and descriptions live in
+ * `lib/i18n`; adding a new role means: (a) add the role here, (b) add the
+ * three TKeys to `lib/i18n/ru-RU.ts`. TypeScript will flag any mismatch.
+ */
 const ROLES: ReadonlyArray<RoleDef> = [
   {
     id: 'passenger',
     emoji: '🧍',
-    label: 'Пассажир',
-    description: 'Когда приедет трамвай и будет ли место?',
+    labelKey: 'app.rolePassenger.label',
+    descriptionKey: 'app.rolePassenger.description',
+    placeholderKey: 'app.rolePassenger.placeholder',
   },
   {
     id: 'dispatcher',
     emoji: '🎛️',
-    label: 'Диспетчер',
-    description: 'Алерты по перегрузу (T-131)',
+    labelKey: 'app.roleDispatcher.label',
+    descriptionKey: 'app.roleDispatcher.description',
+    placeholderKey: 'app.rolePassenger.placeholder',
   },
   {
     id: 'analyst',
     emoji: '📊',
-    label: 'Аналитик',
-    description: 'Графики и метрики (T-035/037)',
+    labelKey: 'app.roleAnalyst.label',
+    descriptionKey: 'app.roleAnalyst.description',
+    placeholderKey: 'app.rolePassenger.placeholder',
   },
   {
     id: 'planner',
     emoji: '🔮',
-    label: 'Планировщик',
-    description: 'Monte Carlo сценарии (T-036)',
+    labelKey: 'app.rolePlanner.label',
+    descriptionKey: 'app.rolePlanner.description',
+    placeholderKey: 'app.rolePassenger.placeholder',
   },
 ];
 
@@ -61,12 +84,10 @@ function PlaceholderPanel({ role }: { role: RoleDef }): JSX.Element {
   return (
     <section style={{ padding: '16px 24px' }}>
       <h2 style={{ marginTop: 0 }}>
-        {role.emoji} {role.label}
+        {role.emoji} {t(role.labelKey)}
       </h2>
-      <p style={{ color: '#666' }}>{role.description}</p>
-      <p style={{ color: '#999', fontSize: 13 }}>
-        Этот режим появится в следующих тикетах. Сейчас готов только режим «Пассажир».
-      </p>
+      <p style={{ color: '#666' }}>{t(role.descriptionKey)}</p>
+      <p style={{ color: '#999', fontSize: 13 }}>{t(role.placeholderKey)}</p>
     </section>
   );
 }
@@ -90,12 +111,15 @@ export function App(): JSX.Element {
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
         }}
       >
-        <h1 style={{ margin: 0, fontSize: 20 }}>Transit-AI</h1>
+        <h1 style={{ margin: 0, fontSize: 20 }}>{t('app.title')}</h1>
         <p style={{ margin: '4px 0 12px', color: '#cbd5e1', fontSize: 13 }}>
-          Хакатон: прогноз загрузки трамваев Москвы
+          {t('app.tagline')}
         </p>
 
-        <nav aria-label="Переключатель ролей" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <nav
+          aria-label={t('app.navAriaLabel')}
+          style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}
+        >
           {ROLES.map((r) => {
             const isActive = r.id === role;
             return (
@@ -116,7 +140,7 @@ export function App(): JSX.Element {
                   fontWeight: isActive ? 600 : 400,
                 }}
               >
-                {r.emoji} {r.label}
+                {r.emoji} {t(r.labelKey)}
               </button>
             );
           })}

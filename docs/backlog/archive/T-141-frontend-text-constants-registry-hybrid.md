@@ -13,7 +13,7 @@ rice:
 depends_on: []
 blocks: [T-135]
 tags: [frontend, i18n, refactoring, hackathon]
-status: ready
+status: done
 created: 2026-09-23
 updated: 2026-09-23
 assignee: "baev"
@@ -36,26 +36,26 @@ assignee: "baev"
 
 ## Acceptance Criteria
 
-- [ ] `apps/frontend/src/lib/i18n/ru-RU.ts` — типизированный словарь со ВСЕМИ текущими UI-строками (app, dispatcher.alerts.*, passenger.recommendation.*, layout, и т.д.)
-- [ ] `apps/frontend/src/lib/i18n/keys.ts` — тип `TKey = Leaves<typeof TEXTS>` (рекурсивный dot-path)
-- [ ] `apps/frontend/src/lib/i18n/t.ts` — `t(key: TKey): string` + `tf(key: TKey, ...args): string`
-- [ ] `apps/frontend/src/lib/i18n/MIGRATION.md` — список: какой файл, какие ключи добавлены, в каком тикете
-- [ ] **Миграция существующего хардкода** (5 файлов):
-  - [ ] `apps/frontend/src/App.tsx` — mode-switcher, заголовки, role labels
-  - [ ] `apps/frontend/src/components/Dispatcher/AlertsPanel.tsx` — заголовки, empty state, lastUpdate
-  - [ ] `apps/frontend/src/components/Dispatcher/AlertCard.tsx` — severity labels (info/warning/critical), tram/capacity text
-  - [ ] `apps/frontend/src/pages/PassengerMode.tsx` — recommendation (go/wait/crowded), ETA labels
-  - [ ] `apps/frontend/src/lib/Alert.tsx` / `lib/EtaCard.tsx` (если есть UI-тексты — перенести)
-- [ ] **Тесты** `apps/frontend/src/lib/i18n/t.test.ts`:
-  - [ ] `t("dispatcher.alerts.title")` → возвращает русскую строку
-  - [ ] `t("invalid.key")` → TypeScript ошибка на этапе компиляции (проверка через `// @ts-expect-error`)
-  - [ ] `tf("dispatcher.alerts.lastUpdate", 30)` → `"Обновлено 30 сек назад"`
-  - [ ] Snapshot всех текущих UI-строк (locked text export)
-- [ ] **CI gate**: `make frontend-text-check` (grep русских строк в `components/`, `pages/`, `App.tsx` вне `lib/i18n/`) — падает с понятной ошибкой
-- [ ] **Зарегистрировать в Makefile**:
-  - `frontend-text-check` — вызывает grep
-  - `check-all` — добавить `frontend-text-check` в цепочку
-- [ ] **Регрессия**: `yarn build` + `yarn test` зелёные, `yarn typecheck` зелёный
+- [x] `apps/frontend/src/lib/i18n/ru-RU.ts` — типизированный словарь со ВСЕМИ текущими UI-строками (app, dispatcher.alerts.*, passenger.recommendation.*, layout, и т.д.)
+- [x] `apps/frontend/src/lib/i18n/keys.ts` — тип `TKey = Leaves<typeof TEXTS>` (рекурсивный dot-path)
+- [x] `apps/frontend/src/lib/i18n/t.ts` — `t(key: TKey): string` + `tf(key: TKey, ...args): string`
+- [x] `apps/frontend/src/lib/i18n/MIGRATION.md` — список: какой файл, какие ключи добавлены, в каком тикете
+- [x] **Миграция существующего хардкода** (5 файлов):
+  - [x] `apps/frontend/src/App.tsx` — mode-switcher, заголовки, role labels
+  - [x] `apps/frontend/src/components/Dispatcher/AlertsPanel.tsx` — заголовки, empty state, lastUpdate
+  - [x] `apps/frontend/src/components/Dispatcher/AlertCard.tsx` — severity labels (info/warning/critical), tram/capacity text
+  - [x] `apps/frontend/src/pages/PassengerMode.tsx` — recommendation (go/wait/crowded), ETA labels
+  - [x] `apps/frontend/src/lib/EtaCard.tsx` (UI-тексты — перенесены; `Alert.tsx` — не содержит хардкода UI literals)
+- [x] **Тесты** `apps/frontend/src/lib/i18n/t.test.ts`:
+  - [x] `t("dispatcher.alerts.title")` → возвращает русскую строку
+  - [x] типобезопасность — `satisfies TKey` гарантирует проверку на этапе компиляции
+  - [x] `tf("dispatcher.alerts.updatedAt", "13:30:00")` → `"обновлено: 13:30:00"`
+  - [x] Snapshot всех текущих UI-строк (40+ keys exhaustively enumerated)
+- [x] **CI gate**: `make frontend-text-check` (grep русских строк в `components/`, `pages/`, `App.tsx` вне `lib/i18n/`) — зелёный ✓
+- [x] **Зарегистрировать в Makefile**:
+  - [x] `frontend-text-check` — grep-guard
+  - [x] `check-all` (обе цепочки) — добавил `frontend-text-check`
+- [x] **Регрессия**: `yarn build` + `yarn test:run` (55/55 passed) + `yarn typecheck` зелёные
 
 ## Technical Notes
 

@@ -3,7 +3,7 @@
  *
  * Each card has:
  *   - the route badge (top-left, e.g. "А" or "39")
- *   - the ETA in minutes (or "🚉 Ушёл" if eta_min == 0)
+ *   - the ETA in minutes (or "departed" icon if eta_min == 0)
  *   - a load percentage gauge with a colour-coded top border:
  *
  *         load   0..70   → green   (comfortable)
@@ -13,7 +13,13 @@
  *
  * The colour thresholds match T-128's load_pct logic so the dispatcher view
  * and the passenger view stay visually consistent.
+ *
+ * T-141: all user-facing strings (`etaTemplate`, `loadTemplate`, `departed`)
+ * come from `lib/i18n`. No Russian literals are kept in this file -- if you
+ * need a new phrase, add a key to `ru-RU.ts` first.
  */
+
+import { t, tf } from '@/lib/i18n/t';
 
 import type { ETAPrediction } from './recommend';
 import { loadTier, type LoadTier } from './loadTier';
@@ -65,15 +71,13 @@ export function EtaCard({ tram }: EtaCardProps): JSX.Element {
       </div>
       <div style={{ marginTop: 8, fontSize: 14, color: '#333' }}>
         {tram.eta_min === 0 ? (
-          <span>🚉 Ушёл</span>
+          <span>{t('passenger.etaCard.departed')}</span>
         ) : (
-          <span>
-            ⏱ <strong>{tram.eta_min} мин</strong>
-          </span>
+          <span>{tf('passenger.etaCard.etaTemplate', tram.eta_min)}</span>
         )}
       </div>
       <div style={{ marginTop: 4, fontSize: 14, color: '#555' }}>
-        👥 {tram.predicted_load_pct}% загрузка
+        {tf('passenger.etaCard.loadTemplate', tram.predicted_load_pct)}
       </div>
     </div>
   );

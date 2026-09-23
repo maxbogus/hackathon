@@ -4,11 +4,17 @@
  * T-131: replaces the `PlaceholderPanel` for the dispatcher role.
  *
  * Polling: TanStack Query's `refetchInterval` does the same job as the
- * `streamlit-autorefresh` snippet in the original AC. We log a soft warning
- * (development only) when the hook is unmounted mid-flight.
+ * `streamlit-autorefresh` snippet in the original AC.
+ *
+ * T-141: every user-facing string is looked up through `t()` / `tf()` from
+ * `lib/i18n`. The format-relative time stamp and the window suffix are
+ * assembled lazily so an unmount mid-fetch can't reach the DOM with stale
+ * text. No Russian literal leaks into this file.
  */
 
 import { useCallback } from 'react';
+
+import { t, tf } from '@/lib/i18n/t';
 
 import { useGetOverloadAlertsApiV1InsightsAlertsGet } from '@/generated/api';
 
@@ -16,11 +22,12 @@ import { AlertCard } from './AlertCard';
 import type { OverloadAlert } from '@/generated/api.schemas';
 
 const REFETCH_INTERVAL_MS = 60_000;
+const DEFAULT_WINDOW_MIN = 30;
 
 export function AlertsPanel(): JSX.Element {
   const { data, isLoading, isError, error, refetch, isFetching } =
     useGetOverloadAlertsApiV1InsightsAlertsGet(
-      { window_min: 30 },
+      { window_min: DEFAULT_WINDOW_MIN },
       { query: { refetchInterval: REFETCH_INTERVAL_MS } },
     );
 
@@ -33,15 +40,17 @@ export function AlertsPanel(): JSX.Element {
   }, []);
 
   if (isLoading) {
-    return <p data-testid="alerts-loading">Загрузка алертов…</p>;
+    return <p data-testid="alerts-loading">{t('dispatcher.alerts.loading')}</p>;
   }
 
   if (isError) {
     return (
       <section data-testid="alerts-error" role="alert">
-        <p>Не удалось загрузить алерты: {String(error)}</p>
+        <p>
+          {t('dispatcher.alerts.errorPrefix')} {String(error)}
+        </p>
         <button type="button" onClick={() => refetch()}>
-          Повторить
+          {t('dispatcher.alerts.retry')}
         </button>
       </section>
     );
@@ -49,7 +58,11 @@ export function AlertsPanel(): JSX.Element {
 
   const alerts = data?.alerts ?? [];
   const generatedAt = data?.generated_at ? new Date(data.generated_at) : null;
-  const windowMin = data?.window_min ?? 30;
+  const windowMin = data?.window_min ?? DEFAULT_WINDOW_MIN;
+  const generatedAtLabel = generatedAt?.toLocaleTimeString() ?? t('dispatcher.alerts.unknownTime');
+  const updatedText = isFetching
+    ? t('dispatcher.alerts.fetching')
+    : tf('dispatcher.alerts.updatedAt', generatedAtLabel);
 
   return (
     <section style={{ padding: '16px 24px' }}>
@@ -61,12 +74,10 @@ export function AlertsPanel(): JSX.Element {
           marginBottom: 12,
         }}
       >
-        <h2 style={{ margin: 0 }}>🎛️ Диспетчер · алерты перегруза</h2>
+        <h2 style={{ margin: 0 }}>{t('dispatcher.alerts.title')}</h2>
         <span style={{ fontSize: 12, color: '#6b7280' }}>
-          {isFetching ? 'обновление…' : `обновлено: ${generatedAt?.toLocaleTimeString() ?? '—'}`}
-          {' · горизонт '}
-          {windowMin}
-          {' мин'}
+          {updatedText}
+          {tf('dispatcher.alerts.windowSuffix', windowMin)}
         </span>
       </header>
 
@@ -81,7 +92,7 @@ export function AlertsPanel(): JSX.Element {
             color: '#065f46',
           }}
         >
-          ✅ Всё в норме на ближайшие {windowMin} мин.
+          {tf('dispatcher.alerts.emptyState', windowMin)}
         </p>
       ) : (
         <div data-testid="alerts-list">

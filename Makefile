@@ -137,6 +137,21 @@ api-check: ## Validate OpenAPI is up-to-date with backend code
 fe-gen: ## Generate TS types via Orval → apps/frontend/src/generated/
 	cd apps/frontend && $(YARN) orval --config orval.config.ts
 	@printf "\033[32m✓ TS types generated\033[0m\n"
+lint-frontend-text: ## Grep guard: forbid hardcoded Cyrillic UI strings outside lib/i18n
+	@printf "\033[36m→ Checking for hardcoded Cyrillic in apps/frontend/src...\033[0m\n"
+	@if grep -rEn '"[А-ЯЁа-яё][А-ЯЁа-яё]+[ А-ЯЁа-яё]*"' \
+		apps/frontend/src/components/ apps/frontend/src/pages/ apps/frontend/src/App.tsx 2>/dev/null \
+		| grep -v 'lib/i18n/' \
+		| grep -v '\.test\.' \
+		| grep -v '^\s*\*' \
+		| grep -v '// ' ; then \
+		echo "\033[31m✗ Hardcoded Cyrillic UI strings found -- use t() from lib/i18n (T-141, D-014)\033[0m" ; \
+		exit 1 ; \
+	else \
+		echo "\033[32m✓ No hardcoded UI strings\033[0m" ; \
+	fi
+
+frontend-text-check: lint-frontend-text ## Alias
 
 # ---------------------------------------------------------------------------
 # QUALITY
@@ -164,7 +179,7 @@ test-unit: test ## Alias for test
 test-int: ## Integration tests (requires `make up` first)
 	$(UV) run pytest apps/backend/tests -m integration -v --no-cov
 
-check-all: lint typecheck test api-check ledger-check ## Run all checks (CI gate)
+check-all: lint typecheck test api-check ledger-check frontend-text-check ## Run all checks (CI gate)
 
 # ---------------------------------------------------------------------------
 # KNOWLEDGE CAPTURE
@@ -284,4 +299,4 @@ run-benchmark: ## Generic benchmark entry (delegates to ml.transit_ai.benchmark.
 # CI gate (расширенный): все проверки включая структурный анализ
 # ---------------------------------------------------------------------------
 
-check-all: lint typecheck test api-check ledger-check arch-dbml-check pyscn-compare ## Run all checks (CI gate)
+check-all: lint typecheck test api-check ledger-check frontend-text-check arch-dbml-check pyscn-compare ## Run all checks (CI gate)

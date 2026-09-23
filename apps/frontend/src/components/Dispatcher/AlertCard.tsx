@@ -8,9 +8,15 @@
  * Visual contract:
  *   - Severity controls the border colour (red shades, escalating).
  *   - "minutes until departure" is the primary CTA -- dispatcher acts on time.
- *   - "Выпустить вагон" button is a placeholder wired to onRelease so the
+ *   - The release-tram button is a placeholder wired to onRelease so the
  *     parent can hook it into a real backend flow later (not in T-131 scope).
+ *
+ * T-141: every user-facing string lives in `lib/i18n/ru-RU.ts`. Severity
+ * labels and copy are resolved at render time via `t()`/`tf()` -- no
+ * Russian literals leak into this file.
  */
+
+import { t, tf } from '@/lib/i18n/t';
 
 import type { OverloadAlert } from '@/generated/api.schemas';
 
@@ -25,11 +31,15 @@ const SEVERITY_COLORS: Readonly<Record<OverloadAlert['severity'], string>> = {
   info: '#ca8a04', // yellow-700 (text-on-bg, not background)
 };
 
-const SEVERITY_LABELS: Readonly<Record<OverloadAlert['severity'], string>> = {
-  critical: '🚨 КРИТИЧНО',
-  warning: '⚠️  Внимание',
-  info: 'ℹ️  Инфо',
-};
+/**
+ * TKeys for the three severity pills. Mapping colour to key keeps the
+ * lookup const-assertable, which `TKey`'s unions rely on.
+ */
+const SEVERITY_LABEL_KEYS = {
+  critical: 'dispatcher.alerts.card.severityCritical',
+  warning: 'dispatcher.alerts.card.severityWarning',
+  info: 'dispatcher.alerts.card.severityInfo',
+} as const satisfies Readonly<Record<OverloadAlert['severity'], `dispatcher.alerts.card.severity${'Critical' | 'Warning' | 'Info'}`>>;
 
 function severityBackground(severity: OverloadAlert['severity']): string {
   switch (severity) {
@@ -59,7 +69,7 @@ export function AlertCard({ alert, onRelease }: AlertCardProps): JSX.Element {
       }}
     >
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <strong style={{ fontSize: 16 }}>🚋 Маршрут {alert.route_name}</strong>
+        <strong style={{ fontSize: 16 }}>{tf('dispatcher.alerts.card.routeLabel', alert.route_name)}</strong>
         <span
           data-testid="severity-pill"
           style={{
@@ -70,17 +80,18 @@ export function AlertCard({ alert, onRelease }: AlertCardProps): JSX.Element {
             color: '#fff',
           }}
         >
-          {SEVERITY_LABELS[alert.severity]}
+          {t(SEVERITY_LABEL_KEYS[alert.severity])}
         </span>
       </header>
 
       <p style={{ margin: 0, fontSize: 14 }}>
-        Остановка <strong>#{alert.stop_id}</strong> · прогноз загрузки:{' '}
+        {t('dispatcher.alerts.card.stopPrefix')} <strong>#{alert.stop_id}</strong> ·{' '}
+        {t('dispatcher.alerts.card.loadPrefix')}{' '}
         <strong>{alert.predicted_load_pct.toFixed(1)}%</strong>
       </p>
 
       <p data-testid="time-to-overload" style={{ margin: 0, fontSize: 14, color: '#1f2937' }}>
-        ⏱ Перегруз через <strong>{alert.time_to_overload_min} мин</strong>
+        {tf('dispatcher.alerts.card.timeToOverload', alert.time_to_overload_min)}
       </p>
 
       <button
@@ -98,7 +109,7 @@ export function AlertCard({ alert, onRelease }: AlertCardProps): JSX.Element {
           fontSize: 13,
         }}
       >
-        🚌 Выпустить вагон
+        {t('dispatcher.alerts.card.releaseButton')}
       </button>
     </article>
   );

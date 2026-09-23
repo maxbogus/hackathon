@@ -1,14 +1,14 @@
 # STATUS.md — критический путь
 
-_Обновлено: 2026-09-23 (T-141 + scope-down T-115). Добавлен T-141 (text registry hybrid t(key)), скорректирован T-115 (убран English README). Зафиксировано: D-014 (hybrid text registry без react-i18next на хакатоне). Все 24 ready RICE-валидны (F-012 fix applies). Очередь: T-115 (README), T-141 (text registry), T-137 (checklist)._
+_Обновлено: 2026-09-23 (T-141 done). Реализован text registry hybrid t(key) — 40+ ключей, 5 файлов мигрированы, CI-gate зелёный. Следующая цель — T-135 (TanStack Router URL routing, теперь можно)._
 
 ## Сводка
 
 | Счётчик | Значение |
 |---|---|
-| Тикетов в `archive/` (done за всё время) | **37** |
-| Тикетов в `tickets/`: | **25** |
-| &nbsp;&nbsp;• `ready` (готовы к старту) | **24** |
+| Тикетов в `archive/` (done за всё время) | **38** (+T-141) |
+| Тикетов в `tickets/`: | **24** |
+| &nbsp;&nbsp;• `ready` (готовы к старту) | **23** |
 | &nbsp;&nbsp;• `backlog` (отложены) | **0** |
 | &nbsp;&nbsp;• `in-progress` | **0** |
 | Решений в ledger (`decisions.jsonl`) | **14** (D-001..D-014) |
@@ -18,13 +18,13 @@ _Обновлено: 2026-09-23 (T-141 + scope-down T-115). Добавлен T-1
 
 | ID | RICE | Усилие | Что |
 |---|---|---|---|
-| **T-115** | 10.00 | 1h | README: добавить English version, раздел Handover, починить ссылки |
+| **T-115** | 10.00 | 1h | README Russian + Handover (scope-down: без English) |
 | **T-137** | 6.00 | 2h | docs/HACKATHON_CHECKLIST.md (R8 submission, P0) |
-| **T-135** | 6.00 | 2h | TanStack Router: role-switcher → URL (зависит от T-129) |
+| **T-135** | 6.00 | 2h | TanStack Router: role-switcher → URL (теперь можно — T-141 DONE) |
 | **T-125** | 5.40 | 2h | Feature engineering: weather + traffic фичи |
 | **T-122** | 2.70 | 4h | MapProvider + LeafletMap + YandexMap |
 
-> Цепочка `T-127 → T-128 → T-129 → T-130 → T-131` — все архивированы. Демо жюри готово на backend+frontend стеке: ETA + capacity + alerts.
+> Цепочка `T-127 → T-128 → T-129 → T-130 → T-131 → T-141` — все архивированы. Демо жюри готово: ETA + capacity + alerts + text registry.
 
 ## Backlog (отложены)
 
@@ -32,11 +32,12 @@ _Пусто — все тикеты либо в `ready`, либо в `archive`. 
 
 ## В работе (in-progress)
 
-_Пусто._
+_Пусто (готовы брать T-115 / T-135 / T-137 / T-125)._
 
 ## Последние архивированные (для контекста)
 
-- T-131 — dispatcher overload alerts (`/insights/alerts` + AlertsPanel + 21+3 теста) ✨ новый
+- **T-141** — frontend text registry hybrid t(key) (`apps/frontend/src/lib/i18n/` × 5 файлов мигрированы, 17 i18n тестов, 55/55 frontend зелёные, `make frontend-text-check` gate ✨ новый
+- T-131 — dispatcher overload alerts (`/insights/alerts` + AlertsPanel + 21+3 теста)
 - T-128 — capacity-aware load_pct (TRAM_CAPACITY, compute_load_pct, load_color, +20 тестов)
 - T-127 — backend GET `/api/v1/predictions/eta?stop_id=X&n=3` (1h, 23 теста)
 - T-129 — frontend режим «Пассажир» — React/Vite UI для ETA + load + рекомендация (1h)
