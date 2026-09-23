@@ -2,13 +2,14 @@
 
 Records every UI-string migration away from JSX literals into the `TEXTS`
 dictionary (T-141). Read this when:
-  - Adding a new component with user-visible text.
-  - Wondering whether `t("...")` or `tf("...", n)` is the right call.
-  - Verifying the CI gate (`make frontend-text-check`) won't false-positive.
 
-| Ticket | File(s) | Keys added | Notes |
-|---|---|---|---|
-| T-141  | App.tsx, components/Dispatcher/{AlertsPanel,AlertCard}.tsx, pages/PassengerMode.tsx, lib/EtaCard.tsx | app.*, dispatcher.alerts.*, passenger.*, common.minutesShort | Initial migration — 30+ keys, hybrid `t()` lookup introduced. `recommend.ts` left as pure logic (data, not UI literal). |
+- Adding a new component with user-visible text.
+- Wondering whether `t("...")` or `tf("...", n)` is the right call.
+- Verifying the CI gate (`make frontend-text-check`) won't false-positive.
+
+| Ticket | File(s)                                                                                              | Keys added                                                   | Notes                                                                                                                   |
+| ------ | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| T-141  | App.tsx, components/Dispatcher/{AlertsPanel,AlertCard}.tsx, pages/PassengerMode.tsx, lib/EtaCard.tsx | app._, dispatcher.alerts._, passenger.*, common.minutesShort | Initial migration — 30+ keys, hybrid `t()` lookup introduced. `recommend.ts` left as pure logic (data, not UI literal). |
 
 ## Conventions
 

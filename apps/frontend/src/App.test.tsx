@@ -1,17 +1,23 @@
 /**
  * T-129: smoke test for the role-switcher in App.tsx.
  *
- * Covers AC-1 (role-switcher with four buttons) at a minimal level. The
- * deeper <PassengerMode> behaviour is covered by PassengerMode.test.tsx.
+ * T-135: the role-switcher moved to URL-based routing. The four role
+ * entries are now <Link>s (role="link") rendered by the root layout,
+ * and <App> mounts a <RouterProvider>. We assert the router renders the
+ * passenger panel by default at "/".
+ *
+ * Covers AC-1 (role-switcher with four entries) at a minimal level. The
+ * deeper <PassengerMode> behaviour is covered by PassengerMode.test.tsx;
+ * per-route outlet behaviour is covered by __root.test.tsx.
  */
 
 import { describe, expect, it } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { App } from './App';
 
-function renderWithProviders(ui: React.ReactElement) {
+function renderWithProviders(ui: React.ReactElement): void {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -21,32 +27,22 @@ function renderWithProviders(ui: React.ReactElement) {
       },
     },
   });
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
 describe('<App>', () => {
-  it('renders a role-switcher with four role buttons', () => {
+  it('renders a role-switcher with four role links', async () => {
     renderWithProviders(<App />);
-    expect(screen.getByRole('button', { name: /пассажир/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /диспетчер/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /аналитик/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /планировщик/i })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: /пассажир/i })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: /диспетчер/i })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: /аналитик/i })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: /планировщик/i })).toBeInTheDocument();
   });
 
-  it('defaults to the passenger role', () => {
+  it('redirects "/" to /passenger and renders the passenger panel', async () => {
     renderWithProviders(<App />);
-    // The passenger-mode <h2> is rendered by default.
-    expect(screen.getByRole('heading', { name: /пассажир/i })).toBeInTheDocument();
-  });
-
-  it('switches to dispatcher panel when the dispatcher button is clicked', () => {
-    renderWithProviders(<App />);
-    fireEvent.click(screen.getByRole('button', { name: /диспетчер/i }));
-    // The dispatcher panel is async (TanStack Query kicks off a fetch),
-    // so we wait for the heading OR the loading state to confirm the panel
-    // mounted. Full data rendering requires MSW or a backend mock (T-131-1).
-    const heading = screen.queryByRole('heading', { name: /диспетчер.*алерты/i });
-    const loading = screen.queryByTestId('alerts-loading');
-    expect(heading ?? loading).toBeTruthy();
+    expect(
+      await screen.findByRole('heading', { name: /пассажир.*ближайшие трамваи/i }),
+    ).toBeInTheDocument();
   });
 });

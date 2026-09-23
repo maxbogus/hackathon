@@ -13,11 +13,89 @@ rice:
 depends_on: [T-129]
 blocks: []
 tags: [frontend, routing, tanstack, beneficiary, hackathon, mvp]
-status: ready
+status: done
 created: 2026-09-23
 updated: 2026-09-23
 assignee: "baev"
 ---
+
+## Acceptance Criteria
+
+- [x] Установлен `yarn workspace @transit-ai/frontend add @tanstack/react-router` (всё уже было от F-009)
+- [x] Установлен `@tanstack/router-plugin` для Vite (всё уже было от F-009)
+- [x] В `vite.config.ts` подключён router plugin (уже было)
+- [x] Создан `apps/frontend/src/routes/__root.tsx` (уже было для TanStack Router plugin, F-009)
+- [x] Созданы 5 file-based маршрутов: `passenger.tsx`, `dispatcher.tsx`, `analyst.tsx`, `planner.tsx`, `index.tsx` (redirect → /passenger)
+- [x] `App.tsx` переписан: вместо `useState<Role>` — `<RouterProvider>` с module-level singleton router
+- [x] `routes/__root.tsx` теперь содержит header + `<Outlet/>` + `useRouterState` для active role
+- [x] URL `/passenger` открывает PassengerMode по умолчанию (redirect с `/`)
+- [x] URL `/dispatcher` открывает AlertsPanel
+- [x] URL `/analyst`, `/planner` открывают PlaceholderPanel
+- [x] Browser back/forward работает корректно (URL = state)
+- [x] При перезагрузке страницы остаёмся на текущей роли (URL — источник истины)
+- [x] `routeTree.gen.ts` регенерируется автоматически (router plugin)
+- [x] Новый тест `apps/frontend/src/routes/-__root.test.tsx` — 6 тестов: nav links, aria-pressed, outlet rendering
+- [x] `apps/frontend/src/App.test.tsx` обновлён — проверяет навигацию через `<Link>` (2 теста)
+- [x] `yarn typecheck` без ошибок
+- [x] `yarn lint` (ESLint + Prettier) без ошибок
+- [x] `yarn build` собирает (200 modules, 1.29s)
+- [x] `yarn test:run` — 60/60 passed (было 55, +6 новых тестов)
+- [x] `make frontend-text-check` (CI gate от D-014) — ✓ clean
+
+## Implementation summary
+
+**Новые файлы (7):**
+- `apps/frontend/src/routes/index.tsx` — redirect `/` → `/passenger`
+- `apps/frontend/src/routes/passenger.tsx` — `<PassengerMode />`
+- `apps/frontend/src/routes/dispatcher.tsx` — `<AlertsPanel />`
+- `apps/frontend/src/routes/analyst.tsx` — `<PlaceholderPanel role="analyst" />`
+- `apps/frontend/src/routes/planner.tsx` — `<PlaceholderPanel role="planner" />`
+- `apps/frontend/src/components/Layout/RoleSwitcherNav.tsx` — `<Link>`-based nav
+- `apps/frontend/src/components/Layout/PlaceholderPanel.tsx` — вынесен из App.tsx
+- `apps/frontend/src/routes/-__root.test.tsx` — 6 тестов (префикс `-` чтобы router plugin не пытался его сканировать)
+- `apps/frontend/src/lib/roles.ts` — pure-data: ROLES, RoleDef, roleFromPathname, RoleId
+
+**Изменённые файлы (4):**
+- `apps/frontend/src/App.tsx` — переписан: `<RouterProvider>` + module-level singleton router
+- `apps/frontend/src/routes/__root.tsx` — расширен: header + nav + `<Outlet/>`
+- `apps/frontend/src/App.test.tsx` — обновлён под `<Link>` (2 теста)
+- `apps/frontend/src/test/setup.ts` — подавлен jsdom scrollTo warning (F-014)
+
+**Авто-генерируемые:**
+- `apps/frontend/src/routeTree.gen.ts` — регенерирован vite plugin (200 строк, все 5 маршрутов + типы)
+
+## Architecture decisions
+
+- **Module-level singleton router** в `App.tsx` — StrictMode-safe, не сбрасывает navigation stack.
+- **`defaultPreload: 'intent'`** — на демо для жюри: при hover на `<Link>` данные пред-загружаются. Бесплатный UX win.
+- **`declare module '@tanstack/react-router' { interface Register { router: typeof router } }`** — даёт type-safe `<Link to="/dispatcher">` (typo → ошибка компиляции).
+- **`roleFromPathname()` в `lib/roles.ts`** — pure helper для URL → active role; тестируется отдельно.
+- **`RoleSwitcherNav` в `components/Layout/`** — переиспользуемый компонент (вне `routes/`, чтобы router plugin не пытался его сканировать).
+- **`PlaceholderPanel` в `components/Layout/`** — вынесен для переиспользования между `analyst.tsx` и `planner.tsx`.
+- **Non-null assertions заменены на runtime guards** — для `@typescript-eslint/no-non-null-assertion` + `noUncheckedIndexedAccess`.
+
+## Verification
+
+```bash
+$ yarn --cwd apps/frontend typecheck   # 0 errors
+$ yarn --cwd apps/frontend lint        # ESLint clean + Prettier clean
+$ yarn --cwd apps/frontend test:run    # 60/60 passed (9 test files)
+$ yarn --cwd apps/frontend build       # 200 modules, built in 1.29s
+$ make frontend-text-check             # ✓ No hardcoded UI strings
+```
+
+## Coverage
+
+```
+File               | % Stmts | % Branch | % Funcs | % Lines
+All files          |   90.75 |    79.11 |   90.9  |   90.75
+src/routes         |    100  |    86.66 |    100  |    100
+src/lib/roles.ts   |     95  |       50 |    100  |     95
+```
+
+## Findings записано
+
+- **F-014**: jsdom scrollTo warning при TanStack Router navigation — подавлено через `Object.defineProperty(window, 'scrollTo', ...)`.
 
 # T-135: TanStack Router URL routing для role-switcher
 

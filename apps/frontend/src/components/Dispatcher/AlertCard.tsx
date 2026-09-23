@@ -39,7 +39,12 @@ const SEVERITY_LABEL_KEYS = {
   critical: 'dispatcher.alerts.card.severityCritical',
   warning: 'dispatcher.alerts.card.severityWarning',
   info: 'dispatcher.alerts.card.severityInfo',
-} as const satisfies Readonly<Record<OverloadAlert['severity'], `dispatcher.alerts.card.severity${'Critical' | 'Warning' | 'Info'}`>>;
+} as const satisfies Readonly<
+  Record<
+    OverloadAlert['severity'],
+    `dispatcher.alerts.card.severity${'Critical' | 'Warning' | 'Info'}`
+  >
+>;
 
 function severityBackground(severity: OverloadAlert['severity']): string {
   switch (severity) {
@@ -69,7 +74,9 @@ export function AlertCard({ alert, onRelease }: AlertCardProps): JSX.Element {
       }}
     >
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <strong style={{ fontSize: 16 }}>{tf('dispatcher.alerts.card.routeLabel', alert.route_name)}</strong>
+        <strong style={{ fontSize: 16 }}>
+          {tf('dispatcher.alerts.card.routeLabel', alert.route_name)}
+        </strong>
         <span
           data-testid="severity-pill"
           style={{

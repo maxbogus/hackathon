@@ -24,65 +24,65 @@
 
 export const TEXTS = {
   app: {
-    title: "Transit-AI",
-    tagline: "Хакатон: прогноз загрузки трамваев Москвы",
-    navAriaLabel: "Переключатель ролей",
+    title: 'Transit-AI',
+    tagline: 'Хакатон: прогноз загрузки трамваев Москвы',
+    navAriaLabel: 'Переключатель ролей',
     /* App.tsx role-switcher buttons (T-141 replaces 4 hardcoded RoleDef literals) */
     rolePassenger: {
-      label: "Пассажир",
-      description: "Когда приедет трамвай и будет ли место?",
-      placeholder: "Этот режим появится в следующих тикетах. Сейчас готов только режим «Пассажир».",
+      label: 'Пассажир',
+      description: 'Когда приедет трамвай и будет ли место?',
+      placeholder: 'Этот режим появится в следующих тикетах. Сейчас готов только режим «Пассажир».',
     },
     roleDispatcher: {
-      label: "Диспетчер",
-      description: "Алерты по перегрузу (T-131)",
+      label: 'Диспетчер',
+      description: 'Алерты по перегрузу (T-131)',
     },
     roleAnalyst: {
-      label: "Аналитик",
-      description: "Графики и метрики (T-035/037)",
+      label: 'Аналитик',
+      description: 'Графики и метрики (T-035/037)',
     },
     rolePlanner: {
-      label: "Планировщик",
-      description: "Monte Carlo сценарии (T-036)",
+      label: 'Планировщик',
+      description: 'Monte Carlo сценарии (T-036)',
     },
   },
 
   dispatcher: {
     alerts: {
-      title: "🎛️ Диспетчер · алерты перегруза",
-      loading: "Загрузка алертов…",
-      errorPrefix: "Не удалось загрузить алерты:",
-      retry: "Повторить",
-      fetching: "обновление…",
+      title: '🎛️ Диспетчер · алерты перегруза',
+      loading: 'Загрузка алертов…',
+      errorPrefix: 'Не удалось загрузить алерты:',
+      retry: 'Повторить',
+      fetching: 'обновление…',
       updatedAt: (time: string) => `обновлено: ${time}`,
       windowSuffix: (min: number) => ` · горизонт ${min} мин`,
-      unknownTime: "—",
+      unknownTime: '—',
       emptyState: (min: number) => `✅ Всё в норме на ближайшие ${min} мин.`,
       card: {
         routeLabel: (name: string) => `🚋 Маршрут ${name}`,
-        stopPrefix: "Остановка",
-        loadPrefix: "прогноз загрузки:",
+        stopPrefix: 'Остановка',
+        loadPrefix: 'прогноз загрузки:',
         timeToOverload: (min: number) => `⏱ Перегруз через ${min} мин`,
-        releaseButton: "🚌 Выпустить вагон",
-        severityCritical: "🚨 КРИТИЧНО",
-        severityWarning: "⚠️  Внимание",
-        severityInfo: "ℹ️  Инфо",
+        releaseButton: '🚌 Выпустить вагон',
+        severityCritical: '🚨 КРИТИЧНО',
+        severityWarning: '⚠️  Внимание',
+        severityInfo: 'ℹ️  Инфо',
       },
     },
   },
 
   passenger: {
-    modeTitle: "🧍 Пассажир — ближайшие трамваи",
-    modeHint: "Выберите остановку, чтобы увидеть прогноз прибытия и загрузки.",
-    stopsLabel: "Остановка",
-    stopsLoading: "Загрузка остановок…",
-    stopsEmpty: "Нет остановок",
-    etaLoading: "Загрузка прогнозов…",
+    modeTitle: '🧍 Пассажир — ближайшие трамваи',
+    modeHint: 'Выберите остановку, чтобы увидеть прогноз прибытия и загрузки.',
+    stopsLabel: 'Остановка',
+    stopsLoading: 'Загрузка остановок…',
+    stopsEmpty: 'Нет остановок',
+    etaLoading: 'Загрузка прогнозов…',
     etaError: (msg: string) => `Ошибка загрузки данных: ${msg}`,
     modelFooter: (modelId: string) => `Модель: ${modelId} · обновлено только что`,
     /* EtaCard.tsx — small visual primitives */
     etaCard: {
-      departed: "🚉 Ушёл",
+      departed: '🚉 Ушёл',
       etaTemplate: (min: number) => `⏱ ${min} мин`,
       loadTemplate: (pct: number) => `👥 ${pct}% загрузка`,
     },
@@ -90,6 +90,6 @@ export const TEXTS = {
 
   common: {
     /* Shared, neutral Russian phrases (no domain-specific terminology). */
-    minutesShort: "мин",
+    minutesShort: 'мин',
   },
 } as const;

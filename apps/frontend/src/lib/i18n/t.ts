@@ -9,8 +9,8 @@
  * signature stays the same and no call site changes.
  */
 
-import { TEXTS } from "./ru-RU";
-import type { TKey } from "./keys";
+import { TEXTS } from './ru-RU';
+import type { TKey } from './keys';
 
 /**
  * Look up a static string by `TKey`. The dot-path is split on "." and walked
@@ -25,16 +25,16 @@ import type { TKey } from "./keys";
  *     synchronously from JSX, and the dictionary has fewer than 30 keys.
  */
 export function t(key: TKey): string {
-  const segments = key.split(".");
+  const segments = key.split('.');
   let cur: unknown = TEXTS;
   for (const s of segments) {
-    if (cur !== null && typeof cur === "object") {
+    if (cur !== null && typeof cur === 'object') {
       cur = (cur as Record<string, unknown>)[s];
     } else {
       throw new Error(`t(): cannot descend into ${key} at segment "${s}"`);
     }
   }
-  if (typeof cur !== "string") {
+  if (typeof cur !== 'string') {
     throw new Error(`t(): leaf for ${key} is not a string (got ${typeof cur})`);
   }
   return cur;
@@ -48,16 +48,16 @@ export function t(key: TKey): string {
  * `TKey`, which works because `Leaves<T>` exposes function-valued leaves too.
  */
 export function tf(key: TKey, ...args: readonly unknown[]): string {
-  const segments = key.split(".");
+  const segments = key.split('.');
   let cur: unknown = TEXTS;
   for (const s of segments) {
-    if (cur !== null && typeof cur === "object") {
+    if (cur !== null && typeof cur === 'object') {
       cur = (cur as Record<string, unknown>)[s];
     } else {
       throw new Error(`tf(): cannot descend into ${key} at segment "${s}"`);
     }
   }
-  if (typeof cur !== "function") {
+  if (typeof cur !== 'function') {
     throw new Error(`tf(): leaf for ${key} is not a function (got ${typeof cur})`);
   }
   return (cur as (...a: readonly unknown[]) => string)(...args);

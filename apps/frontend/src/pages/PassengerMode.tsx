@@ -123,7 +123,9 @@ export function PassengerMode(): JSX.Element {
         }}
       >
         {loadingStops && <option value="">{t('passenger.stopsLoading')}</option>}
-        {!loadingStops && stops.length === 0 && <option value="">{t('passenger.stopsEmpty')}</option>}
+        {!loadingStops && stops.length === 0 && (
+          <option value="">{t('passenger.stopsEmpty')}</option>
+        )}
         {stops.map((stop) => (
           <option key={stop.id} value={stop.id}>
             {stop.name}
@@ -137,7 +139,9 @@ export function PassengerMode(): JSX.Element {
         </Alert>
       )}
 
-      {loadingEta && stopId !== null && <p style={{ color: '#666' }}>{t('passenger.etaLoading')}</p>}
+      {loadingEta && stopId !== null && (
+        <p style={{ color: '#666' }}>{t('passenger.etaLoading')}</p>
+      )}
 
       {!loadingEta && stopId !== null && (
         <>

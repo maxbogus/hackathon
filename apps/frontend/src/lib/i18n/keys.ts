@@ -18,7 +18,7 @@
  * Adapted from https://twitter.com/matt Pocock  -- standard TS pattern.
  */
 
-import type { TEXTS } from "./ru-RU";
+import type { TEXTS } from './ru-RU';
 
 type Join<K extends string, P extends string> = `${K}.${P}`;
 
