@@ -21,6 +21,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
+from app.api.alerts import router as alerts_router
 from app.api.health import router as health_router
 from app.api.models import router as models_router
 from app.api.predictions import router as predictions_router
@@ -72,6 +73,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router)
     app.include_router(predictions_router)
     app.include_router(models_router)
+    app.include_router(alerts_router)
 
     @app.get("/", tags=["meta"])
     def root() -> dict[str, str]:

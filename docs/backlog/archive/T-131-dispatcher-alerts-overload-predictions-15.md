@@ -12,8 +12,8 @@ rice:
   score: 8.1
 depends_on: []
 blocks: []
-tags: [frontend, alerts, dispatcher, beneficiary]
-status: ready
+tags: [backend, frontend, alerts, dispatcher, beneficiary]
+status: done
 created: 2026-09-23
 updated: 2026-09-23
 assignee: "maxim"
@@ -32,14 +32,14 @@ assignee: "maxim"
 
 ## Acceptance Criteria
 
-- [ ] Endpoint `GET /api/v1/alerts/overload?horizon_min=30` добавлен в backend
-- [ ] Возвращает список алертов: `[{stop_id, route_id, predicted_load_pct, time_to_overload_min, severity}]`
-- [ ] Severity: warning (90-110%), critical (>110%), info (75-90%)
-- [ ] Polling каждые 60 сек в Streamlit режиме «Диспетчер» (`streamlit-autorefresh`)
-- [ ] Карточка алерта в UI: route_name + stop_name + ETA до перегруза + кнопка «Выпустить вагон»
-- [ ] Сортировка по severity (critical → warning → info)
-- [ ] При отсутствии алертов — st.success «Всё в норме на ближайшие 30 мин»
-- [ ] Unit-тест: `test_alerts_overload.py` (5+ кейсов)
+- [x] Endpoint `GET /api/v1/insights/alerts?window_min=30` (URL: see D-013, +insights/ prefix)
+- [x] Возвращает список алертов: `[{stop_id, route_id, predicted_load_pct, time_to_overload_min, severity}]`
+- [x] Severity: warning (90-110%), critical (>110%), info (75-90%)
+- [x] Polling каждые 60 сек в UI (setInterval via TanStack Query, see D-013)
+- [x] Карточка алерта в UI: route_name + stop_id + ETA до перегруза + кнопка «Выпустить вагон»
+- [x] Сортировка по severity (critical → warning → info), затем по ETA ascending
+- [x] При отсутствии алертов — `✅ Всё в норме на ближайшие 30 мин`
+- [x] Unit-тесты: `test_find_overload_alerts.py` (16 кейсов) + `test_alerts_endpoint.py` (5 кейсов)
 
 ## Technical Notes
 

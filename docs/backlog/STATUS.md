@@ -1,17 +1,17 @@
 # STATUS.md — критический путь
 
-_Обновлено: 2026-09-23. После T-128: backend capacity-aware load_pct (TRAM_CAPACITY, compute_load_pct, load_color) — 22 новых теста, +20 в test_compute_load_pct. live curl OK, OpenAPI/TS синхронизированы (load_pct max=150). Зафиксировано: D-012 (capacity в forecast/load.py не в config.py). Очередь: T-131 (dispatcher alerts), T-115 (README), T-135 (URL routing)._
+_Обновлено: 2026-09-23. После T-131: backend alerts endpoint + alerts.py + Dispatcher/AlertsPanel — 21 новый тест (16 unit + 5 integration), +3 frontend теста. OpenAPI/TS синхронизированы (9 paths, hook useGetOverloadAlertsApiV1InsightsAlertsGet). Зафиксировано: D-013 (setInterval vs streamlit-autorefresh + /insights/alerts URL). Очередь: T-115 (README), T-135 (URL routing)._
 
 ## Сводка
 
 | Счётчик | Значение |
 |---|---|
-| Тикетов в `archive/` (done за всё время) | **36** |
-| Тикетов в `tickets/`: | **17** |
-| &nbsp;&nbsp;• `ready` (готовы к старту) | **16** |
+| Тикетов в `archive/` (done за всё время) | **37** |
+| Тикетов в `tickets/`: | **16** |
+| &nbsp;&nbsp;• `ready` (готовы к старту) | **15** |
 | &nbsp;&nbsp;• `backlog` (отложены) | **0** |
 | &nbsp;&nbsp;• `in-progress` | **0** |
-| Решений в ledger (`decisions.jsonl`) | **12** (D-001..D-012) |
+| Решений в ledger (`decisions.jsonl`) | **13** (D-001..D-013) |
 | Находок в ledger (`findings.jsonl`) | **11** (F-001..F-008, F-009, F-010, F-011) |
 
 ## Готовые к старту (топ-5 по RICE score)
@@ -19,12 +19,10 @@ _Обновлено: 2026-09-23. После T-128: backend capacity-aware load_p
 | ID | RICE | Усилие | Что |
 |---|---|---|---|
 | **T-115** | 10.00 | 1h | README: добавить English version, раздел Handover, починить ссылки |
-| **T-131** | 8.10 | 2h | Алерты диспетчеру T-30 мин warning |
 | **T-135** | 6.0 | 2h | TanStack Router: перевести role-switcher на URL (зависит от T-129) |
 | **T-123** | 5.5 | 3h | Weather data integration (Open-Meteo) |
 
-> Цепочка `T-127 → T-128 → T-129 → T-130` — все архивированы. Демо жюри готово на backend+frontend стеке.
-> Следующие блокеры: T-128 (capacity для load_pct), T-131 (dispatcher UI).
+> Цепочка `T-127 → T-128 → T-129 → T-130 → T-131` — все архивированы. Демо жюри готово на backend+frontend стеке: ETA + capacity + alerts.
 
 ## Backlog (отложены)
 
@@ -36,11 +34,12 @@ _Пусто._
 
 ## Последние архивированные (для контекста)
 
-- T-128 — capacity-aware load_pct (TRAM_CAPACITY, compute_load_pct, load_color, +20 тестов) ✨ новый
+- T-131 — dispatcher overload alerts (`/insights/alerts` + AlertsPanel + 21+3 теста) ✨ новый
+- T-128 — capacity-aware load_pct (TRAM_CAPACITY, compute_load_pct, load_color, +20 тестов)
 - T-127 — backend GET `/api/v1/predictions/eta?stop_id=X&n=3` (1h, 23 теста)
 - T-129 — frontend режим «Пассажир» — React/Vite UI для ETA + load + рекомендация (1h)
 - T-133 — слайд «Боли пассажиров → наше решение» для жюри (1h)
-- T-130 — recommend() бизнес-логика «ехать/ждать» для frontend (1h) ✨ новый
+- T-130 — recommend() бизнес-логика «ехать/ждать» для frontend (1h)
 - T-091 — fix mypy exclude regex (F-001)
 - T-042 — backend GET `/api/v1/predictions/stop/{id}/route/{id}` (3h)
 - T-039 — ml benchmark scripts + api-gen scripts (5h)
@@ -79,7 +78,8 @@ _Пусто — все мёртвые ссылки (T-098/T-094/T-047/T-131-ui/T
 | D-009 | Отказаться от Streamlit UI → React/Vite (T-129/T-130) | — |
 | D-010 | apps/frontend nodeLinker=node-modules (фикс EBADF под vitest@2) | — |
 | **D-011** | **STOP_ROUTES hardcoded match frontend mock (pixel-perfect demo)** | — |
-| **D-012** | **TRAM_CAPACITY в forecast/load.py (не config.py — domain constant)** | — ✨ новый |
+| **D-012** | **TRAM_CAPACITY в forecast/load.py (не config.py — domain constant)** | — |
+| **D-013** | **Dispatcher alerts polling: setInterval via TanStack Query, не streamlit-autorefresh (+ /insights/alerts URL)** | — ✨ новый |
 
 ## Риски
 

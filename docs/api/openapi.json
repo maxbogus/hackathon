@@ -285,6 +285,54 @@
         }
       }
     },
+    "/api/v1/insights/alerts": {
+      "get": {
+        "tags": [
+          "insights"
+        ],
+        "summary": "Get Overload Alerts",
+        "description": "Return sorted overload alerts for the upcoming ``window_min`` minutes.",
+        "operationId": "get_overload_alerts_api_v1_insights_alerts_get",
+        "parameters": [
+          {
+            "name": "window_min",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 120,
+              "minimum": 1,
+              "description": "Look-ahead horizon in minutes. Defaults to 30 (current peak commute). Hard cap 120 (4 hours) for dispatcher UI sanity.",
+              "default": 30,
+              "title": "Window Min"
+            },
+            "description": "Look-ahead horizon in minutes. Defaults to 30 (current peak commute). Hard cap 120 (4 hours) for dispatcher UI sanity."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverloadAlertsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "tags": [
@@ -414,6 +462,94 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "OverloadAlert": {
+        "properties": {
+          "stop_id": {
+            "type": "integer",
+            "title": "Stop Id",
+            "description": "Numeric stop id (mirrors app.data.transit.STOP_ROUTES)."
+          },
+          "route_id": {
+            "type": "integer",
+            "title": "Route Id",
+            "description": "Numeric route id."
+          },
+          "route_name": {
+            "type": "string",
+            "title": "Route Name",
+            "description": "Human-readable route label (e.g. '7', 'A', 'T1')."
+          },
+          "predicted_load_pct": {
+            "type": "number",
+            "maximum": 150.0,
+            "minimum": 75.0,
+            "title": "Predicted Load Pct",
+            "description": "Predicted load as % of tram capacity. Always >= 75 (the alert threshold) and <= 150 (the MAX_LOAD_PCT clamp). Server-side filtering has already removed sub-threshold predictions."
+          },
+          "time_to_overload_min": {
+            "type": "integer",
+            "maximum": 120.0,
+            "minimum": 0.0,
+            "title": "Time To Overload Min",
+            "description": "ETA in minutes of the specific tram this alert refers to (minutes until the tram leaves this stop). Each alert card in the dispatcher UI is rendered against its own time-to-overload."
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warning",
+              "critical"
+            ],
+            "title": "Severity",
+            "description": "Bucketed risk level. info in [75,90), warning in [90,110), critical >=110."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "stop_id",
+          "route_id",
+          "route_name",
+          "predicted_load_pct",
+          "time_to_overload_min",
+          "severity"
+        ],
+        "title": "OverloadAlert",
+        "description": "One actionable overload prediction for the dispatcher UI."
+      },
+      "OverloadAlertsResponse": {
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At",
+            "description": "Server-side UTC timestamp of the alert scan."
+          },
+          "window_min": {
+            "type": "integer",
+            "maximum": 120.0,
+            "minimum": 1.0,
+            "title": "Window Min",
+            "description": "Look-ahead horizon used for this scan (minutes)."
+          },
+          "alerts": {
+            "items": {
+              "$ref": "#/components/schemas/OverloadAlert"
+            },
+            "type": "array",
+            "title": "Alerts",
+            "description": "Sorted alerts: critical first, then warning, then info. Within a severity, by time_to_overload_min ascending."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "generated_at",
+          "window_min"
+        ],
+        "title": "OverloadAlertsResponse",
+        "description": "Response body for `GET /api/v1/insights/alerts`."
       },
       "ValidationError": {
         "properties": {
