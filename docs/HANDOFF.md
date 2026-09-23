@@ -1,24 +1,25 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-23T11:55:00Z
-> Обновлено: Cline после T-128 (capacity-aware load_pct)
+> Последнее обновление: 2026-09-23T12:10:00Z
+> Обновлено: Cline после T-131 (dispatcher alerts)
 
 ## Цель
 
-Завершить MVP для демо жюри: ✅ backend ETA + capacity-aware load_pct + frontend PassengerMode
-готовы. Следующее — dispatcher alerts (T-131), URL routing (T-135), README fix (T-115).
+Завершить MVP для демо жюри: ✅ backend ETA + capacity-aware load_pct + ✅ dispatcher alerts + frontend PassengerMode готовы.
+Следующее — URL routing (T-135), README English (T-115).
 
 ## Git state
 
 ```
-status: pending commit (T-127 changes uncommitted)
-ahead of origin/master: +26 commits (после T-127 будет +3)
+status: pending commit (T-131 changes uncommitted — see git status)
+ahead of origin/master: +29 commits (после T-131 будет +31)
 ```
 
-## Что сделано за последние сессии (8)
+## Что сделано за последние сессии (10)
 
-- **T-128** — capacity-aware load_pct (TRAM_CAPACITY, compute_load_pct, load_color, +22 теста) ✨ новый
-- **T-127** — backend GET `/api/v1/predictions/eta?stop_id=X&n=3` (1h, 23 теста)
+- **T-131** — dispatcher overload alerts (`/api/v1/insights/alerts` + React AlertsPanel, 21+3 теста) ✨ новый
+- T-128 — capacity-aware load_pct (TRAM_CAPACITY, compute_load_pct, load_color, +22 теста)
+- T-127 — backend GET `/api/v1/predictions/eta?stop_id=X&n=3` (1h, 23 теста)
 - T-129 — React/Vite режим «Пассажир» с ETA + load + рекомендация (1h, 35 tests)
 - T-130 — recommend() pure function для passenger mode (1h, 97% test coverage)
 - T-133 — слайд «Боли пассажиров → наше решение» (1h)
@@ -27,27 +28,25 @@ ahead of origin/master: +26 commits (после T-127 будет +3)
 - T-039 — ml benchmark scripts + api-gen scripts (5h)
 - T-037 — ml reports/plots.py matplotlib headless Agg (3h)
 
-## Архив (done за всё время): 36
+## Архив (done за всё время): 37
 
 ## Что в работе
 
-Пусто (T-127 только что завершён, готовы брать T-128 / T-115 / T-131 / T-135).
+Пусто (T-131 только что завершён, готовы брать T-115 / T-135).
 
 ## Следующая задача
 
-**T-131:** Алерты диспетчеру T-30 мин warning (RICE 8.10, 2h). Создаст
-endpoint `/api/v1/insights/alerts?stop_id=X&window_min=30` который возвращает
-список перегруженных остановок в ближайшие N минут.
+**T-115:** README: добавить English version, раздел Handover, починить ссылки (RICE 10.00, 1h).
+
+> T-131 уже сделал Severity шкалу (info/warning/critical) — следующие тикеты могут
+> переиспользовать `app.insights.alerts.classify_load()` и `app.insights.alerts.SEVERITY_*`.
 
 Команда запуска:
 ```bash
-cd apps/backend
-uv run pytest tests/test_alerts.py -v  # tests пишем первыми (RED)
-make api-gen && make fe-gen
+make ready-top && cat docs/backlog/tickets/T-115-*.md
+# или сразу:
+$EDITOR docs/README.md
 ```
-
-> T-128 уже сделал `load_color()` (green/yellow/red/darkred) — T-131 переиспользует
-> эту шкалу для определения «alert-worthy» stops (load_pct > 90% = warning).
 
 ## Открытые вопросы
 
@@ -55,69 +54,57 @@ make api-gen && make fe-gen
 
 ## Артефакты на диске
 
-### Backend (T-127) ✨ новые
-- `apps/backend/app/forecast/load.py` — TRAM_CAPACITY (MappingProxyType), MAX_LOAD_PCT=150, compute_load_pct, load_color ✨ новый (124 строки)
-- `apps/backend/app/api/predictions.py` — добавлен `@router.get("/predictions/eta")` (50 строк)
-- `apps/backend/app/schemas/eta.py` — Pydantic `ETAPrediction` + `ETAResponse` (60 строк)
-- `apps/backend/app/data/__init__.py` — пакет для domain helpers
-- `apps/backend/app/data/transit.py` — `STOP_ROUTES`, `RouteRef`, `compute_eta_predictions`, `clamp_n` (220 строк)
-- `apps/backend/tests/test_eta_endpoint.py` — 10 integration тестов (224 строки)
-- `apps/backend/tests/test_eta_compute.py` — 15 unit-тестов (208 строк, +2 per-route capacity)
-- `apps/backend/tests/test_compute_load_pct.py` — 20 unit-тестов capacity-aware (143 строки) ✨ новый
-- `docs/hackathon/capacity_model.md` — модель вместимости трамваев Москвы (133 строки) ✨ новый
+### Backend (T-131) ✨ новые
+- `apps/backend/app/insights/__init__.py` — пакет ✨ новый
+- `apps/backend/app/insights/alerts.py` — OverloadAlert dataclass + find_overload_alerts + classify_load + SEVERITY_* + MAX_LOAD_PCT re-export ✨ новый (135 строк)
+- `apps/backend/app/api/alerts.py` — GET /api/v1/insights/alerts?window_min=N router ✨ новый (118 строк)
+- `apps/backend/app/schemas/alerts.py` — OverloadAlert + OverloadAlertsResponse Pydantic ✨ новый (90 строк)
+- `apps/backend/app/main.py` — зарегистрирован alerts_router
+- `apps/backend/tests/test_find_overload_alerts.py` — 16 unit-тестов ✨ новый
+- `apps/backend/tests/test_alerts_endpoint.py` — 5 integration тестов ✨ новый
 
-### Frontend (T-127) ✨ новые
-- `apps/frontend/src/api/customInstance.ts` — fetch wrapper для Orval (F-011 fix)
-- `apps/frontend/src/generated/api.ts` — обновлён, есть `useGetPredictionsEta` hook
-- `apps/frontend/src/generated/api.schemas.ts` — `ETAPrediction`, `ETAResponse` TS типы
+### Frontend (T-131) ✨ новые
+- `apps/frontend/src/components/Dispatcher/AlertsPanel.tsx` — useQuery + refetchInterval(60s) ✨ новый
+- `apps/frontend/src/components/Dispatcher/AlertCard.tsx` — карточка с severity pill ✨ новый
+- `apps/frontend/src/components/Dispatcher/AlertCard.test.tsx` — 3 vitest кейса ✨ новый
+- `apps/frontend/src/App.tsx` — role='dispatcher' → <AlertsPanel /> (вместо PlaceholderPanel)
+- `apps/frontend/src/App.test.tsx` — обёрнут в QueryClientProvider
 
 ### Контракт (синхронизирован)
-- `docs/api/openapi.json` — 8 paths, `ETAPrediction.predicted_load_pct` maximum повышен до 150.0 ✨ обновлён
-- `apps/backend/app/schemas/eta.py` — `Field(le=100.0 → le=150.0)` для overload support
-- `apps/frontend/src/lib/recommend.ts` — `ETAPrediction` TS интерфейс ↔ `apps/backend/app/schemas/eta.py` Pydantic (drop-in)
+- `docs/api/openapi.json` — 9 paths (+/api/v1/insights/alerts)
+- `apps/frontend/src/generated/api.ts` — hook `useGetOverloadAlertsApiV1InsightsAlertsGet` ✨ новый
+- `apps/frontend/src/generated/api.schemas.ts` — `OverloadAlert`, `OverloadAlertsResponse`
 
 ### Архив
-- `docs/backlog/archive/T-127-backend-eta-endpoint-next-3-trams-with.md` — done, 8/8 AC ✓
-- `docs/ledger/decisions.jsonl` — D-011 добавлено (STOP_ROUTES mock-match)
-- `docs/ledger/findings.jsonl` — F-011 добавлено (отсутствовал customInstance.ts)
-- `docs/backlog/STATUS.md` — 35 archive / 17 ready / 11 decisions / 11 findings
+- `docs/backlog/archive/T-131-dispatcher-alerts-overload-predictions-15.md` — done, 8/8 AC ✓
+- `docs/ledger/decisions.jsonl` — D-013 (setInterval + /insights/alerts URL rationale)
+- `docs/backlog/STATUS.md` — 37 archive / 15 ready / 13 decisions / 11 findings
 
-## Live verification (T-127)
+## Live verification (T-131)
 
 ```bash
-$ curl -s 'http://127.0.0.1:8765/api/v1/predictions/eta?stop_id=1' | python3 -m json.tool
-{
-    "stop_id": 1,
-    "generated_at": "2026-09-23T08:39:54.665647Z",
-    "horizon_minutes": 60,
-    "n_requested": 3,
-    "trams": [
-        {"route_id": 7,  "route_name": "7",  "eta_min": 10, "predicted_load_pct": 8.4, "model_id": "baseline_v1"},
-        {"route_id": 9,  "route_name": "9",  "eta_min": 30, "predicted_load_pct": 8.4, "model_id": "baseline_v1"},
-        {"route_id": 10, "route_name": "А", "eta_min": 50, "predicted_load_pct": 8.4, "model_id": "baseline_v1"}
-    ]
-}
+# через TestClient (backend не запущен в этой сессии)
+$ pytest apps/backend/tests/test_alerts_endpoint.py -v
+tests/test_alerts_endpoint.py::test_alerts_route_returns_200_with_default_window PASSED
+tests/test_alerts_endpoint.py::test_alerts_route_accepts_window_min_query PASSED
+tests/test_alerts_endpoint.py::test_alerts_route_rejects_negative_window_min PASSED
+tests/test_alerts_endpoint.py::test_alerts_route_rejects_overlong_window_min PASSED
+tests/test_alerts_endpoint.py::test_alerts_payload_alert_shape_when_present PASSED
 ```
 
 ## Последние решения в ledger
 
-- **D-009**: Отказ от Streamlit UI → React/Vite (apps/frontend)
-- **D-010**: nodeLinker=node-modules для apps/frontend (фикс EBADF под vitest@2)
-- **D-012**: TRAM_CAPACITY в `forecast/load.py` (не `config.py`) — domain constant, not runtime ENV knob ✨ новый
+- **D-013**: Dispatcher alerts polling — setInterval через TanStack Query (не streamlit-autorefresh), URL /api/v1/insights/alerts (не /alerts/overload) ✨ новый
+- **D-012**: TRAM_CAPACITY в `forecast/load.py` (не `config.py`) — domain constant, not runtime ENV knob
 - **D-011**: STOP_ROUTES hardcoded to match frontend mock (pixel-perfect demo)
+- **D-010**: nodeLinker=node-modules для apps/frontend (фикс EBADF под vitest@2)
 
-## Последние находки
-
-- **F-009**: TanStack Router plugin требует `src/routes/__root.tsx` → создан placeholder
-- **F-010**: .prettierrc.json ссылается на отсутствующий `prettier-plugin-organize-imports` → убран из конфига
-- **F-011**: apps/frontend/src/api/customInstance.ts отсутствовал → создан с поддержкой `params` для query-string ✨ новый
-
-## Тестовые счётчики (после T-127)
+## Тестовые счётчики (после T-131)
 
 | Модуль | Тестов | Coverage |
 |---|---|---|
-| apps/backend/tests/ | **73 passed** (было 51, +22 в T-128) | — |
-| apps/frontend/src/ | **35 passed** (без изменений) | ~73% statements |
+| apps/backend/tests/ | **94 passed** (было 73, +21 в T-131) | — |
+| apps/frontend/src/ | **38 passed** (было 35, +3 в T-131) | ~73% statements |
 | ml/tests/ | (не запускались) | — |
 
 ## Не делать в следующей сессии
@@ -134,3 +121,6 @@ $ curl -s 'http://127.0.0.1:8765/api/v1/predictions/eta?stop_id=1' | python3 -m 
 - ❌ Не класть `TRAM_CAPACITY` в `config.py` — это domain constant, не ENV knob (D-012)
 - ❌ Не менять `MAX_LOAD_PCT` без апдейта `schemas/eta.py::Field(le=...)` и `make api-gen`
 - ❌ Не менять границы `load_color()` без обновления UI (recommend.ts)
+- ❌ Не добавлять `streamlit-autorefresh` или другие Streamlit-пакеты (D-013)
+- ❌ Не менять URL `/api/v1/insights/alerts` на `/api/v1/alerts/overload` (D-013)
+- ❌ Не использовать `time_to_overload_min` с одинаковой семантикой для всего stop — каждая карточка = свой трамвай (D-013)
