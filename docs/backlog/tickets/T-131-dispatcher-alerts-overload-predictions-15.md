@@ -10,7 +10,7 @@ rice:
   I: 3.0
   C: 0.9
   score: 8.1
-depends_on: [T-047, T-131-ui]
+depends_on: []
 blocks: []
 tags: [frontend, alerts, dispatcher, beneficiary]
 status: ready
@@ -43,7 +43,8 @@ assignee: "maxim"
 
 ## Technical Notes
 
-Использует `T-047` (top-N перегруженных) как базу. Добавляет:
+Использует существующий `apps/backend/app/api/predictions.py` как базу для прогноза загрузки.
+Добавляет:
 1. Time-to-overload: `t_peak - t_now` в минутах
 2. Severity classification
 3. UI с auto-refresh

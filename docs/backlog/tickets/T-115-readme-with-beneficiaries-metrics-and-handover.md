@@ -1,7 +1,7 @@
 ---
 id: T-115
-phase: 0
-title: README с бенефициарами, метриками успеха и инструкцией handover в Департамент
+phase: 7
+title: README — добавить English version, исправить ссылки, отдельный раздел Handover
 priority: P0
 effort: 1
 unit: hours
@@ -13,13 +13,13 @@ rice:
 depends_on: []
 blocks: []
 tags: [docs, handover, beneficiary, hackathon]
-status: backlog
+status: ready
 created: 2026-09-23
 updated: 2026-09-23
 assignee: "maxim"
 ---
 
-# T-115: README с бенефициарами, метриками успеха и инструкцией handover
+# T-115: README — добавить English version, исправить ссылки, отдельный раздел Handover
 
 ## Context
 
@@ -27,78 +27,87 @@ assignee: "maxim"
 в инфраструктуру московского транспорта». Для этого нужна документация, которую Департамент
 транспорта может прочитать без контекста разработки.
 
-Completeness (документация + demo + handover) — критерий #1 на многих хакатонах (США-анализ).
+**Прогресс:** базовая русская версия README.md уже написана (12 разделов, бенефициары,
+метрики успеха, Quick Start, Makefile-команды, технологии). Осталось:
+
+- Исправить ссылки на несуществующие файлы (`docs/ARCHITECTURE.md`, `docs/HACKATHON_RULES.md`,
+  `docs/DATA_CONTRACTS.md`, `docs/USER_STORIES.md`, `docs/ML.md`, `docs/HACKATHON_CHECKLIST.md`,
+  `docs/PROMPTS/`, `docs/ledger/README.md` — проверить какие реально существуют).
+- Добавить English version (для open-source).
+- Выделить отдельный раздел Handover в Департамент (контакты, лицензия, что нужно для внедрения).
+- Добавить раздел «Где смотреть метрики модели» — ссылка на `docs/reports/` и текущую активную модель.
 
 ## Acceptance Criteria
 
-- [ ] Обновлён корневой `README.md` (или создан `docs/hackathon/README.md`)
-- [ ] Раздел «Бенефициары»: Департамент, диспетчеры, пассажиры — описаны явно
-- [ ] Раздел «Метрики успеха для города» — таблица с baseline → наше решение → улучшение
-- [ ] Раздел «Быстрый старт» — `make install && make seed && make train && streamlit run`
-- [ ] Раздел «Архитектура» — ссылка на `docs/architecture/` и краткое описание
-- [ ] Раздел «Контракты» — OpenAPI URL, JSON Schema для predictions
-- [ ] Раздел «Handover в Департамент» — что нужно для внедрения, контакты, лицензия
-- [ ] Раздел «Данные» — какие источники используются, ограничения
-- [ ] Раздел «Метрики модели» — где посмотреть (docs/reports/), последние значения
-- [ ] README на русском (для Департамента) + English version (для open-source)
+- [x] Обновлён корневой `README.md` (есть 12 разделов)
+- [x] Раздел «Бенефициары»: Департамент, диспетчеры, пассажиры — описаны явно
+- [x] Раздел «Метрики успеха для города» — таблица с baseline → наше решение → улучшение
+- [x] Раздел «Быстрый старт» — `make install && make seed && make train && yarn dev`
+- [x] Раздел «Архитектура» — ссылка на `docs/architecture/` (schema.dbml есть) и краткое описание
+- [x] Раздел «Контракты» — OpenAPI URL, JSON Schema для predictions (через docs/api/openapi.json)
+- [ ] Раздел «Handover в Департамент» — что нужно для внедрения, контакты, лицензия (выделить отдельно)
+- [x] Раздел «Данные» — какие источники используются, ограничения (через ссылку на requirements.md)
+- [ ] Раздел «Где метрики модели» — ссылка на `docs/reports/`, текущая активная модель
+- [ ] README на русском (для Департамента) — есть
+- [ ] English version (`README.en.md`) — отсутствует, добавить
 
 ## Technical Notes
 
-Структура:
+**Что проверить и исправить:**
 
-```markdown
-# Transit-AI — Прогноз загрузки трамвайных маршрутов Москвы
-
-> Решение для Хакатона Московского транспорта (25.09–03.10.2026)
-> Трек: «ИИ-прогноз загрузки трамвайных маршрутов»
-
-## Бенефициары
-
-Это решение создано для:
-- **Департамента транспорта Москвы** — инструмент управления трамвайной сетью
-- **Диспетчеров транспортного комплекса** — оперативное принятие решений
-- **Пассажиров московского трамвая** — предсказуемость и комфорт поездок
-
-## Метрики успеха для города
-
-| Метрика | Baseline | Наше решение | Улучшение |
-|---|---|---|---|
-| Среднее время ожидания | 8-12 мин | 6-9 мин | -15% |
-| Процент перегруженных рейсов | 23% | <15% | -35% |
-| Точность прогноза ETA | n/a | ±2 мин | — |
-
-## Быстрый старт
-
-\`\`\`bash
-make install && make seed && make train-xgboost && make predict
-streamlit run apps/streamlit_app/app.py
-\`\`\`
-
-## Архитектура
-
-См. `docs/architecture/architecture.md` (будет создан в T-115-extension).
-
-## Handover в Департамент
-
-- Лицензия: Apache 2.0
-- Контракты: OpenAPI 3.1 в `docs/api/openapi.json`
-- Модели: ONNX + meta.json в `ml/artifacts/`
-- Контакты: <email команды>
+```bash
+# Какие файлы из README реально существуют?
+ls docs/ARCHITECTURE.md docs/HACKATHON_RULES.md docs/DATA_CONTRACTS.md \
+   docs/USER_STORIES.md docs/ML.md docs/HACKATHON_CHECKLIST.md \
+   docs/PROMPTS/ docs/ledger/README.md 2>&1
+# Удалить из README битые ссылки, добавить актуальные.
 ```
+
+**Актуальные ссылки в проекте:**
+- `AGENTS.md` — ✅
+- `.clinerules/00-AGENTS.md` — ✅
+- `docs/hackathon/requirements.md` — ✅
+- `docs/hackathon/presentation/slide_01_pain_points.md` — ✅
+- `docs/api/openapi.json` — ✅ (генерируется backend)
+- `docs/architecture/schema.dbml` — ✅
+- `docs/architecture/schema-tables.md` — ✅
+- `docs/ledger/decisions.jsonl` — ✅
+- `docs/backlog/STATUS.md` — ✅
+- `ml/transit_ai/...` — ✅
+
+**Что нужно сделать:**
+1. Аудит ссылок: убрать неработающие (`docs/ARCHITECTURE.md`, `docs/HACKATHON_RULES.md`,
+   `docs/DATA_CONTRACTS.md`, `docs/USER_STORIES.md`, `docs/ML.md`,
+   `docs/HACKATHON_CHECKLIST.md`, `docs/PROMPTS/`, `docs/ledger/README.md`).
+2. Добавить раздел «Handover в Департамент» с подразделами:
+   - Что готово к внедрению (артефакты, API, документация)
+   - Что нужно от Департамента (реальные данные, доступ к API)
+   - Контакты команды
+   - Лицензия (текущая MIT, обсуждается)
+3. Создать `README.en.md` — English mirror основного README.
+4. Добавить раздел «Метрики модели» с динамической ссылкой на активную модель
+   (`ml/artifacts/active.json` → model_id → docs/reports/<model>_metrics.json).
 
 ## Verification
 
 ```bash
-# Файл существует и не пустой
-test -s README.md && echo "OK" || echo "MISSING"
+# Все ссылки из README ведут на существующие файлы
+grep -oE "\[[^]]+\]\(([^)]+\.md|[^)]+/)\)" /home/maxbogus/Repositories/hackathon/README.md | \
+  grep -oE "\([^)]+\)" | tr -d '()' | while read f; do
+    [ -e "/home/maxbogus/Repositories/hackathon/${f#./}" ] || echo "BROKEN: $f"
+  done
+# Должно вернуть 0 строк
 
-# Все 9 разделов присутствуют
-grep -E "^##" README.md | wc -l  # >= 9
+# README.en.md создан
+test -s README.en.md && echo "OK" || echo "MISSING"
+
+# Раздел Handover присутствует
+grep -E "^## .*[Hh]andover" README.md
 ```
 
 ## Beneficiary Impact
 
 **Департамент транспорта (⭐⭐⭐⭐⭐)** — handover = готовность к внедрению = рекомендация жюри.
-**Open-source сообщество** — Apache 2.0 + документация = реиспользование.
+**Open-source сообщество** — MIT + English README = реиспользование.
 
 RICE: 10.0 — **топ-7 приоритет**. Дешёвая задача с высоким импактом для жюри.

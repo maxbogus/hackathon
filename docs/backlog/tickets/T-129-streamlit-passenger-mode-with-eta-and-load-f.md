@@ -1,7 +1,7 @@
 ---
 id: T-129
-phase: 0
-title: streamlit режим Пассажир — прогноз ETA + загрузки для следующих рейсов
+phase: 4
+title: frontend режим «Пассажир» — прогноз ETA + загрузки для следующих рейсов (React/Vite)
 priority: P0
 effort: 1
 unit: hours
@@ -10,16 +10,16 @@ rice:
   I: 3.0
   C: 0.9
   score: 13.5
-depends_on: [T-019, T-098]
-blocks: [T-127, T-128]
-tags: [frontend, streamlit, passenger, beneficiary]
+depends_on: [T-019]
+blocks: []
+tags: [frontend, react, passenger, beneficiary]
 status: ready
 created: 2026-09-23
 updated: 2026-09-23
 assignee: "baev"
 ---
 
-# T-129: streamlit режим «Пассажир» — прогноз ETA + загрузки для следующих рейсов
+# T-129: frontend режим «Пассажир» — прогноз ETA + загрузки для следующих рейсов (React/Vite)
 
 ## Context
 
@@ -29,38 +29,47 @@ assignee: "baev"
 - «Когда приедет трамвай?» (непредсказуемость интервалов)
 - «Будет ли место?» (переполненность в час пик)
 
-Сейчас в плане 3 режима (Аналитик / Диспетчер / Планировщик). Этого мало — для пассажира
-нужен отдельный UX, решающий именно его боли.
+Режим «Пассажир» — отдельный UX, решающий именно боли пассажира. Включён в общий
+дашборд как одна из ролей (Пассажир / Диспетчер / Аналитик / Планировщик).
+
+**Архитектурное решение (D-009):** реализация на React/Vite в `apps/frontend/src/`,
+а не на Streamlit. Streamlit не используется в проекте (apps/frontend на Vite 5 +
+React 18 + TS strict, типизация через Orval из docs/api/openapi.json).
 
 ## Acceptance Criteria
 
-- [ ] В sidebar Streamlit добавлен radio: «🧍 Пассажир / 🎛️ Диспетчер / 📊 Аналитик / 🔮 Планировщик»
-- [ ] Режим «Пассажир» показывает selectbox со списком остановок (из /api/v1/stops)
+- [ ] В `apps/frontend/src/App.tsx` (или роутере) добавлен role-switcher: «🧍 Пассажир / 🎛️ Диспетчер / 📊 Аналитик / 🔮 Планировщик»
+- [ ] Компонент `apps/frontend/src/pages/PassengerMode.tsx` (или аналог)
+- [ ] selectbox со списком остановок (из `GET /api/v1/stops` — Orval hook)
 - [ ] При выборе остановки отображается 3 карточки ближайших рейсов (ETA + прогноз загрузки)
 - [ ] Цвет карточки зависит от загрузки: green (<60%), yellow (60-85%), red (>85%)
-- [ ] Использует mock-данные при `USE_MOCK=1` (для параллельной разработки без API)
-- [ ] Переключается на реальный API при `USE_MOCK=0`
-- [ ] Работает в браузере без ошибок (smoke test)
+- [ ] Использует mock-данные из `apps/frontend/src/mocks/eta_predictions.json` при `VITE_USE_MOCK=1`
+- [ ] Переключается на реальный API при `VITE_USE_MOCK=0` (через TanStack Query + Orval hook)
+- [ ] TypeScript strict: `npx tsc --noEmit` без ошибок
+- [ ] Smoke test в dev: `yarn dev` → переключить в режим "Пассажир", выбрать остановку 1 → 3 карточки
 
 ## Technical Notes
 
-Файл: `apps/streamlit_app/app.py`. Использует `streamlit`, `folium`, `streamlit-folium`,
-`altair` (уже установлены). Компоненты: `st.radio`, `st.selectbox`, `st.metric`,
-`st.columns(3)`, `st.markdown` для цветных карточек.
+Файлы:
+- `apps/frontend/src/pages/PassengerMode.tsx` — основной компонент
+- `apps/frontend/src/lib/etaCard.tsx` — карточка рейса (цвет + ETA + load)
+- `apps/frontend/src/mocks/eta_predictions.json` — mock fixture
+- TanStack Query: `useQuery({ queryKey: ['eta', stopId], queryFn: getEtaForStop })` с `refetchInterval: 60_000`
 
-Mock fixture для режима «Пассажир»: `apps/streamlit_app/mock_data/eta_predictions.json`
-(массив {stop_id, route_id, eta_min, predicted_load_pct, model_id}).
+Контракт API (после T-127): `GET /api/v1/predictions/eta?stop_id=X&n=3`. Orval сгенерирует
+типизированный hook `useGetPredictionsEta(...)` в `apps/frontend/src/generated/`.
 
-Использует контракт `GET /api/v1/predictions/eta?stop_id=X&n=3` (новый endpoint, добавить в T-019).
+Цветовая шкала (см. T-128): green <70%, yellow 70-90%, red 90-110%, dark_red >110%.
 
 ## Verification
 
 ```bash
-USE_MOCK=1 streamlit run apps/streamlit_app/app.py
+cd apps/frontend
+VITE_USE_MOCK=1 yarn dev
 # В браузере: переключить в режим "Пассажир", выбрать остановку 1
 # Должно появиться 3 карточки с ETA и загрузкой (mock данные)
 
-USE_MOCK=0 streamlit run apps/streamlit_app/app.py  # когда API готов
+VITE_USE_MOCK=0 yarn dev  # когда API готов
 ```
 
 ## Beneficiary Impact

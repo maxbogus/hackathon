@@ -10,7 +10,7 @@ rice:
   I: 2.0
   C: 0.7
   score: 3.5
-depends_on: [T-094, T-117, T-125]
+depends_on: [T-125]
 blocks: []
 tags: [ml, retrain, exogenous, evaluation]
 status: ready
@@ -23,7 +23,7 @@ assignee: "maxim"
 
 ## Context
 
-После T-094 (XGBoost + lag), T-117 (real data), T-125 (exogenous features) — нужно
+После T-125 (exogenous features) — нужно
 **переобучить модель** на полном наборе фичей и **доказать жюри**, что exogenous features
 улучшают метрики. Без измерения импакта — это «маркетинговое заявление», с измерением —
 «доказательство».
@@ -31,10 +31,10 @@ assignee: "maxim"
 ## Acceptance Criteria
 
 - [ ] Pipeline:
-  1. Загрузить реальные данные через T-117
+  1. Загрузить реальные данные через `RealSource` (когда данные появятся от оргкомитета)
   2. Добавить weather через T-123
   3. Добавить traffic через T-124
-  4. Добавить lag features (T-094)
+  4. Добавить lag features (стандартный фичеинжиниринг в `ml/transit_ai/data/features.py`)
   5. Обучить XGBoost v3 с полным набором фичей
   6. Сохранить в `ml/artifacts/xgboost_v3/`
 - [ ] Сравнительная таблица метрик (baseline → v1 → v2 → v3):

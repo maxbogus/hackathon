@@ -1,7 +1,7 @@
 ---
 id: T-130
-phase: 0
-title: бизнес-логика рекомендации «ехать сейчас или подождать» в Streamlit
+phase: 4
+title: бизнес-логика рекомендации «ехать сейчас или подождать» в frontend (TypeScript)
 priority: P0
 effort: 1
 unit: hours
@@ -12,14 +12,14 @@ rice:
   score: 13.5
 depends_on: [T-129, T-127]
 blocks: []
-tags: [frontend, streamlit, passenger, business-logic, beneficiary]
-status: backlog
+tags: [frontend, react, passenger, business-logic, beneficiary]
+status: ready
 created: 2026-09-23
 updated: 2026-09-23
 assignee: "maxim"
 ---
 
-# T-130: бизнес-логика рекомендации «ехать сейчас или подождать» в Streamlit
+# T-130: бизнес-логика рекомендации «ехать сейчас или подождать» в frontend (TypeScript)
 
 ## Context
 
@@ -27,52 +27,88 @@ assignee: "maxim"
 (ETA + загрузка) — нужно дать action-oriented рекомендацию. Это превращает UI из «информации»
 в «инструмент принятия решения», что и хочет Департамент транспорта.
 
+**Архитектурное решение (D-009):** реализация на TypeScript, не на Python. Чистая
+функция `recommend(trams)` лежит в `apps/frontend/src/lib/recommend.ts` — типобезопасная,
+покрывается vitest-тестами. UI в режиме «Пассажир» (T-129) импортирует и вызывает её,
+показывает результат через React-компонент с цветной иконкой.
+
 ## Acceptance Criteria
 
-- [ ] Функция `recommend(trams: list[ETAPrediction]) -> str` реализована в `apps/streamlit_app/business.py`
-- [ ] Логика: если ближайший рейс загружен <70% → рекомендует «Садитесь»
-- [ ] Логика: если загружен 70-90% И следующий приходит <10 мин → рекомендует «Подождите X мин — будет свободнее»
-- [ ] Логика: если загружен >90% → рекомендует «Обязательно подождите» (с эмодзи ⚠️)
+- [ ] Функция `recommend(trams: ETAPrediction[]): { text: string; emoji: string; severity: 'success' | 'warning' | 'info' }` реализована в `apps/frontend/src/lib/recommend.ts`
+- [ ] Логика: если ближайший рейс загружен <70% → рекомендует «Садитесь» (severity: success)
+- [ ] Логика: если загружен 70-90% И следующий приходит <10 мин → рекомендует «Подождите X мин — будет свободнее» (severity: info)
+- [ ] Логика: если загружен >90% → рекомендует «Обязательно подождите» (severity: warning, emoji ⚠️)
 - [ ] Логика: если ближайший уже ушёл (ETA = 0) → рекомендует следующий
 - [ ] Метрика под рекомендацией: «Экономия ~N мин времени ожидания в комфорте»
-- [ ] Покрытие unit-тестами: `apps/streamlit_app/tests/test_business.py` (5+ кейсов)
-- [ ] UI в режиме «Пассажир» (T-129) вызывает `recommend()` и показывает результат в st.success/st.warning
+- [ ] Покрытие vitest-тестами: `apps/frontend/src/lib/recommend.test.ts` (5+ кейсов)
+- [ ] `PassengerMode.tsx` (из T-129) вызывает `recommend()` и отображает через `<Alert severity={r.severity}>`
+- [ ] TypeScript strict: `yarn typecheck` без ошибок
 
 ## Technical Notes
 
 Простая decision tree — никаких ML, чистая бизнес-логика. Это показывает жюри, что мы
 понимаем не только данные, но и user experience.
 
-```python
-def recommend(trams: list[ETAPrediction]) -> tuple[str, str]:
-    """Returns (recommendation_text, emoji)."""
-    if not trams:
-        return "Нет данных о ближайших рейсах", "❓"
-    current = trams[0]
-    next_tram = trams[1] if len(trams) > 1 else None
-    
-    if current.load_pct < 70:
-        return "✅ Садитесь — будет комфортно", "✅"
-    
-    if current.load_pct >= 90:
-        if next_tram and next_tram.eta_min <= 10:
-            saved_min = next_tram.eta_min
-            return f"⚠️ Подождите {saved_min} мин — будет значительно свободнее", "⚠️"
-        return "⚠️ Будет тесно — но вариантов нет", "⚠️"
-    
-    # 70-90%
-    if next_tram and next_tram.eta_min <= 8 and next_tram.load_pct < current.load_pct - 15:
-        return f"⏳ Подождите {next_tram.eta_min} мин — будет свободнее", "⏳"
-    return "✅ Садитесь — загрузка приемлемая", "✅"
+```typescript
+// apps/frontend/src/lib/recommend.ts
+export interface ETAPrediction {
+  route_id: number;
+  route_name: string;
+  eta_min: number;
+  predicted_load_pct: number;
+  model_id: string;
+}
+
+export type Severity = 'success' | 'warning' | 'info';
+
+export interface Recommendation {
+  text: string;
+  emoji: string;
+  severity: Severity;
+}
+
+export function recommend(trams: ETAPrediction[]): Recommendation {
+  if (trams.length === 0) {
+    return { text: 'Нет данных о ближайших рейсах', emoji: '❓', severity: 'info' };
+  }
+  const current = trams[0]!;
+  const nextTram = trams[1];
+
+  if (current.predicted_load_pct < 70) {
+    return { text: '✅ Садитесь — будет комфортно', emoji: '✅', severity: 'success' };
+  }
+
+  if (current.predicted_load_pct >= 90) {
+    if (nextTram && nextTram.eta_min <= 10) {
+      return {
+        text: `⚠️ Подождите ${nextTram.eta_min} мин — будет значительно свободнее`,
+        emoji: '⚠️',
+        severity: 'warning',
+      };
+    }
+    return { text: '⚠️ Будет тесно — но вариантов нет', emoji: '⚠️', severity: 'warning' };
+  }
+
+  // 70-90%
+  if (nextTram && nextTram.eta_min <= 8 && nextTram.predicted_load_pct < current.predicted_load_pct - 15) {
+    return {
+      text: `⏳ Подождите ${nextTram.eta_min} мин — будет свободнее`,
+      emoji: '⏳',
+      severity: 'info',
+    };
+  }
+  return { text: '✅ Садитесь — загрузка приемлемая', emoji: '✅', severity: 'success' };
+}
 ```
 
 ## Verification
 
 ```bash
-uv run pytest apps/streamlit_app/tests/test_business.py -v
+cd apps/frontend
+yarn test:run src/lib/recommend.test.ts
 # Должно быть >= 5 тестов, все зелёные
 
-streamlit run apps/streamlit_app/app.py
+yarn dev
 # В режиме Пассажир, остановка 1: должна появиться рекомендация
 ```
 

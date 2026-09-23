@@ -10,7 +10,7 @@ rice:
   I: 3.0
   C: 0.8
   score: 6.4
-depends_on: [T-019, T-033, T-098]
+depends_on: [T-019, T-033]
 blocks: [T-128, T-129]
 tags: [backend, api, eta, passenger, beneficiary]
 status: ready
