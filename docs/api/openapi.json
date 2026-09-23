@@ -334,10 +334,10 @@
           },
           "predicted_load_pct": {
             "type": "number",
-            "maximum": 100.0,
+            "maximum": 150.0,
             "minimum": 0.0,
             "title": "Predicted Load Pct",
-            "description": "Predicted load as % of tram capacity."
+            "description": "Predicted load as % of tram capacity. Clamped to [0, 150] — values >100 mean the tram is predicted to be overloaded (darkred on the colour scale)."
           },
           "model_id": {
             "type": "string",

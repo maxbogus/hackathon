@@ -10,8 +10,8 @@ Hardcoded layout intentionally mirrors `apps/frontend/src/mocks/stops.json`
 so the demo for the jury looks identical whether `VITE_USE_MOCK=1` or
 `VITE_USE_MOCK=0` (only the data source changes).
 
-T-128 will replace the hardcoded STOP_ROUTES with a SQL/JSON-backed lookup
-and add per-route tram capacity. T-127 keeps the surface area minimal.
+Per-route tram capacity lives in `app.forecast.load` (T-128). This module
+re-exports `DEFAULT_TRAM_CAPACITY` for backward-compat with T-127 tests.
 """
 
 from __future__ import annotations
@@ -20,6 +20,13 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Final
 
+from app.forecast.load import (
+    DEFAULT_TRAM_CAPACITY as _DEFAULT_TRAM_CAPACITY,
+)
+from app.forecast.load import (
+    MAX_LOAD_PCT,
+    capacity_for,
+)
 from app.schemas.eta import ETAPrediction
 
 if TYPE_CHECKING:
@@ -48,9 +55,11 @@ STOP_ROUTES: Final[dict[int, tuple[RouteRef, ...]]] = {
     4: (RouteRef(27, "27"), RouteRef(29, "29")),
 }
 
-# Average seated+standing capacity for Moscow trams.
-# T-128 will replace with per-route capacity (Витязь 150-200, Львёнок 100).
-DEFAULT_TRAM_CAPACITY: Final[int] = 150
+# Backward-compat re-export — the canonical home is `app.forecast.load`
+# (T-128). Kept here because T-127 tests import `DEFAULT_TRAM_CAPACITY`
+# from this module. Will be removed once those tests are updated to import
+# from `app.forecast.load` directly.
+DEFAULT_TRAM_CAPACITY: Final[int] = _DEFAULT_TRAM_CAPACITY
 
 # Upper bound for the `n` query parameter — the UI only renders up to 5 cards.
 MAX_TRAMS_PER_REQUEST: Final[int] = 5
@@ -83,9 +92,13 @@ def compute_eta_predictions(
     predictor: Predictor,
     *,
     now: datetime | None = None,
-    capacity: int = DEFAULT_TRAM_CAPACITY,
+    capacity: int | None = None,
 ) -> list[ETAPrediction]:
     """Compute next-N upcoming trams at `stop_id` using `predictor`.
+
+    If `capacity` is None (the default), per-route capacity is looked up via
+    `app.forecast.load.capacity_for(route_id)` for each tram — T1/T2 get
+    250 (diameter), everything else gets 150 (Витязь-Москва).
 
     Algorithm:
         1. Predict hourly ridership over [now, now + HORIZON_MINUTES].
@@ -94,7 +107,7 @@ def compute_eta_predictions(
              - eta_min = (bucket midpoint - now) in minutes (rounded up)
              - load = sum of hourly predictions inside bucket, weighted
                proportionally (linear interpolation)
-             - load_pct = clamp(load / capacity * 100, 0, 100)
+             - load_pct = clamp(load / capacity * 100, 0, MAX_LOAD_PCT=150)
         4. Assign route_id/route_name from STOP_ROUTES (cycle if fewer
            routes than requested).
 
@@ -132,11 +145,15 @@ def compute_eta_predictions(
             minutes=bucket_width_min * i + bucket_width_min // 2
         )
         eta_min = max(0, int((bucket_mid - now).total_seconds() // 60))
-        load_pct = _clamp(load / capacity * 100.0, 0.0, 100.0)
+        route = routes[i % len(routes)]
+        # Per-route capacity (T-128): diameter routes Т1/Т2 get 250, all others
+        # get DEFAULT_TRAM_CAPACITY (150). Explicit kwarg wins for tests/legacy
+        # callers; otherwise we look up by route_id from STOP_ROUTES.
+        route_capacity = capacity if capacity is not None else capacity_for(route.id)
+        load_pct = _clamp(load / route_capacity * 100.0, 0.0, MAX_LOAD_PCT)
         # Round to 1 decimal — load_pct floats get noisy with many decimals.
         load_pct = round(load_pct, 1)
 
-        route = routes[i % len(routes)]
         result.append(
             ETAPrediction(
                 route_id=route.id,

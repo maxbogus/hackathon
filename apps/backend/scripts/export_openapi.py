@@ -11,6 +11,7 @@ Exit codes:
     0 - OpenAPI exported successfully.
     1 - Failed (no app, import error, IO error).
 """
+
 from __future__ import annotations
 
 import json
@@ -26,12 +27,17 @@ def main() -> int:
         from app.main import app  # noqa: PLC0415 — lazy import for clearer error
     except ImportError as e:
         print(f"❌ Failed to import FastAPI app: {e}", file=sys.stderr)
-        print("Hint: run from apps/backend with `uv run python scripts/export_openapi.py`.", file=sys.stderr)
+        print(
+            "Hint: run from apps/backend with `uv run python scripts/export_openapi.py`.",
+            file=sys.stderr,
+        )
         return 1
 
     schema = app.openapi()
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT_PATH.write_text(json.dumps(schema, indent=2, ensure_ascii=False), encoding="utf-8")
+    OUTPUT_PATH.write_text(
+        json.dumps(schema, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
     paths = len(schema.get("paths", {}))
     print(f"✅ Exported OpenAPI ({paths} paths) → {OUTPUT_PATH}")
     return 0

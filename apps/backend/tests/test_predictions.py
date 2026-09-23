@@ -80,7 +80,9 @@ def client_with_active_artifact(tmp_path: Path) -> TestClient:
     return TestClient(app)
 
 
-def test_models_active_returns_baseline_info(client_with_active_artifact: TestClient) -> None:
+def test_models_active_returns_baseline_info(
+    client_with_active_artifact: TestClient,
+) -> None:
     response = client_with_active_artifact.get("/api/v1/models/active")
     assert response.status_code == 200
     body = response.json()
@@ -89,7 +91,9 @@ def test_models_active_returns_baseline_info(client_with_active_artifact: TestCl
     assert body["version"] == "v0.1.0"
 
 
-def test_predictions_for_stop_returns_hourly_points(client_with_active_artifact: TestClient) -> None:
+def test_predictions_for_stop_returns_hourly_points(
+    client_with_active_artifact: TestClient,
+) -> None:
     start = datetime(2026, 2, 1, 7, 0, 0)
     end = datetime(2026, 2, 1, 10, 0, 0)
     response = client_with_active_artifact.get(
@@ -114,7 +118,10 @@ def test_predictions_rejects_inverted_period() -> None:
     client = TestClient(app)
     response = client.get(
         "/api/v1/predictions/stop/1",
-        params={"period_start": "2026-02-01T10:00:00", "period_end": "2026-02-01T07:00:00"},
+        params={
+            "period_start": "2026-02-01T10:00:00",
+            "period_end": "2026-02-01T07:00:00",
+        },
     )
     assert response.status_code == 400
 

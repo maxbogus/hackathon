@@ -122,14 +122,18 @@ def test_compute_load_pct_uses_capacity() -> None:
     assert result[0].predicted_load_pct == pytest.approx(40.0, abs=0.1)
 
 
-def test_compute_load_pct_clamped_to_100() -> None:
-    """An overloaded hour (300 passengers, capacity=150) → 100%, not 200%."""
+def test_compute_load_pct_clamped_to_150() -> None:
+    """An overloaded hour (300 passengers, capacity=150) → 150%, not 200%.
+
+    T-128 raised the clamp ceiling from 100 to 150 so the UI can distinguish
+    "full" (100%) from "overloaded" (110-150%, darkred colour).
+    """
     predictor = _FakePredictor(hourly_value=300.0)
     now = datetime(2026, 9, 23, 10, 0, 0)
     result = compute_eta_predictions(
         stop_id=1, n=1, predictor=predictor, now=now, capacity=150
     )
-    assert result[0].predicted_load_pct == 100.0
+    assert result[0].predicted_load_pct == 150.0
 
 
 def test_compute_load_pct_clamped_to_0_for_zero_load() -> None:
@@ -182,3 +186,33 @@ def test_stop_routes_matches_mock_frontend() -> None:
     assert [r.id for r in STOP_ROUTES[1]] == [7, 9, 10]
     assert [r.name for r in STOP_ROUTES[1]] == ["7", "9", "А"]
     assert [r.id for r in STOP_ROUTES[4]] == [27, 29]
+
+
+# ---- T-128: per-route capacity wired into compute_eta_predictions ----
+
+
+def test_compute_eta_uses_per_route_capacity_by_default() -> None:
+    """Without explicit `capacity`, each tram uses capacity_for(route.id).
+
+    With hourly=150 pax and STOP_ROUTES[1] routes (id 7/9/10 — none are
+    diameter), capacity_for returns 150 → load_pct ≈ 100% for the first bucket.
+    """
+    from app.forecast.load import DEFAULT_TRAM_CAPACITY
+
+    predictor = _FakePredictor(hourly_value=float(DEFAULT_TRAM_CAPACITY))
+    now = datetime(2026, 9, 23, 10, 0, 0)
+    result = compute_eta_predictions(stop_id=1, n=1, predictor=predictor, now=now)
+    # Route 7 has no override → capacity=150 → 150/150 = 100%.
+    assert result[0].route_id == 7
+    assert result[0].predicted_load_pct == pytest.approx(100.0, abs=0.1)
+
+
+def test_compute_eta_explicit_capacity_overrides_per_route() -> None:
+    """Passing capacity= explicitly bypasses per-route lookup (legacy callers)."""
+    predictor = _FakePredictor(hourly_value=60.0)
+    now = datetime(2026, 9, 23, 10, 0, 0)
+    # capacity=300 means 60/300 = 20% even though per-route says 150.
+    result = compute_eta_predictions(
+        stop_id=1, n=1, predictor=predictor, now=now, capacity=300
+    )
+    assert result[0].predicted_load_pct == pytest.approx(20.0, abs=0.1)

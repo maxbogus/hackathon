@@ -168,14 +168,14 @@ def test_eta_eta_min_monotonic_increasing(client_with_baseline: TestClient) -> N
     assert etas[-1] <= 60
 
 
-def test_eta_load_pct_within_0_100(client_with_baseline: TestClient) -> None:
-    """load_pct is a percentage — must be clamped to [0, 100]."""
+def test_eta_load_pct_within_0_150(client_with_baseline: TestClient) -> None:
+    """load_pct is a percentage — clamped to [0, 150] (T-128, allows overload)."""
     response = client_with_baseline.get(
         "/api/v1/predictions/eta", params={"stop_id": 4}
     )
     body = response.json()
     for t in body["trams"]:
-        assert 0.0 <= t["predicted_load_pct"] <= 100.0
+        assert 0.0 <= t["predicted_load_pct"] <= 150.0
 
 
 # ---- Edge cases ----

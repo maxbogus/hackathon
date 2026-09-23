@@ -63,7 +63,9 @@ def client_with_no_artifacts(tmp_path: Path) -> TestClient:
     return TestClient(app)
 
 
-def test_list_models_returns_all_artifacts(client_with_two_artifacts: TestClient) -> None:
+def test_list_models_returns_all_artifacts(
+    client_with_two_artifacts: TestClient,
+) -> None:
     response = client_with_two_artifacts.get("/api/v1/models")
     assert response.status_code == 200
     body = response.json()
@@ -97,14 +99,18 @@ def test_list_models_includes_metadata(client_with_two_artifacts: TestClient) ->
 
 
 def test_list_models_filter_active_only(client_with_two_artifacts: TestClient) -> None:
-    response = client_with_two_artifacts.get("/api/v1/models", params={"active_only": "true"})
+    response = client_with_two_artifacts.get(
+        "/api/v1/models", params={"active_only": "true"}
+    )
     assert response.status_code == 200
     body = response.json()
     assert len(body["models"]) == 1
     assert body["models"][0]["model_id"] == "baseline_v1"
 
 
-def test_list_models_returns_empty_when_no_artifacts(client_with_no_artifacts: TestClient) -> None:
+def test_list_models_returns_empty_when_no_artifacts(
+    client_with_no_artifacts: TestClient,
+) -> None:
     response = client_with_no_artifacts.get("/api/v1/models")
     assert response.status_code == 200
     body = response.json()

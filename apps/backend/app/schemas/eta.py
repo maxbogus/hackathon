@@ -34,8 +34,12 @@ class ETAPrediction(BaseModel):
     )
     predicted_load_pct: float = Field(
         ge=0.0,
-        le=100.0,
-        description="Predicted load as % of tram capacity.",
+        le=150.0,
+        description=(
+            "Predicted load as % of tram capacity. Clamped to [0, 150] — "
+            "values >100 mean the tram is predicted to be overloaded "
+            "(darkred on the colour scale)."
+        ),
     )
     model_id: str = Field(description="Id of the model that produced this prediction.")
 

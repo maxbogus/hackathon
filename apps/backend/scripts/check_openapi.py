@@ -12,6 +12,7 @@ Exit codes:
     1 - Drift detected (caller must regenerate via `make api-gen`).
     2 - Import error / missing file.
 """
+
 from __future__ import annotations
 
 import json
@@ -39,10 +40,15 @@ def main() -> int:
     # Strip noisy defaults that FastAPI generates each call but don't affect schema semantically.
     # (e.g. operationId, security). We compare only what consumers see: paths + components.
     def _trim(schema: dict) -> dict:
-        return {"paths": schema.get("paths", {}), "components": schema.get("components", {})}
+        return {
+            "paths": schema.get("paths", {}),
+            "components": schema.get("components", {}),
+        }
 
     if _trim(live) == _trim(on_disk):
-        print(f"✅ OpenAPI in sync with backend code ({len(live.get('paths', {}))} paths)")
+        print(
+            f"✅ OpenAPI in sync with backend code ({len(live.get('paths', {}))} paths)"
+        )
         return 0
 
     print("❌ OpenAPI drift detected: docs/api/openapi.json is stale.")

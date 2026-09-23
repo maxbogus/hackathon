@@ -1,17 +1,17 @@
 # STATUS.md — критический путь
 
-_Обновлено: 2026-09-23. После T-127: backend `/api/v1/predictions/eta` готов (23 теста, live curl OK, контракт синхронизирован с фронтом через Orval). Зафиксировано: D-011 (STOP_ROUTES mock-match), F-011 (отсутствовал customInstance.ts — создан). Очередь: T-128 (capacity-aware load_pct), T-131 (dispatcher alerts), T-115 (README)._
+_Обновлено: 2026-09-23. После T-128: backend capacity-aware load_pct (TRAM_CAPACITY, compute_load_pct, load_color) — 22 новых теста, +20 в test_compute_load_pct. live curl OK, OpenAPI/TS синхронизированы (load_pct max=150). Зафиксировано: D-012 (capacity в forecast/load.py не в config.py). Очередь: T-131 (dispatcher alerts), T-115 (README), T-135 (URL routing)._
 
 ## Сводка
 
 | Счётчик | Значение |
 |---|---|
-| Тикетов в `archive/` (done за всё время) | **35** |
+| Тикетов в `archive/` (done за всё время) | **36** |
 | Тикетов в `tickets/`: | **17** |
-| &nbsp;&nbsp;• `ready` (готовы к старту) | **17** |
+| &nbsp;&nbsp;• `ready` (готовы к старту) | **16** |
 | &nbsp;&nbsp;• `backlog` (отложены) | **0** |
 | &nbsp;&nbsp;• `in-progress` | **0** |
-| Решений в ledger (`decisions.jsonl`) | **11** (D-001..D-011) |
+| Решений в ledger (`decisions.jsonl`) | **12** (D-001..D-012) |
 | Находок в ledger (`findings.jsonl`) | **11** (F-001..F-008, F-009, F-010, F-011) |
 
 ## Готовые к старту (топ-5 по RICE score)
@@ -19,7 +19,6 @@ _Обновлено: 2026-09-23. После T-127: backend `/api/v1/predictions/
 | ID | RICE | Усилие | Что |
 |---|---|---|---|
 | **T-115** | 10.00 | 1h | README: добавить English version, раздел Handover, починить ссылки |
-| **T-128** | 8.40 | 2h | `load_pct` прогноз с учётом capacity трамвая |
 | **T-131** | 8.10 | 2h | Алерты диспетчеру T-30 мин warning |
 | **T-135** | 6.0 | 2h | TanStack Router: перевести role-switcher на URL (зависит от T-129) |
 | **T-123** | 5.5 | 3h | Weather data integration (Open-Meteo) |
@@ -37,7 +36,8 @@ _Пусто._
 
 ## Последние архивированные (для контекста)
 
-- T-127 — backend GET `/api/v1/predictions/eta?stop_id=X&n=3` (1h, 23 теста) ✨ новый
+- T-128 — capacity-aware load_pct (TRAM_CAPACITY, compute_load_pct, load_color, +20 тестов) ✨ новый
+- T-127 — backend GET `/api/v1/predictions/eta?stop_id=X&n=3` (1h, 23 теста)
 - T-129 — frontend режим «Пассажир» — React/Vite UI для ETA + load + рекомендация (1h)
 - T-133 — слайд «Боли пассажиров → наше решение» для жюри (1h)
 - T-130 — recommend() бизнес-логика «ехать/ждать» для frontend (1h) ✨ новый
@@ -78,7 +78,8 @@ _Пусто — все мёртвые ссылки (T-098/T-094/T-047/T-131-ui/T
 | D-008 | Убрать мёртвые ссылки T-098/T-094/T-047/T-131-ui/T-117 | — |
 | D-009 | Отказаться от Streamlit UI → React/Vite (T-129/T-130) | — |
 | D-010 | apps/frontend nodeLinker=node-modules (фикс EBADF под vitest@2) | — |
-| **D-011** | **STOP_ROUTES hardcoded match frontend mock (pixel-perfect demo)** | — ✨ новый |
+| **D-011** | **STOP_ROUTES hardcoded match frontend mock (pixel-perfect demo)** | — |
+| **D-012** | **TRAM_CAPACITY в forecast/load.py (не config.py — domain constant)** | — ✨ новый |
 
 ## Риски
 

@@ -13,7 +13,7 @@ rice:
 depends_on: [T-127]
 blocks: [T-129]
 tags: [backend, ml, load-prediction, beneficiary]
-status: ready
+status: done
 created: 2026-09-23
 updated: 2026-09-23
 assignee: "maxim"
@@ -32,14 +32,14 @@ assignee: "maxim"
 
 ## Acceptance Criteria
 
-- [ ] Константа `TRAM_CAPACITY` в `apps/backend/app/config.py`: dict `route_id → capacity`
-- [ ] Default capacity: 150 пассажиров (среднее для «Витязь-Москва»)
-- [ ] Capacity override для Т1, Т2 (диаметры, длинные составы): 250
-- [ ] Функция `compute_load_pct(predicted_count: float, route_id: int) -> float` в `apps/backend/app/forecast/load.py`
-- [ ] Clipping: load_pct ∈ [0, 150] (>100% = перегруз, до 150% = критично)
-- [ ] Цветовая шкала: green <70%, yellow 70-90%, red 90-110%, dark_red >110%
-- [ ] Документировано в `docs/hackathon/capacity_model.md` (откуда цифры, как валидировать)
-- [ ] Unit-тест: `test_compute_load_pct.py` (5+ кейсов: empty, half, full, overload, edge cases)
+- [x] Константа `TRAM_CAPACITY` в `apps/backend/app/config.py`: dict `route_id → capacity`
+- [x] Default capacity: 150 пассажиров (среднее для «Витязь-Москва»)
+- [x] Capacity override для Т1, Т2 (диаметры, длинные составы): 250
+- [x] Функция `compute_load_pct(predicted_count: float, route_id: int) -> float` в `apps/backend/app/forecast/load.py`
+- [x] Clipping: load_pct ∈ [0, 150] (>100% = перегруз, до 150% = критично)
+- [x] Цветовая шкала: green <70%, yellow 70-90%, red 90-110%, dark_red >110%
+- [x] Документировано в `docs/hackathon/capacity_model.md` (откуда цифры, как валидировать)
+- [x] Unit-тест: `test_compute_load_pct.py` (5+ кейсов: empty, half, full, overload, edge cases)
 
 ## Technical Notes
 

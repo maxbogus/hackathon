@@ -1,12 +1,12 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-23T08:45:00Z
-> Обновлено: Cline после T-127 (Backend ETA endpoint)
+> Последнее обновление: 2026-09-23T11:55:00Z
+> Обновлено: Cline после T-128 (capacity-aware load_pct)
 
 ## Цель
 
-Завершить MVP для демо жюри: ✅ backend ETA + frontend PassengerMode готовы. Следующее —
-capacity-aware load_pct (T-128) и dispatcher alerts (T-131).
+Завершить MVP для демо жюри: ✅ backend ETA + capacity-aware load_pct + frontend PassengerMode
+готовы. Следующее — dispatcher alerts (T-131), URL routing (T-135), README fix (T-115).
 
 ## Git state
 
@@ -17,7 +17,8 @@ ahead of origin/master: +26 commits (после T-127 будет +3)
 
 ## Что сделано за последние сессии (8)
 
-- **T-127** — backend GET `/api/v1/predictions/eta?stop_id=X&n=3` (1h, 23 теста) ✨ новый
+- **T-128** — capacity-aware load_pct (TRAM_CAPACITY, compute_load_pct, load_color, +22 теста) ✨ новый
+- **T-127** — backend GET `/api/v1/predictions/eta?stop_id=X&n=3` (1h, 23 теста)
 - T-129 — React/Vite режим «Пассажир» с ETA + load + рекомендация (1h, 35 tests)
 - T-130 — recommend() pure function для passenger mode (1h, 97% test coverage)
 - T-133 — слайд «Боли пассажиров → наше решение» (1h)
@@ -26,7 +27,7 @@ ahead of origin/master: +26 commits (после T-127 будет +3)
 - T-039 — ml benchmark scripts + api-gen scripts (5h)
 - T-037 — ml reports/plots.py matplotlib headless Agg (3h)
 
-## Архив (done за всё время): 35
+## Архив (done за всё время): 36
 
 ## Что в работе
 
@@ -34,20 +35,19 @@ ahead of origin/master: +26 commits (после T-127 будет +3)
 
 ## Следующая задача
 
-**T-128:** `load_pct` прогноз с учётом capacity трамвая — per-route tram capacity
-(Витязь 150-200, Львёнок 100), чтобы load_pct стал реалистичным. Заменит
-`DEFAULT_TRAM_CAPACITY = 150` хардкод.
+**T-131:** Алерты диспетчеру T-30 мин warning (RICE 8.10, 2h). Создаст
+endpoint `/api/v1/insights/alerts?stop_id=X&window_min=30` который возвращает
+список перегруженных остановок в ближайшие N минут.
 
 Команда запуска:
 ```bash
 cd apps/backend
-uv run pytest tests/test_eta_compute.py -v
+uv run pytest tests/test_alerts.py -v  # tests пишем первыми (RED)
 make api-gen && make fe-gen
 ```
 
-> T-127 уже добавил структуру для per-route capacity (RouteRef dataclass + STOP_ROUTES
-> dict). T-128 расширит её per-route атрибутом `capacity_pax` и обновит compute_eta_predictions
-> чтобы использовать capacity из маршрута, а не global default.
+> T-128 уже сделал `load_color()` (green/yellow/red/darkred) — T-131 переиспользует
+> эту шкалу для определения «alert-worthy» stops (load_pct > 90% = warning).
 
 ## Открытые вопросы
 
@@ -56,12 +56,15 @@ make api-gen && make fe-gen
 ## Артефакты на диске
 
 ### Backend (T-127) ✨ новые
+- `apps/backend/app/forecast/load.py` — TRAM_CAPACITY (MappingProxyType), MAX_LOAD_PCT=150, compute_load_pct, load_color ✨ новый (124 строки)
 - `apps/backend/app/api/predictions.py` — добавлен `@router.get("/predictions/eta")` (50 строк)
 - `apps/backend/app/schemas/eta.py` — Pydantic `ETAPrediction` + `ETAResponse` (60 строк)
 - `apps/backend/app/data/__init__.py` — пакет для domain helpers
 - `apps/backend/app/data/transit.py` — `STOP_ROUTES`, `RouteRef`, `compute_eta_predictions`, `clamp_n` (220 строк)
 - `apps/backend/tests/test_eta_endpoint.py` — 10 integration тестов (224 строки)
-- `apps/backend/tests/test_eta_compute.py` — 13 unit-тестов pure functions (182 строки)
+- `apps/backend/tests/test_eta_compute.py` — 15 unit-тестов (208 строк, +2 per-route capacity)
+- `apps/backend/tests/test_compute_load_pct.py` — 20 unit-тестов capacity-aware (143 строки) ✨ новый
+- `docs/hackathon/capacity_model.md` — модель вместимости трамваев Москвы (133 строки) ✨ новый
 
 ### Frontend (T-127) ✨ новые
 - `apps/frontend/src/api/customInstance.ts` — fetch wrapper для Orval (F-011 fix)
@@ -69,7 +72,8 @@ make api-gen && make fe-gen
 - `apps/frontend/src/generated/api.schemas.ts` — `ETAPrediction`, `ETAResponse` TS типы
 
 ### Контракт (синхронизирован)
-- `docs/api/openapi.json` — 8 paths (было 7), `ETAResponse` schema добавлена
+- `docs/api/openapi.json` — 8 paths, `ETAPrediction.predicted_load_pct` maximum повышен до 150.0 ✨ обновлён
+- `apps/backend/app/schemas/eta.py` — `Field(le=100.0 → le=150.0)` для overload support
 - `apps/frontend/src/lib/recommend.ts` — `ETAPrediction` TS интерфейс ↔ `apps/backend/app/schemas/eta.py` Pydantic (drop-in)
 
 ### Архив
@@ -99,7 +103,8 @@ $ curl -s 'http://127.0.0.1:8765/api/v1/predictions/eta?stop_id=1' | python3 -m 
 
 - **D-009**: Отказ от Streamlit UI → React/Vite (apps/frontend)
 - **D-010**: nodeLinker=node-modules для apps/frontend (фикс EBADF под vitest@2)
-- **D-011**: STOP_ROUTES hardcoded to match frontend mock (pixel-perfect demo) ✨ новый
+- **D-012**: TRAM_CAPACITY в `forecast/load.py` (не `config.py`) — domain constant, not runtime ENV knob ✨ новый
+- **D-011**: STOP_ROUTES hardcoded to match frontend mock (pixel-perfect demo)
 
 ## Последние находки
 
@@ -111,7 +116,7 @@ $ curl -s 'http://127.0.0.1:8765/api/v1/predictions/eta?stop_id=1' | python3 -m 
 
 | Модуль | Тестов | Coverage |
 |---|---|---|
-| apps/backend/tests/ | **51 passed** (было 28, +23) | — |
+| apps/backend/tests/ | **73 passed** (было 51, +22 в T-128) | — |
 | apps/frontend/src/ | **35 passed** (без изменений) | ~73% statements |
 | ml/tests/ | (не запускались) | — |
 
@@ -126,3 +131,6 @@ $ curl -s 'http://127.0.0.1:8765/api/v1/predictions/eta?stop_id=1' | python3 -m 
 - ❌ Не удалять `src/routes/__root.tsx` — TanStack Router plugin требует его (F-009)
 - ❌ Не удалять `apps/frontend/src/api/customInstance.ts` — Orval mutator (F-011)
 - ❌ Не хардкодить STOP_ROUTES > 4 остановок без синхронного апдейта frontend mock (D-011)
+- ❌ Не класть `TRAM_CAPACITY` в `config.py` — это domain constant, не ENV knob (D-012)
+- ❌ Не менять `MAX_LOAD_PCT` без апдейта `schemas/eta.py::Field(le=...)` и `make api-gen`
+- ❌ Не менять границы `load_color()` без обновления UI (recommend.ts)

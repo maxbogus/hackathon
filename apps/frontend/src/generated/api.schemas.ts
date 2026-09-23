@@ -24,9 +24,9 @@ export interface ETAPrediction {
    */
   eta_min: number;
   /**
-   * Predicted load as % of tram capacity.
+   * Predicted load as % of tram capacity. Clamped to [0, 150] — values >100 mean the tram is predicted to be overloaded (darkred on the colour scale).
    * @minimum 0
-   * @maximum 100
+   * @maximum 150
    */
   predicted_load_pct: number;
   /** Id of the model that produced this prediction. */
@@ -69,41 +69,42 @@ export interface ValidationError {
   ctx?: ValidationErrorCtx;
 }
 
-export type HealthzApiV1HealthzGet200 = { [key: string]: string };
+export type HealthzApiV1HealthzGet200 = {[key: string]: string};
 
-export type VersionApiV1VersionGet200 = { [key: string]: string | null };
+export type VersionApiV1VersionGet200 = {[key: string]: string | null};
 
 export type ReadyzApiV1ReadyzGet200 = { [key: string]: unknown };
 
 export type GetPredictionsForStopApiV1PredictionsStopStopIdGetParams = {
-  period_start: string;
-  period_end: string;
+period_start: string;
+period_end: string;
 };
 
 export type GetPredictionsForStopApiV1PredictionsStopStopIdGet200 = { [key: string]: unknown };
 
 export type GetEtaPredictionsApiV1PredictionsEtaGetParams = {
-  /**
-   * Tram stop id (1..N).
-   * @minimum 1
-   */
-  stop_id: number;
-  /**
-   * Number of upcoming trams to return. Clamped to [1, 5].
-   * @minimum 1
-   */
-  n?: number;
+/**
+ * Tram stop id (1..N).
+ * @minimum 1
+ */
+stop_id: number;
+/**
+ * Number of upcoming trams to return. Clamped to [1, 5].
+ * @minimum 1
+ */
+n?: number;
 };
 
 export type GetActiveModelApiV1ModelsActiveGet200 = { [key: string]: unknown };
 
 export type ListModelsApiV1ModelsGetParams = {
-  /**
-   * If true, return only the currently active model.
-   */
-  active_only?: boolean;
+/**
+ * If true, return only the currently active model.
+ */
+active_only?: boolean;
 };
 
 export type ListModelsApiV1ModelsGet200 = { [key: string]: unknown };
 
-export type RootGet200 = { [key: string]: string };
+export type RootGet200 = {[key: string]: string};
+

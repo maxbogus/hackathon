@@ -46,4 +46,3 @@ def test_settings_app_env_must_be_valid(monkeypatch: pytest.MonkeyPatch) -> None
     monkeypatch.setenv("TRANSIT_AI_APP_ENV", "staging")
     with pytest.raises(ValidationError):
         Settings(_env_file=None)
-
