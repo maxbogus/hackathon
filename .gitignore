@@ -21,9 +21,9 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
-parts/
+/lib/        # repo-root Python lib/ (e.g. setuptools sdist), see `src/lib` below
+/lib64/      # repo-root Python lib64/ (same)
+/parts/
 sdist/
 var/
 wheels/

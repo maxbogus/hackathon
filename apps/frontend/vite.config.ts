@@ -6,8 +6,10 @@ import path from 'node:path';
 
 export default defineConfig({
   plugins: [
-    react(),
+    // TanStack Router MUST come before JSX-transforming plugins — it introspects
+    // JSX to discover route definitions. See plugin error if order is swapped.
     TanStackRouterVite({ target: 'react', autoCodeSplitting: true }),
+    react(),
   ],
   resolve: {
     alias: {
