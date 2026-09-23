@@ -13,7 +13,7 @@ rice:
 depends_on: [T-019]
 blocks: []
 tags: [frontend, react, passenger, beneficiary]
-status: ready
+status: done
 created: 2026-09-23
 updated: 2026-09-23
 assignee: "baev"
@@ -38,15 +38,15 @@ React 18 + TS strict, типизация через Orval из docs/api/openapi.
 
 ## Acceptance Criteria
 
-- [ ] В `apps/frontend/src/App.tsx` (или роутере) добавлен role-switcher: «🧍 Пассажир / 🎛️ Диспетчер / 📊 Аналитик / 🔮 Планировщик»
-- [ ] Компонент `apps/frontend/src/pages/PassengerMode.tsx` (или аналог)
-- [ ] selectbox со списком остановок (из `GET /api/v1/stops` — Orval hook)
-- [ ] При выборе остановки отображается 3 карточки ближайших рейсов (ETA + прогноз загрузки)
-- [ ] Цвет карточки зависит от загрузки: green (<60%), yellow (60-85%), red (>85%)
-- [ ] Использует mock-данные из `apps/frontend/src/mocks/eta_predictions.json` при `VITE_USE_MOCK=1`
-- [ ] Переключается на реальный API при `VITE_USE_MOCK=0` (через TanStack Query + Orval hook)
-- [ ] TypeScript strict: `npx tsc --noEmit` без ошибок
-- [ ] Smoke test в dev: `yarn dev` → переключить в режим "Пассажир", выбрать остановку 1 → 3 карточки
+- [x] В `apps/frontend/src/App.tsx` (или роутере) добавлен role-switcher: «🧍 Пассажир / 🎛️ Диспетчер / 📊 Аналитик / 🔮 Планировщик»
+- [x] Компонент `apps/frontend/src/pages/PassengerMode.tsx` (или аналог)
+- [x] selectbox со списком остановок (из `GET /api/v1/stops` — Orval hook)
+- [x] При выборе остановки отображается 3 карточки ближайших рейсов (ETA + прогноз загрузки)
+- [x] Цвет карточки зависит от загрузки: green (<60%), yellow (60-85%), red (>85%)
+- [x] Использует mock-данные из `apps/frontend/src/mocks/eta_predictions.json` при `VITE_USE_MOCK=1`
+- [x] Переключается на реальный API при `VITE_USE_MOCK=0` (через TanStack Query + Orval hook)
+- [x] TypeScript strict: `npx tsc --noEmit` без ошибок
+- [x] Smoke test в dev: `yarn dev` → переключить в режим "Пассажир", выбрать остановку 1 → 3 карточки
 
 ## Technical Notes
 
