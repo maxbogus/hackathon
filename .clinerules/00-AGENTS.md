@@ -24,6 +24,7 @@
 | 14 | `14-decisions-ledger.md` | Фиксация решений в ledger (RICE > 5) |
 | 15 | `15-promote-finding.md` | Находка → note → rule → skill |
 | 16 | `16-tdd-cycle.md` | RED → GREEN → REFACTOR |
+| 20 | `20-text-constants-registry.md` | Frontend hybrid t(key) text registry |
 | — | `MEMORY-BUDGET.md` | Анти-краш: не читать >1MB JSON |
 
 ## Quick rules
@@ -42,6 +43,8 @@
    Каждая находка → `docs/ledger/findings.jsonl`. Через `make ledger-add`.
 10. **Handoff:** В конце каждого ответа — блок `## CONTEXT HANDOFF` (6 строк)
     или обновление `docs/HANDOFF.md` (источник истины для новой сессии).
+11. **Frontend text registry:** все UI-строки через `t(key)` из `apps/frontend/src/lib/i18n/`
+    (см. clinerule 20). Запрет хардкода русских строк в `.tsx` вне `lib/i18n/`.
 
 ## How Cline should work on this project
 

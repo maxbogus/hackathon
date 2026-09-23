@@ -16,6 +16,7 @@ tags: [docs, handover, beneficiary, hackathon]
 status: ready
 created: 2026-09-23
 updated: 2026-09-23
+scope: "Russian README only — English not required (see T-141 for UI text registry)"
 assignee: "maxim"
 ---
 
@@ -26,6 +27,10 @@ assignee: "maxim"
 Лучшие проекты хакатона, по словам организаторов, «могут быть рекомендованы к внедрению
 в инфраструктуру московского транспорта». Для этого нужна документация, которую Департамент
 транспорта может прочитать без контекста разработки.
+
+**Принятое решение:** хакатон русский → README на русском (для Департамента), UI на русском, код и комментарии на английском. English version README НЕ нужна.
+
+**Миграция UI-текстов:** см. отдельный тикет T-141 (apps/frontend/src/lib/i18n/) — text registry с типизированным `t(key)`. T-115 не занимается аудитом хардкода на фронте.
 
 **Прогресс:** базовая русская версия README.md уже написана (12 разделов, бенефициары,
 метрики успеха, Quick Start, Makefile-команды, технологии). Осталось:
@@ -48,8 +53,8 @@ assignee: "maxim"
 - [ ] Раздел «Handover в Департамент» — что нужно для внедрения, контакты, лицензия (выделить отдельно)
 - [x] Раздел «Данные» — какие источники используются, ограничения (через ссылку на requirements.md)
 - [ ] Раздел «Где метрики модели» — ссылка на `docs/reports/`, текущая активная модель
-- [ ] README на русском (для Департамента) — есть
-- [ ] English version (`README.en.md`) — отсутствует, добавить
+- [x] README на русском (для Департамента) — есть
+- [x] README.en.md — НЕ НУЖЕН (хакатон русский, код и комментарии на английском, UI на русском)
 
 ## Technical Notes
 
@@ -84,8 +89,7 @@ ls docs/ARCHITECTURE.md docs/HACKATHON_RULES.md docs/DATA_CONTRACTS.md \
    - Что нужно от Департамента (реальные данные, доступ к API)
    - Контакты команды
    - Лицензия (текущая MIT, обсуждается)
-3. Создать `README.en.md` — English mirror основного README.
-4. Добавить раздел «Метрики модели» с динамической ссылкой на активную модель
+3. Добавить раздел «Метрики модели» с динамической ссылкой на активную модель
    (`ml/artifacts/active.json` → model_id → docs/reports/<model>_metrics.json).
 
 ## Verification
@@ -97,9 +101,6 @@ grep -oE "\[[^]]+\]\(([^)]+\.md|[^)]+/)\)" /home/maxbogus/Repositories/hackathon
     [ -e "/home/maxbogus/Repositories/hackathon/${f#./}" ] || echo "BROKEN: $f"
   done
 # Должно вернуть 0 строк
-
-# README.en.md создан
-test -s README.en.md && echo "OK" || echo "MISSING"
 
 # Раздел Handover присутствует
 grep -E "^## .*[Hh]andover" README.md

@@ -1,7 +1,7 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-23T13:00:00Z
-> Обновлено: Cline после gap-analysis (8 tickets T-122/T-134..T-140 + T-135 YAML fix)
+> Последнее обновление: 2026-09-23T13:45:00Z
+> Обновлено: Cline после text registry design (T-141 + D-014 + scope-down T-115)
 
 ## Цель
 
@@ -18,7 +18,13 @@ new commits since T-131:
 ahead of origin/master: +31 commits
 ```
 
-## Что сделано за последние сессии (10)
+## Что сделано за последние сессии (11)
+
+- **T-141** — frontend text registry hybrid t(key) (apps/frontend/src/lib/i18n/) — тикет создан ✨ новый
+- **D-014** — Hybrid text registry решение (RICE ~6) — записано в ledger ✨ новый
+- **T-115** — скорректирован: убран English README, добавлена ссылка на T-141 ✨ scope-down
+
+## Что сделано за предыдущие сессии (10)
 
 - **T-131** — dispatcher overload alerts (`/api/v1/insights/alerts` + React AlertsPanel, 21+3 теста) ✨ новый
 - T-128 — capacity-aware load_pct (TRAM_CAPACITY, compute_load_pct, load_color, +22 теста)
@@ -39,9 +45,11 @@ ahead of origin/master: +31 commits
 
 ## Следующая задача
 
-**T-137 (P0, RICE 6.00, 2h):** `docs/HACKATHON_CHECKLIST.md` — R8 hackathon-rules перед сабмитом 03.10.
-Альтернатива: **T-115 (RICE 10.00, 1h)** — README English + Handover.
-Альтернатива: **T-135 (RICE 6.00, 2h)** — TanStack Router URL routing.
+**T-115 (P0, RICE 10.00, 1h):** README Russian + Handover (scope-down: English не нужен).
+Альтернатива: **T-141 (P1, RICE 1.20, 2.5h)** — text registry hybrid t(key) миграция UI.
+Альтернатива: **T-137 (P0, RICE 6.00, 2h)** — submission checklist R8.
+
+> T-135 (URL routing) теперь **заблокирован T-141** — route names должны идти через t().
 
 > T-131 уже сделал Severity шкалу (info/warning/critical) — следующие тикеты могут
 > переиспользовать `app.insights.alerts.classify_load()` и `app.insights.alerts.SEVERITY_*`.
@@ -94,6 +102,9 @@ $EDITOR docs/README.md
 - `docs/backlog/tickets/T-138-...md` — apps/assistant LiteLLM skeleton (P2, RICE 1.50, maxim)
 - `docs/backlog/tickets/T-139-...md` — apps/mcp stdio JSON-RPC server (P2, RICE 1.60, maxim)
 - `docs/backlog/tickets/T-140-...md` — ml GCN+LSTM spatiotemporal (P2, RICE 0.60, unassigned)
+- `docs/backlog/tickets/T-141-...md` — frontend text registry hybrid t(key) (P1, RICE 1.20, baev) ✨ новый
+- `.clinerules/20-text-constants-registry.md` — clinerule для text registry ✨ новый
+- `docs/ledger/decisions.jsonl` — D-014 (hybrid t(key) без react-i18next) ✨ новый
 
 ## Live verification (T-131)
 
@@ -109,7 +120,8 @@ tests/test_alerts_endpoint.py::test_alerts_payload_alert_shape_when_present PASS
 
 ## Последние решения в ledger
 
-- **D-013**: Dispatcher alerts polling — setInterval через TanStack Query (не streamlit-autorefresh), URL /api/v1/insights/alerts (не /alerts/overload) ✨ новый
+- **D-014**: Hybrid text registry `t(key)` без `react-i18next` на хакатоне ✨ новый
+- **D-013**: Dispatcher alerts polling — setInterval через TanStack Query (не streamlit-autorefresh), URL /api/v1/insights/alerts (не /alerts/overload)
 - **D-012**: TRAM_CAPACITY в `forecast/load.py` (не `config.py`) — domain constant, not runtime ENV knob
 - **D-011**: STOP_ROUTES hardcoded to match frontend mock (pixel-perfect demo)
 - **D-010**: nodeLinker=node-modules для apps/frontend (фикс EBADF под vitest@2)
@@ -138,4 +150,6 @@ tests/test_alerts_endpoint.py::test_alerts_payload_alert_shape_when_present PASS
 - ❌ Не менять границы `load_color()` без обновления UI (recommend.ts)
 - ❌ Не добавлять `streamlit-autorefresh` или другие Streamlit-пакеты (D-013)
 - ❌ Не менять URL `/api/v1/insights/alerts` на `/api/v1/alerts/overload` (D-013)
+- ❌ Не создавать README.en.md — хакатон русский, English не нужен (T-115 scope-down)
+- ❌ Не хардкодить русские/UI строки в .tsx вне `apps/frontend/src/lib/i18n/` (D-014, T-141)
 - ❌ Не использовать `time_to_overload_min` с одинаковой семантикой для всего stop — каждая карточка = свой трамвай (D-013)

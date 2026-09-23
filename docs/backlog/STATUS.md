@@ -1,17 +1,17 @@
 # STATUS.md — критический путь
 
-_Обновлено: 2026-09-23 (gap-analysis). После T-131: backend alerts endpoint + alerts.py + Dispatcher/AlertsPanel — 21 новый тест (16 unit + 5 integration), +3 frontend теста. OpenAPI/TS синхронизированы (9 paths, hook useGetOverloadAlertsApiV1InsightsAlertsGet). Зафиксировано: D-013 (setInterval vs streamlit-autorefresh + /insights/alerts URL). Очередь: T-115 (README), T-135 (URL routing)._
+_Обновлено: 2026-09-23 (T-141 + scope-down T-115). Добавлен T-141 (text registry hybrid t(key)), скорректирован T-115 (убран English README). Зафиксировано: D-014 (hybrid text registry без react-i18next на хакатоне). Все 24 ready RICE-валидны (F-012 fix applies). Очередь: T-115 (README), T-141 (text registry), T-137 (checklist)._
 
 ## Сводка
 
 | Счётчик | Значение |
 |---|---|
 | Тикетов в `archive/` (done за всё время) | **37** |
-| Тикетов в `tickets/`: | **24** |
-| &nbsp;&nbsp;• `ready` (готовы к старту) | **23** |
+| Тикетов в `tickets/`: | **25** |
+| &nbsp;&nbsp;• `ready` (готовы к старту) | **24** |
 | &nbsp;&nbsp;• `backlog` (отложены) | **0** |
 | &nbsp;&nbsp;• `in-progress` | **0** |
-| Решений в ledger (`decisions.jsonl`) | **13** (D-001..D-013) |
+| Решений в ledger (`decisions.jsonl`) | **14** (D-001..D-014) |
 | Находок в ledger (`findings.jsonl`) | **11** (F-001..F-008, F-009, F-010, F-011) |
 
 ## Готовые к старту (топ-5 по RICE score)
@@ -28,7 +28,7 @@ _Обновлено: 2026-09-23 (gap-analysis). После T-131: backend alerts
 
 ## Backlog (отложены)
 
-_Пусто — все тикеты либо в `ready`, либо в `archive`. Из 23 ready в топ-15 попали 6 новых (T-122, T-134, T-135, T-137, T-138, T-139)._
+_Пусто — все тикеты либо в `ready`, либо в `archive`. Из 24 ready в топ-15 попали 7 новых (T-122, T-134, T-135, T-137, T-138, T-139, T-141)._
 
 ## В работе (in-progress)
 
@@ -81,7 +81,8 @@ _Пусто — все мёртвые ссылки (T-098/T-094/T-047/T-131-ui/T
 | D-010 | apps/frontend nodeLinker=node-modules (фикс EBADF под vitest@2) | — |
 | **D-011** | **STOP_ROUTES hardcoded match frontend mock (pixel-perfect demo)** | — |
 | **D-012** | **TRAM_CAPACITY в forecast/load.py (не config.py — domain constant)** | — |
-| **D-013** | **Dispatcher alerts polling: setInterval via TanStack Query, не streamlit-autorefresh (+ /insights/alerts URL)** | — ✨ новый |
+| **D-013** | **Dispatcher alerts polling: setInterval via TanStack Query, не streamlit-autorefresh (+ /insights/alerts URL)** | — |
+| **D-014** | **Hybrid text registry `t(key)` без библиотек: `apps/frontend/src/lib/i18n/` + grep CI gate** | ~6 ✨ новый |
 
 ## Риски
 
