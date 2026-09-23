@@ -1,32 +1,33 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-23T13:45:00Z
-> Обновлено: Cline после text registry design (T-141 + D-014 + scope-down T-115)
+> Последнее обновление: 2026-09-23T13:40:00Z
+> Обновлено: Cline после T-141 (text registry hybrid t(key), DONE)
 
 ## Цель
 
-Завершить MVP для демо жюри: ✅ backend ETA + capacity-aware load_pct + ✅ dispatcher alerts + frontend PassengerMode готовы.
-Следующее — submission checklist T-137 (P0), затем T-135 URL routing, T-115 README English.
+Развивать frontend с text-registry + картой; backend готов (ETA + capacity + alerts).
+Реальные данные ~27.09 → retrain → submission checklist T-137. До этого — Track A: **T-135 → T-122** (URL routing + map).
 
 ## Git state
 
 ```
 status: clean
-new commits since T-131:
-  2d31d7a fix(backlog): quote title in T-135 to fix YAML parsing
-  bc58589 chore(backlog): add 7 gap-analysis tickets (T-122, T-134, T-136..T-140)
-ahead of origin/master: +31 commits
+latest commit: 61524a3 feat(frontend): hybrid text registry t(key) — migrate 5 UI files (T-141)
+new commits since T-131: 6
+  4930f07 chore(backlog): add text registry rule + T-141 hybrid t(key), scope-down T-115
+  61524a3 feat(frontend): hybrid text registry t(key) — migrate 5 UI files (T-141)
+ahead of origin/master: +37 commits
 ```
 
 ## Что сделано за последние сессии (11)
 
-- **T-141** — frontend text registry hybrid t(key) (apps/frontend/src/lib/i18n/) — тикет создан ✨ новый
-- **D-014** — Hybrid text registry решение (RICE ~6) — записано в ledger ✨ новый
-- **T-115** — скорректирован: убран English README, добавлена ссылка на T-141 ✨ scope-down
+- **T-141** — frontend text registry hybrid t(key) DONE — 40+ ключей в `lib/i18n/`, 5 файлов мигрированы (App.tsx, AlertsPanel, AlertCard, PassengerMode, EtaCard), `make frontend-text-check` gate, типобезопасность через `TKey = Leaves<typeof TEXTS>`. Tests: 17/17 i18n + 55/55 total. Yarn build: green. ✨ новый
+- **D-014** — Hybrid text registry решение (RICE ~6) — записано в ledger (см. session earlier)
+- **T-115** — скорректирован: убран English README, добавлена ссылка на T-141
 
 ## Что сделано за предыдущие сессии (10)
 
-- **T-131** — dispatcher overload alerts (`/api/v1/insights/alerts` + React AlertsPanel, 21+3 теста) ✨ новый
+- **T-131** — dispatcher overload alerts (`/api/v1/insights/alerts` + React AlertsPanel, 21+3 теста)
 - T-128 — capacity-aware load_pct (TRAM_CAPACITY, compute_load_pct, load_color, +22 теста)
 - T-127 — backend GET `/api/v1/predictions/eta?stop_id=X&n=3` (1h, 23 теста)
 - T-129 — React/Vite режим «Пассажир» с ETA + load + рекомендация (1h, 35 tests)
@@ -41,33 +42,44 @@ ahead of origin/master: +31 commits
 
 ## Что в работе
 
-Пусто (T-131 только что завершён, готовы брать T-115 / T-135).
+Пусто (T-141 DONE, готовы брать T-115 / T-135 / T-137 / T-125).
 
 ## Следующая задача
 
-**T-115 (P0, RICE 10.00, 1h):** README Russian + Handover (scope-down: English не нужен).
-Альтернатива: **T-141 (P1, RICE 1.20, 2.5h)** — text registry hybrid t(key) миграция UI.
-Альтернатива: **T-137 (P0, RICE 6.00, 2h)** — submission checklist R8.
+**Track A — frontend refactor** (T-141 → T-135 → T-122). После T-141 **unblocked**:
+- **T-135 (P1, RICE 6.00, 2h, baev)** — TanStack Router URL routing для role-switcher. Route names теперь могут идти через `t()`.
+- **T-122 (P1, RICE 2.70, 4h, baev)** — MapProvider + LeafletMap + YandexMap (нужно для визуальной части демо жюри).
+- **T-125 (P2, RICE 5.40, 2h, maxim)** — weather + traffic фичи (можно параллельно с Track A).
 
-> T-135 (URL routing) теперь **заблокирован T-141** — route names должны идти через t().
+> **Track B (после 27.09 real data)**: T-137 (R8 checklist) → T-115 (README) → T-039 (re-train benchmark).
 
-> T-131 уже сделал Severity шкалу (info/warning/critical) — следующие тикеты могут
-> переиспользовать `app.insights.alerts.classify_load()` и `app.insights.alerts.SEVERITY_*`.
-
-Команда запуска:
+Команда запуска T-135:
 ```bash
-make ready-top && cat docs/backlog/tickets/T-115-*.md
-# или сразу:
-$EDITOR docs/README.md
+cat docs/backlog/tickets/T-135-*.md
+$EDITOR apps/frontend/src/routes/__root.tsx   # convert useState to Link/useNavigate
+yarn --cwd apps/frontend test:run
 ```
 
 ## Открытые вопросы
 
 - T-122 RICE mismatch (был 4.5 в YAML, формула даёт 2.70) — починен, записано как F-012.
+- F-013 (NEW): yarn cwd issue в multi-command tool calls — использовать `yarn --cwd <abs-path>` (см. findings F-013 ниже).
 
 ## Артефакты на диске
 
-### Backend (T-131) ✨ новые
+### Frontend (T-141) ✨ новые
+- `apps/frontend/src/lib/i18n/ru-RU.ts` — типизированный словарь 40+ ключей ✨
+- `apps/frontend/src/lib/i18n/keys.ts` — рекурсивный `TKey = Leaves<typeof TEXTS>` ✨
+- `apps/frontend/src/lib/i18n/t.ts` — `t(key)` + `tf(key, ...args)` ✨
+- `apps/frontend/src/lib/i18n/t.test.ts` — 17 unit тестов + 1 snapshot ✨
+- `apps/frontend/src/lib/i18n/MIGRATION.md` — лог миграций ✨
+- `apps/frontend/src/App.tsx` — мигрирован (Role table → label/description/placeholder keys) ✨
+- `apps/frontend/src/components/Dispatcher/{AlertsPanel,AlertCard}.tsx` — мигрированы ✨
+- `apps/frontend/src/pages/PassengerMode.tsx` — мигрирован (`recommend.text` остаётся pure-data) ✨
+- `apps/frontend/src/lib/EtaCard.tsx` — мигрирован ✨
+- `Makefile` — добавлены `lint-frontend-text` + `frontend-text-check`; обе `check-all` цепочки обновлены ✨
+
+### Backend (T-131) (без изменений в этой сессии)
 - `apps/backend/app/insights/__init__.py` — пакет ✨ новый
 - `apps/backend/app/insights/alerts.py` — OverloadAlert dataclass + find_overload_alerts + classify_load + SEVERITY_* + MAX_LOAD_PCT re-export ✨ новый (135 строк)
 - `apps/backend/app/api/alerts.py` — GET /api/v1/insights/alerts?window_min=N router ✨ новый (118 строк)
@@ -152,4 +164,6 @@ tests/test_alerts_endpoint.py::test_alerts_payload_alert_shape_when_present PASS
 - ❌ Не менять URL `/api/v1/insights/alerts` на `/api/v1/alerts/overload` (D-013)
 - ❌ Не создавать README.en.md — хакатон русский, English не нужен (T-115 scope-down)
 - ❌ Не хардкодить русские/UI строки в .tsx вне `apps/frontend/src/lib/i18n/` (D-014, T-141)
+- ❌ Не использовать `cd apps/frontend && yarn ...` chains в multi-command tool calls — `yarn --cwd <abs-path>` обязательно (F-013)
+- ❌ Не удалять/изменять `Makefile` `lint-frontend-text` — CI gate для D-014
 - ❌ Не использовать `time_to_overload_min` с одинаковой семантикой для всего stop — каждая карточка = свой трамвай (D-013)
