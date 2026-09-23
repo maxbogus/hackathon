@@ -13,7 +13,7 @@ rice:
 depends_on: [T-019, T-033]
 blocks: [T-128, T-129]
 tags: [backend, api, eta, passenger, beneficiary]
-status: ready
+status: done
 created: 2026-09-23
 updated: 2026-09-23
 assignee: "maxim"
@@ -32,8 +32,8 @@ Endpoint возвращает массив ближайших рейсов (ETA 
 
 ## Acceptance Criteria
 
-- [ ] Endpoint `GET /api/v1/predictions/eta?stop_id=X&n=3` добавлен в `apps/backend/app/api/predictions.py`
-- [ ] Response schema `ETAResponse` в Pydantic:
+- [x] Endpoint `GET /api/v1/predictions/eta?stop_id=X&n=3` добавлен в `apps/backend/app/api/predictions.py`
+- [x] Response schema `ETAResponse` в Pydantic:
   - `stop_id: int`
   - `trams: list[ETAPrediction]` где `ETAPrediction`:
     - `route_id: int`
@@ -41,13 +41,13 @@ Endpoint возвращает массив ближайших рейсов (ETA 
     - `eta_min: int` (0-60)
     - `predicted_load_pct: float` (0-100)
     - `model_id: str`
-- [ ] Алгоритм: берёт текущее время, активную модель из registry, предсказывает
+- [x] Алгоритм: берёт текущее время, активную модель из registry, предсказывает
   пассажиропоток на следующие 60 минут с шагом 5-15 мин (3 точки)
-- [ ] ETA вычисляется как `t_arrival - t_now`, где `t_arrival` — следующий пик нагрузки
+- [x] ETA вычисляется как `t_arrival - t_now`, где `t_arrival` — следующий пик нагрузки
   на этом stop_id (или фиксированный интервал если данных мало)
-- [ ] Если активная модель не поддерживает per-stop per-5min — fallback на hourly forecast
-- [ ] CORS headers настроены для Streamlit (разные порты)
-- [ ] Smoke test: `curl http://localhost:8000/api/v1/predictions/eta?stop_id=1&n=3`
+- [x] Если активная модель не поддерживает per-stop per-5min — fallback на hourly forecast
+- [x] CORS headers настроены для Streamlit (разные порты)
+- [x] Smoke test: `curl http://localhost:8000/api/v1/predictions/eta?stop_id=1&n=3`
   возвращает валидный JSON
 
 ## Technical Notes

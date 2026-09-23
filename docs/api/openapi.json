@@ -154,6 +154,65 @@
         }
       }
     },
+    "/api/v1/predictions/eta": {
+      "get": {
+        "tags": [
+          "predictions"
+        ],
+        "summary": "Get next N upcoming trams at a stop (ETA + predicted load)",
+        "description": "Return the next N trams calling at `stop_id`.\n\nUsed by the passenger-mode UI (T-129) to render the \"next trams\" cards\nwith ETA + predicted load. The response shape (`ETAResponse`) is\nkept in sync with `apps/frontend/src/lib/recommend.ts`.\n\nBehaviour:\n    - Reads the active model from `ArtifactLoader`.\n    - Predicts hourly ridership over the next 60 minutes.\n    - Distributes predictions across N equal-width buckets\n      (see `app.data.transit.compute_eta_predictions`).\n    - Returns an empty `trams` list when the stop is unknown\n      (UI shows \"no data\").\n\nErrors:\n    - 503: no active model artifact (consistent with /models/active).\n    - 501: active model is not yet wired into the predictor dispatcher.",
+        "operationId": "get_eta_predictions_api_v1_predictions_eta_get",
+        "parameters": [
+          {
+            "name": "stop_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Tram stop id (1..N).",
+              "title": "Stop Id"
+            },
+            "description": "Tram stop id (1..N)."
+          },
+          {
+            "name": "n",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Number of upcoming trams to return. Clamped to [1, 5].",
+              "default": 3,
+              "title": "N"
+            },
+            "description": "Number of upcoming trams to return. Clamped to [1, 5]."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ETAResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/models/active": {
       "get": {
         "tags": [
@@ -254,6 +313,95 @@
   },
   "components": {
     "schemas": {
+      "ETAPrediction": {
+        "properties": {
+          "route_id": {
+            "type": "integer",
+            "title": "Route Id",
+            "description": "Numeric id of the route (e.g. 7)."
+          },
+          "route_name": {
+            "type": "string",
+            "title": "Route Name",
+            "description": "Human-readable label (e.g. '7', 'А'). May equal route_id as a string for numeric-only routes."
+          },
+          "eta_min": {
+            "type": "integer",
+            "maximum": 60.0,
+            "minimum": 0.0,
+            "title": "Eta Min",
+            "description": "Minutes until arrival. 0 = already at the stop / leaving now."
+          },
+          "predicted_load_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Predicted Load Pct",
+            "description": "Predicted load as % of tram capacity."
+          },
+          "model_id": {
+            "type": "string",
+            "title": "Model Id",
+            "description": "Id of the model that produced this prediction."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "route_id",
+          "route_name",
+          "eta_min",
+          "predicted_load_pct",
+          "model_id"
+        ],
+        "title": "ETAPrediction",
+        "description": "One tram approaching a stop.\n\nMirrors the TypeScript `ETAPrediction` interface in\n`apps/frontend/src/lib/recommend.ts` — do not rename fields without\nregenerating `apps/frontend/src/generated/api.ts`."
+      },
+      "ETAResponse": {
+        "properties": {
+          "stop_id": {
+            "type": "integer",
+            "title": "Stop Id",
+            "description": "Echo of the request's stop_id."
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At",
+            "description": "Server time when the response was assembled (ISO 8601)."
+          },
+          "horizon_minutes": {
+            "type": "integer",
+            "title": "Horizon Minutes",
+            "description": "How far into the future predictions were made.",
+            "default": 60
+          },
+          "n_requested": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "N Requested",
+            "description": "Number of trams requested (clamped to [1, 5])."
+          },
+          "trams": {
+            "items": {
+              "$ref": "#/components/schemas/ETAPrediction"
+            },
+            "type": "array",
+            "title": "Trams",
+            "description": "Sorted by eta_min ascending. Empty list = no data."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "stop_id",
+          "generated_at",
+          "n_requested"
+        ],
+        "title": "ETAResponse",
+        "description": "Response body of GET /api/v1/predictions/eta."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {

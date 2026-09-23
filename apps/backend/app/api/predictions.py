@@ -6,18 +6,24 @@ for a given stop and time range.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from transit_ai.models.base import PredictionPoint
 from transit_ai.models.baseline import BaselineMean
 
+from app.data.transit import (
+    HORIZON_MINUTES,
+    MAX_TRAMS_PER_REQUEST,
+    compute_eta_predictions,
+)
 from app.forecast.loader import (
     ActiveArtifactNotFoundError,
     ArtifactLoader,
     ArtifactNotFoundError,
     get_loader,
 )
+from app.schemas.eta import ETAResponse
 
 router = APIRouter(prefix="/api/v1", tags=["predictions"])
 
@@ -43,7 +49,9 @@ def _get_predictor(loader: ArtifactLoader) -> BaselineMean:
     )
 
 
-@router.get("/predictions/stop/{stop_id}", summary="Get ridership predictions for a stop")
+@router.get(
+    "/predictions/stop/{stop_id}", summary="Get ridership predictions for a stop"
+)
 def get_predictions_for_stop(
     stop_id: int,
     period_start: datetime,
@@ -60,7 +68,9 @@ def get_predictions_for_stop(
     try:
         predictor = _get_predictor(loader)
     except (ArtifactNotFoundError, ActiveArtifactNotFoundError) as exc:
-        raise HTTPException(status_code=503, detail=f"No active artifact: {exc}") from exc
+        raise HTTPException(
+            status_code=503, detail=f"No active artifact: {exc}"
+        ) from exc
 
     points: list[PredictionPoint] = predictor.predict(stop_id, period_start, period_end)
 
@@ -82,13 +92,76 @@ def get_predictions_for_stop(
     }
 
 
+@router.get(
+    "/predictions/eta",
+    response_model=ETAResponse,
+    summary="Get next N upcoming trams at a stop (ETA + predicted load)",
+)
+def get_eta_predictions(
+    stop_id: int = Query(..., description="Tram stop id (1..N).", ge=1),
+    n: int = Query(
+        default=3,
+        ge=1,
+        description=(
+            "Number of upcoming trams to return. Clamped to "
+            f"[1, {MAX_TRAMS_PER_REQUEST}]."
+        ),
+    ),
+    loader: ArtifactLoader = Depends(get_loader),
+) -> ETAResponse:
+    """Return the next N trams calling at `stop_id`.
+
+    Used by the passenger-mode UI (T-129) to render the "next trams" cards
+    with ETA + predicted load. The response shape (`ETAResponse`) is
+    kept in sync with `apps/frontend/src/lib/recommend.ts`.
+
+    Behaviour:
+        - Reads the active model from `ArtifactLoader`.
+        - Predicts hourly ridership over the next 60 minutes.
+        - Distributes predictions across N equal-width buckets
+          (see `app.data.transit.compute_eta_predictions`).
+        - Returns an empty `trams` list when the stop is unknown
+          (UI shows "no data").
+
+    Errors:
+        - 503: no active model artifact (consistent with /models/active).
+        - 501: active model is not yet wired into the predictor dispatcher.
+    """
+    n_clamped = min(n, MAX_TRAMS_PER_REQUEST)
+
+    try:
+        predictor = _get_predictor(loader)
+    except (ArtifactNotFoundError, ActiveArtifactNotFoundError) as exc:
+        raise HTTPException(
+            status_code=503, detail=f"No active artifact: {exc}"
+        ) from exc
+
+    now = datetime.now(tz=UTC)
+    trams = compute_eta_predictions(
+        stop_id=stop_id,
+        n=n_clamped,
+        predictor=predictor,
+        now=now,
+    )
+
+    return ETAResponse(
+        stop_id=stop_id,
+        generated_at=now,
+        horizon_minutes=HORIZON_MINUTES,
+        n_requested=n_clamped,
+        trams=trams,
+    )
+
+
 @router.get("/models/active", summary="Get active model info")
 def get_active_model(loader: ArtifactLoader = Depends(get_loader)) -> dict:
     """Return metadata of the currently active model artifact."""
     try:
         artifact = loader.get_active()
     except (ArtifactNotFoundError, ActiveArtifactNotFoundError) as exc:
-        raise HTTPException(status_code=503, detail=f"No active artifact: {exc}") from exc
+        raise HTTPException(
+            status_code=503, detail=f"No active artifact: {exc}"
+        ) from exc
 
     return {
         "model_id": artifact.model_id,

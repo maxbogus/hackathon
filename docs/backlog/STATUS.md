@@ -1,18 +1,18 @@
 # STATUS.md — критический путь
 
-_Обновлено: 2026-09-23. После T-129: passenger mode UI готов (35 tests, mock-режим). Зафиксировано: F-009 (TanStack __root.tsx), F-010 (prettier-plugin отсутствует). Очередь: T-127 (backend ETA), T-128 (load_pct), T-131 (dispatcher alerts)._
+_Обновлено: 2026-09-23. После T-127: backend `/api/v1/predictions/eta` готов (23 теста, live curl OK, контракт синхронизирован с фронтом через Orval). Зафиксировано: D-011 (STOP_ROUTES mock-match), F-011 (отсутствовал customInstance.ts — создан). Очередь: T-128 (capacity-aware load_pct), T-131 (dispatcher alerts), T-115 (README)._
 
 ## Сводка
 
 | Счётчик | Значение |
 |---|---|
-| Тикетов в `archive/` (done за всё время) | **34** |
-| Тикетов в `tickets/`: | **18** |
-| &nbsp;&nbsp;• `ready` (готовы к старту) | **19** |
+| Тикетов в `archive/` (done за всё время) | **35** |
+| Тикетов в `tickets/`: | **17** |
+| &nbsp;&nbsp;• `ready` (готовы к старту) | **17** |
 | &nbsp;&nbsp;• `backlog` (отложены) | **0** |
 | &nbsp;&nbsp;• `in-progress` | **0** |
-| Решений в ledger (`decisions.jsonl`) | **10** (D-001..D-010) |
-| Находок в ledger (`findings.jsonl`) | **10** (F-001..F-008, F-009, F-010) |
+| Решений в ledger (`decisions.jsonl`) | **11** (D-001..D-011) |
+| Находок в ledger (`findings.jsonl`) | **11** (F-001..F-008, F-009, F-010, F-011) |
 
 ## Готовые к старту (топ-5 по RICE score)
 
@@ -21,11 +21,11 @@ _Обновлено: 2026-09-23. После T-129: passenger mode UI готов 
 | **T-115** | 10.00 | 1h | README: добавить English version, раздел Handover, починить ссылки |
 | **T-128** | 8.40 | 2h | `load_pct` прогноз с учётом capacity трамвая |
 | **T-131** | 8.10 | 2h | Алерты диспетчеру T-30 мин warning |
-| **T-127** | ~7.0 | 1h | Backend `/api/v1/eta/stop/{id}` — следующие N трамваев |
 | **T-135** | 6.0 | 2h | TanStack Router: перевести role-switcher на URL (зависит от T-129) |
+| **T-123** | 5.5 | 3h | Weather data integration (Open-Meteo) |
 
-> Цепочка `T-127 → T-128 → T-129 → T-130` — это полный путь к демо для жюри за ~7 часов работы.
-> Зависимости T-127: T-019 ✅ (архив), T-033 ✅ (архив). Мёртвые ссылки (T-098) убраны (D-008).
+> Цепочка `T-127 → T-128 → T-129 → T-130` — все архивированы. Демо жюри готово на backend+frontend стеке.
+> Следующие блокеры: T-128 (capacity для load_pct), T-131 (dispatcher UI).
 
 ## Backlog (отложены)
 
@@ -37,7 +37,8 @@ _Пусто._
 
 ## Последние архивированные (для контекста)
 
-- T-129 — frontend режим «Пассажир» — React/Vite UI для ETA + load + рекомендация (1h) ✨ новый
+- T-127 — backend GET `/api/v1/predictions/eta?stop_id=X&n=3` (1h, 23 теста) ✨ новый
+- T-129 — frontend режим «Пассажир» — React/Vite UI для ETA + load + рекомендация (1h)
 - T-133 — слайд «Боли пассажиров → наше решение» для жюри (1h)
 - T-130 — recommend() бизнес-логика «ехать/ждать» для frontend (1h) ✨ новый
 - T-091 — fix mypy exclude regex (F-001)
@@ -77,6 +78,7 @@ _Пусто — все мёртвые ссылки (T-098/T-094/T-047/T-131-ui/T
 | D-008 | Убрать мёртвые ссылки T-098/T-094/T-047/T-131-ui/T-117 | — |
 | D-009 | Отказаться от Streamlit UI → React/Vite (T-129/T-130) | — |
 | D-010 | apps/frontend nodeLinker=node-modules (фикс EBADF под vitest@2) | — |
+| **D-011** | **STOP_ROUTES hardcoded match frontend mock (pixel-perfect demo)** | — ✨ новый |
 
 ## Риски
 
