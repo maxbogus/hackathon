@@ -55,20 +55,26 @@ def test_mape_returns_zero_when_all_actuals_zero() -> None:
     assert mape(y_true, y_pred) == 0.0
 
 
-def test_compute_metrics_returns_all_three() -> None:
-    """compute_metrics возвращает dict с rmsle/mae/mape (>=0)."""
+def test_compute_metrics_returns_all_five() -> None:
+    """compute_metrics возвращает dict с rmsle/mae/mape/wape/wape_score (>=0)."""
     y_true = np.array([10.0, 20.0, 30.0, 40.0, 50.0])
     y_pred = np.array([12.0, 22.0, 28.0, 42.0, 48.0])
     metrics = compute_metrics(y_true, y_pred)
     assert isinstance(metrics, dict)
-    assert set(metrics.keys()) == {"rmsle", "mae", "mape"}
-    for v in metrics.values():
-        assert isinstance(v, float)
-        assert v >= 0.0
+    assert set(metrics.keys()) == {"rmsle", "mae", "mape", "wape", "wape_score"}
+    for k, v in metrics.items():
+        assert isinstance(v, float), f"{k} not float: {type(v)}"
+        assert v >= 0.0, f"{k} negative: {v}"
 
 
 def test_compute_metrics_handles_empty_arrays() -> None:
     """compute_metrics on empty arrays → zeros (no crash)."""
     empty = np.array([])
     metrics = compute_metrics(empty, empty)
-    assert metrics == {"rmsle": 0.0, "mae": 0.0, "mape": 0.0}
+    assert metrics == {
+        "rmsle": 0.0,
+        "mae": 0.0,
+        "mape": 0.0,
+        "wape": 0.0,
+        "wape_score": 0.0,
+    }
