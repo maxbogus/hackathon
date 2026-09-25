@@ -1,27 +1,22 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-25T14:16:42.051290+00:00
+> Последнее обновление: 2026-09-25T14:45:14.923610+00:00
 > Обновлено: автоматически через `make handoff-update`
 
 ## Цель
 
-Продолжить разработку скелета Transit-AI
+Поднять WAPE submission с 0.72568 → 0.78-0.80 до дедлайна 27.09. Frontend coef-slider для К2.в, README Handover
 
 ## Прогресс
 
-Phase 0 (toolchain + clinerules + ledger)
+T-146+T-147 backend done. Submission #2 готов с bias correction. Frontend deferred (слайдеры coef_weather/event/season). Open: T-148 calendar, T-123 weather, T-115 README Handover, frontend coef slider.
 
 ## Git state
 
 ```
-commit: dad34f9
-status: A  data/real/README.md
-M  docs/HACKATHON_CHECKLIST.md
-M  docs/backlog/STATUS.md
-M  docs/backlog/archive/T-137-docs-hackathon-checklist-r8-submission.md
-R  docs/backlog/tickets/T-167-hackathon-checklist-sla-resources-loadtest.md -> docs/backlog/archive/T-167-hackathon-checklist-sla-resources-loadtest.md
- D docs/backlog/tickets/T-164-backend-dockerfile-non-root-hardening.md
- D docs/backlog/tickets/T-166-clinerule-22-skill-02-load-testing-playbook.md
+commit: 47daf59
+status: M docs/HANDOFF.md
+?? data/real/README.md
 ```
 
 ## Что в работе (0)
@@ -36,14 +31,14 @@ _пусто_
 - T-166-clinerule-22-skill-02-load-testing-playbook.md
 - T-167-hackathon-checklist-sla-resources-loadtest.md
 
-## Архив (done за всё время): 46
+## Архив (done за всё время): 48
 
 - T-160-backend-load-test-k6-docker-smoke.md
 - T-162-backend-load-profiles-baseline-stress-spike-soak.md
 - T-164-backend-dockerfile-non-root-hardening.md
 - T-166-clinerule-22-skill-02-load-testing-playbook.md
 - T-167-hackathon-checklist-sla-resources-loadtest.md
-_(показаны последние 5 из 46)_
+_(показаны последние 5 из 48)_
 
 ## Следующая задача
 
@@ -51,15 +46,15 @@ _(показаны последние 5 из 46)_
 
 ## Последние решения в ledger
 
-- **D-020**: SLA p95 ≤ 2000ms как hard gate в make check-all (R6 compliance)
 - **D-021**: Container resources hardcoded в docker-compose для R3 reproducible
 - **D-022**: Dockerfile hardening: multi-stage + non-root user + production healthcheck
+- **D-023**: Per-route bias calibration в log-space (T-147): pred *= exp(median(log1p(actual) - log1p(pred)))
 
 ## Последние находки
 
-- **F-017**: WAPE-score требует поддержки корректирующих коэффициентов в API
 - **F-018**: Реальный dataset хакатона НЕ полная сетка 24h — трамваи не ходят 0-3 ночи
 - **F-019**: Первый сабмит submission.csv на платформе хакатона — WAPE-score=0.72568
+- **F-020**: Per-route WAPE диагностика (T-146): слабые маршруты [25, 50, 7, 28], слабые часы [0-4, 22-23], слабые weekday [Сб, Вс]
 
 ## Открытые вопросы
 
