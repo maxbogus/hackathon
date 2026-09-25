@@ -1,0 +1,56 @@
+# Transit-AI .dockerignore (T-164)
+# Исключает из build context всё, что не нужно в Docker image:
+# - кэши Python/Node (ускоряет build на 30-50%)
+# - .env с секретами (security)
+# - tests/, docs/, scripts/ (не нужны в runtime image)
+# - data/, predictions/, ml/artifacts/ (gitignored runtime данные)
+
+# === Python кэши и venv ===
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.hypothesis/
+
+# === Node (фронт) ===
+node_modules/
+.yarn/cache
+.yarn/install-state.gz
+.pnp.*
+
+# === Git и IDE ===
+.git/
+.gitignore
+.gitattributes
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# === Secrets (security) ===
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# === Тесты, документация, скрипты (не нужны в runtime) ===
+tests/
+docs/
+scripts/
+
+# === Runtime данные (gitignored, монтируются через volumes) ===
+data/
+predictions/
+ml/artifacts/
+
+# === Docker-специфичное ===
+Dockerfile*
+docker-compose*.yml
+.dockerignore
