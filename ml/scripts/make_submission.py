@@ -29,6 +29,7 @@ from transit_ai.calibration.route_bias import apply_route_bias, compute_route_bi
 from transit_ai.data.base import DateRange
 from transit_ai.data.real import RealSource
 from transit_ai.models.route_baseline import RouteBaselineMean
+from transit_ai.models.xgboost_route import XGBoostRoutePredictor, build_lag_lookup
 from transit_ai.reports.metrics import compute_metrics
 from transit_ai.submission.candidate import print_candidate
 from transit_ai.submission.manifest import write_manifest
@@ -38,6 +39,8 @@ DEFAULT_TRAIN_START = datetime(2025, 1, 1, tzinfo=UTC)
 DEFAULT_TRAIN_END = datetime(2025, 8, 31, tzinfo=UTC)
 DEFAULT_TEST_START = datetime(2025, 9, 1, tzinfo=UTC)
 DEFAULT_TEST_END = datetime(2025, 10, 31, tzinfo=UTC)
+DEFAULT_HOLDOUT_END = DEFAULT_TEST_END  # T-152 alias
+DEFAULT_HOLDOUT_START = DEFAULT_TEST_START  # T-152 alias
 SCRIPT_DIR = Path(__file__).resolve().parent
 ML_DIR = SCRIPT_DIR.parent
 REPO_ROOT = ML_DIR.parent
@@ -88,6 +91,12 @@ def main() -> int:
     )
     p.add_argument("--model-id", default="route_baseline_v1", help="Model id")
     p.add_argument(
+        "--model-kind",
+        choices=["route_baseline", "xgboost_route"],
+        default="route_baseline",
+        help="Model kind (T-152: xgboost_route для XGBoost)",
+    )
+    p.add_argument(
         "--coef-weather",
         type=float,
         default=1.0,
@@ -117,14 +126,25 @@ def main() -> int:
 
     # 1. Load real data + train
     src = RealSource()
-    train_df = src.load_ridership(DateRange(DEFAULT_TRAIN_START, DEFAULT_TRAIN_END))
-    print(
-        f"Train rows: {len(train_df):,} ({DEFAULT_TRAIN_START.date()} → {DEFAULT_TRAIN_END.date()})"
-    )
-
-    model = RouteBaselineMean(model_id=args.model_id)
-    model.fit(train_df)
-    print(f"Fit done: {len(model.table_)} (route, weekday, hour) buckets")
+    # XGBoost использует полный ряд (train+holdout) для lag features
+    if args.model_kind == "xgboost_route":
+        all_df = src.load_ridership(DateRange(DEFAULT_TRAIN_START, DEFAULT_HOLDOUT_END))
+        train_df = all_df[all_df["timestamp"] < pd.Timestamp(DEFAULT_HOLDOUT_START).tz_localize(None)].copy()
+        print(
+            f"Train rows: {len(train_df):,} ({DEFAULT_TRAIN_START.date()} → {DEFAULT_TRAIN_END.date()})"
+        )
+        # Train XGBoost на полном ряду
+        model = XGBoostRoutePredictor(model_id=args.model_id)
+        model.fit(all_df)
+        print(f"Fit done: {model.n_estimators} trees x 3 quantiles")
+    else:
+        train_df = src.load_ridership(DateRange(DEFAULT_TRAIN_START, DEFAULT_TRAIN_END))
+        print(
+            f"Train rows: {len(train_df):,} ({DEFAULT_TRAIN_START.date()} → {DEFAULT_TRAIN_END.date()})"
+        )
+        model = RouteBaselineMean(model_id=args.model_id)
+        model.fit(train_df)
+        print(f"Fit done: {len(model.table_)} (route, weekday, hour) buckets")
 
     # 2. Evaluate on test (holdout: sep-oct) — first WITHOUT calibration
     test_df = src.load_ridership(DateRange(DEFAULT_TEST_START, DEFAULT_TEST_END))
@@ -166,7 +186,17 @@ def main() -> int:
     # predict_batch expects route_id/date/hour cols (matching RealSource output)
     pred_df = grid.rename(columns={"route": "route_id"})
     pred_df["date"] = pd.to_datetime(pred_df["date"])
-    preds = model.predict_batch(pred_df)
+
+    # T-152-fallback: для XGBoost при inference (submission period) lag/rolling
+    # фичей считаем через build_lag_lookup (mean из train по (route, weekday, hour)).
+    # Для RouteBaselineMean это не нужно (там фичи не используются).
+    lag_lookup = None
+    if args.model_kind == "xgboost_route":
+        lag_lookup = build_lag_lookup(train_df)
+        print(f"Built lag_lookup: {len(lag_lookup):,} entries (route, weekday, hour) -> mean")
+        preds = model.predict_batch(pred_df, lag_lookup=lag_lookup)
+    else:
+        preds = model.predict_batch(pred_df)
 
     # Apply per-route bias correction (T-147)
     preds = apply_route_bias(preds, grid["route"].astype(int).values, route_biases)
