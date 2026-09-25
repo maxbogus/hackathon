@@ -6,6 +6,7 @@ and thresholds, and that each is invoked by the corresponding make target.
 
 R6 hackathon-rules + docs/load-profiles/README.md contract.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -88,9 +89,7 @@ def test_profile_script_has_thresholds(profile: str) -> None:
     text = _read(LOAD_DIR / f"{profile}_dispatcher.js")
     p95 = cfg["p95"]
     err = cfg["err"]
-    assert re.search(rf"p\(95\)<{p95}", text), (
-        f"{profile}: missing threshold p(95)<{p95}"
-    )
+    assert re.search(rf"p\(95\)<{p95}", text), f"{profile}: missing threshold p(95)<{p95}"
     err_str = f"rate<{err}"
     assert err_str in text, f"{profile}: missing threshold {err_str}"
 
@@ -112,16 +111,9 @@ def test_profile_script_uses_stages(profile: str) -> None:
 def test_profile_script_round_robin_endpoints(profile: str) -> None:
     """Baseline и stress должны покрывать 3 эндпоинта (round-robin)."""
     text = _read(LOAD_DIR / f"{profile}_dispatcher.js")
-    assert "/api/v1/predictions/stop/" in text, (
-        f"{profile}: missing /api/v1/predictions/stop/"
-    )
-    assert "/api/v1/predictions/eta" in text, (
-        f"{profile}: missing /api/v1/predictions/eta"
-    )
-    assert "/api/v1/models/active" in text, (
-        f"{profile}: missing /api/v1/models/active"
-    )
-
+    assert "/api/v1/predictions/stop/" in text, f"{profile}: missing /api/v1/predictions/stop/"
+    assert "/api/v1/predictions/eta" in text, f"{profile}: missing /api/v1/predictions/eta"
+    assert "/api/v1/models/active" in text, f"{profile}: missing /api/v1/models/active"
 
 
 # === Makefile targets ===
@@ -156,18 +148,14 @@ def test_makefile_target_in_help() -> None:
         check=False,
     ).stdout
     for profile in PROFILES:
-        assert f"loadtest-{profile}" in help_text, (
-            f"loadtest-{profile} missing from `make help`"
-        )
+        assert f"loadtest-{profile}" in help_text, f"loadtest-{profile} missing from `make help`"
 
 
 def test_loadtest_all_runs_all_profiles_except_soak() -> None:
     """loadtest-all: smoke + baseline + stress + spike (без soak)."""
     dry_run = _make_dry_run("loadtest-all")
     for profile in ("smoke", "baseline", "stress", "spike"):
-        assert profile in dry_run, (
-            f"loadtest-all must include {profile}. Got: {dry_run[:1000]}"
-        )
+        assert profile in dry_run, f"loadtest-all must include {profile}. Got: {dry_run[:1000]}"
 
 
 # === Документация ===

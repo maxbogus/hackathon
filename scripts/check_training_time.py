@@ -5,6 +5,7 @@ Usage:
     uv run python scripts/check_training_time.py --limit-sec 3600
     uv run python scripts/check_training_time.py --artifacts-dir ml/artifacts
 """
+
 from __future__ import annotations
 
 import argparse
@@ -31,11 +32,13 @@ def scan_artifacts(artifacts_dir: Path) -> list[ArtifactRecord]:
             continue
         model_id = meta.get("model_id", meta_path.parent.name)
         train_time = float(meta.get("train_time_sec", 0))
-        records.append({
-            "model_id": model_id,
-            "train_time_sec": train_time,
-            "path": str(meta_path),
-        })
+        records.append(
+            {
+                "model_id": model_id,
+                "train_time_sec": train_time,
+                "path": str(meta_path),
+            }
+        )
     return records
 
 
@@ -57,8 +60,12 @@ def check_total_time(
 def main() -> int:
     parser = argparse.ArgumentParser(description="Check R6 training time limit")
     parser.add_argument("--artifacts-dir", type=Path, default=Path("ml/artifacts"))
-    parser.add_argument("--limit-sec", type=float, default=R6_LIMIT_SEC,
-                        help=f"R6 training time limit (default: {R6_LIMIT_SEC}s = 60m)")
+    parser.add_argument(
+        "--limit-sec",
+        type=float,
+        default=R6_LIMIT_SEC,
+        help=f"R6 training time limit (default: {R6_LIMIT_SEC}s = 60m)",
+    )
     args = parser.parse_args()
 
     print(f"Scanning {args.artifacts_dir} for training time...")

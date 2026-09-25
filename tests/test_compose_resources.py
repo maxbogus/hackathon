@@ -6,6 +6,7 @@ k6 loadtest profile must use CPU pinning to isolate load from backend.
 Note: docker compose v2 uses top-level keys (mem_limit, cpus, pids_limit)
 rather than deploy.resources (which is swarm-only).
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -76,9 +77,7 @@ def test_k6_in_loadtest_profile() -> None:
     compose = load_compose()
     k6 = compose["services"]["k6"]
     profiles = k6.get("profiles", [])
-    assert "loadtest" in profiles, (
-        f"k6 must be in 'loadtest' profile. Got profiles: {profiles}"
-    )
+    assert "loadtest" in profiles, f"k6 must be in 'loadtest' profile. Got profiles: {profiles}"
 
 
 def test_k6_has_cpu_pinning() -> None:
@@ -99,12 +98,8 @@ def test_k6_uses_grafana_image() -> None:
     compose = load_compose()
     k6 = compose["services"]["k6"]
     image = k6.get("image", "")
-    assert image.startswith("grafana/k6:"), (
-        f"k6 must use grafana/k6 image. Got: {image!r}"
-    )
-    assert not image.endswith(":latest"), (
-        f"k6 image must be pinned, not :latest. Got: {image!r}"
-    )
+    assert image.startswith("grafana/k6:"), f"k6 must use grafana/k6 image. Got: {image!r}"
+    assert not image.endswith(":latest"), f"k6 image must be pinned, not :latest. Got: {image!r}"
 
 
 def test_k6_mounts_tests_load() -> None:
@@ -112,12 +107,8 @@ def test_k6_mounts_tests_load() -> None:
     compose = load_compose()
     k6 = compose["services"]["k6"]
     volumes = k6.get("volumes", [])
-    has_tests_load = any(
-        "./tests/load" in str(v) and "/scripts" in str(v) for v in volumes
-    )
-    assert has_tests_load, (
-        f"k6 must mount ./tests/load as /scripts. Got volumes: {volumes}"
-    )
+    has_tests_load = any("./tests/load" in str(v) and "/scripts" in str(v) for v in volumes)
+    assert has_tests_load, f"k6 must mount ./tests/load as /scripts. Got volumes: {volumes}"
 
 
 def test_k6_mounts_reports_dir() -> None:
@@ -125,12 +116,8 @@ def test_k6_mounts_reports_dir() -> None:
     compose = load_compose()
     k6 = compose["services"]["k6"]
     volumes = k6.get("volumes", [])
-    has_reports = any(
-        "load-profiles/reports" in str(v) for v in volumes
-    )
-    assert has_reports, (
-        f"k6 must mount reports dir. Got volumes: {volumes}"
-    )
+    has_reports = any("load-profiles/reports" in str(v) for v in volumes)
+    assert has_reports, f"k6 must mount reports dir. Got volumes: {volumes}"
 
 
 def test_k6_has_web_dashboard_env() -> None:
@@ -138,9 +125,7 @@ def test_k6_has_web_dashboard_env() -> None:
     compose = load_compose()
     k6 = compose["services"]["k6"]
     env = k6.get("environment", {})
-    assert env.get("K6_WEB_DASHBOARD") == "true", (
-        f"k6 must have K6_WEB_DASHBOARD=true. Got: {env}"
-    )
+    assert env.get("K6_WEB_DASHBOARD") == "true", f"k6 must have K6_WEB_DASHBOARD=true. Got: {env}"
     assert env.get("K6_WEB_DASHBOARD_PORT") == "5665", (
         f"k6 must have K6_WEB_DASHBOARD_PORT=5665. Got: {env}"
     )
@@ -151,6 +136,4 @@ def test_k6_uses_host_network() -> None:
     compose = load_compose()
     k6 = compose["services"]["k6"]
     net_mode = k6.get("network_mode")
-    assert net_mode == "host", (
-        f"k6 must use network_mode: host. Got: {net_mode!r}"
-    )
+    assert net_mode == "host", f"k6 must use network_mode: host. Got: {net_mode!r}"

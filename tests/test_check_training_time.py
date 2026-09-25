@@ -1,4 +1,5 @@
 """Tests for scripts/check_training_time.py (T-165)."""
+
 from __future__ import annotations
 
 import json

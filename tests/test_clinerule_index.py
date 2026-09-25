@@ -6,6 +6,7 @@ Validates that:
 - ai/skills/02-*.md exists (T-166 deliverable)
 - No orphan index entries (file exists for every listed number)
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -42,6 +43,7 @@ def _index_entries() -> dict[int, str]:
 
 # === Index integrity ===
 
+
 def test_clinerule_index_exists() -> None:
     assert INDEX_FILE.exists(), f"Missing {INDEX_FILE}"
 
@@ -72,12 +74,11 @@ def test_index_entry_file_exists(num: int, filename: str) -> None:  # noqa: ARG0
     `num` нужен только для читаемого ID в pytest output.
     """
     path = CLINERULES_DIR / filename
-    assert path.exists(), (
-        f"Index references {filename} but file does not exist at {path}"
-    )
+    assert path.exists(), f"Index references {filename} but file does not exist at {path}"
 
 
 # === T-166 deliverables ===
+
 
 def test_clinerule_22_load_testing_exists() -> None:
     """T-166: должен появиться .clinerules/22-load-testing.md."""

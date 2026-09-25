@@ -3,6 +3,7 @@
 Validates security/reproducibility requirements from clinerule 01-safety.md:
 non-root user, pinned base image, sane healthcheck parameters.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -26,13 +27,12 @@ def _dockerfile_text() -> str:
 
 # === Multi-stage build ===
 
+
 def test_dockerfile_uses_multi_stage() -> None:
     """Multi-stage build обязателен для R3 reproducible (тикет T-164)."""
     text = _dockerfile_text()
     from_count = text.count("FROM ")
-    assert from_count >= 2, (
-        f"Dockerfile must use multi-stage build (≥2 FROM). Got: {from_count}"
-    )
+    assert from_count >= 2, f"Dockerfile must use multi-stage build (≥2 FROM). Got: {from_count}"
 
 
 def test_dockerfile_has_builder_stage() -> None:
@@ -52,6 +52,7 @@ def test_dockerfile_runtime_copies_from_builder() -> None:
 
 
 # === Security: non-root user ===
+
 
 def test_dockerfile_creates_app_user() -> None:
     """Должен создаваться системный user app с UID 1000."""
@@ -87,6 +88,7 @@ def test_user_directive_before_cmd() -> None:
 
 # === Reproducibility: pinned base image ===
 
+
 def test_dockerfile_no_latest_tag() -> None:
     """Base image НЕ должен использовать :latest (R3 reproducible)."""
     text = _dockerfile_text()
@@ -106,6 +108,7 @@ def test_dockerfile_pins_bookworm_or_slim() -> None:
 
 # === Healthcheck ===
 
+
 def test_dockerfile_healthcheck_interval_ge_30s() -> None:
     """HEALTHCHECK --interval=30s или больше (production-friendly)."""
     text = _dockerfile_text()
@@ -115,9 +118,7 @@ def test_dockerfile_healthcheck_interval_ge_30s() -> None:
     value = int(m.group(1))
     unit = m.group(2)
     seconds = value if unit == "s" else value * 60
-    assert seconds >= 30, (
-        f"HEALTHCHECK interval must be ≥30s for production. Got: {value}{unit}"
-    )
+    assert seconds >= 30, f"HEALTHCHECK interval must be ≥30s for production. Got: {value}{unit}"
 
 
 def test_dockerfile_healthcheck_retries_ge_3() -> None:
@@ -125,20 +126,17 @@ def test_dockerfile_healthcheck_retries_ge_3() -> None:
     text = _dockerfile_text()
     m = re.search(r"--retries=(\d+)", text)
     assert m, "HEALTHCHECK must specify --retries"
-    assert int(m.group(1)) >= 3, (
-        f"HEALTHCHECK retries must be ≥3. Got: {m.group(1)}"
-    )
+    assert int(m.group(1)) >= 3, f"HEALTHCHECK retries must be ≥3. Got: {m.group(1)}"
 
 
 def test_dockerfile_healthcheck_has_start_period() -> None:
     """HEALTHCHECK должен иметь --start-period для cold start."""
     text = _dockerfile_text()
-    assert "--start-period" in text, (
-        "HEALTHCHECK should specify --start-period for app warm-up"
-    )
+    assert "--start-period" in text, "HEALTHCHECK should specify --start-period for app warm-up"
 
 
 # === .dockerignore ===
+
 
 def test_dockerignore_exists() -> None:
     """.dockerignore обязателен для ускорения build + исключения секретов."""
@@ -157,12 +155,11 @@ def test_dockerignore_excludes(pattern: str) -> None:
 
 # === EXPOSE / CMD ===
 
+
 def test_dockerfile_exposes_8000() -> None:
     """EXPOSE 8000 сохранён (FastAPI default)."""
     text = _dockerfile_text()
-    assert re.search(r"^EXPOSE\s+8000\b", text, re.MULTILINE), (
-        "Dockerfile must EXPOSE 8000"
-    )
+    assert re.search(r"^EXPOSE\s+8000\b", text, re.MULTILINE), "Dockerfile must EXPOSE 8000"
 
 
 def test_dockerfile_cmd_uses_uvicorn() -> None:

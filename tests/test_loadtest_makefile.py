@@ -3,6 +3,7 @@
 Validates that make loadtest-* targets exist and use docker compose
 with the loadtest profile, as required by R6 hackathon-rules.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -43,9 +44,7 @@ def test_makefile_exists() -> None:
 def test_loadtest_smoke_in_help() -> None:
     """make help должен показывать loadtest-smoke target."""
     help_text = _make_help()
-    assert "loadtest-smoke" in help_text, (
-        "loadtest-smoke target missing from `make help`"
-    )
+    assert "loadtest-smoke" in help_text, "loadtest-smoke target missing from `make help`"
 
 
 def test_loadtest_smoke_uses_docker_compose() -> None:

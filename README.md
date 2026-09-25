@@ -174,7 +174,7 @@ make assistant-test      # smoke test registry моделей
 - [docs/DATA_CONTRACTS.md](docs/DATA_CONTRACTS.md) — что нужно от организаторов
 - [docs/USER_STORIES.md](docs/USER_STORIES.md) — сценарии диспетчера
 - [docs/ML.md](docs/ML.md) — описание моделей
-- [docs/HACKATHON_CHECKLIST.md](docs/HACKATHON_CHECKLIST.md) — чек-лист дня X
+- [docs/HACKATHON_CHECKLIST.md](docs/HACKATHON_CHECKLIST.md) — финальный чек-лист submission (R8)
 - [docs/PROMPTS/](docs/PROMPTS/) — промпты для сбора данных, EDA, валидации
 - [docs/ledger/README.md](docs/ledger/README.md) — как пользоваться ledger
 
