@@ -37,6 +37,7 @@ from transit_ai.data.events_calendar import EVENT_FEATURE_NAMES, get_event_featu
 from transit_ai.data.poi_features import POI_FEATURE_NAMES, get_route_poi_features
 from transit_ai.data.seasonal_calendar import get_seasonal_features
 from transit_ai.data.spravochnik_geo import build_route_geo_features
+from transit_ai.data.traffic_osm import TRAFFIC_FEATURE_NAMES, get_traffic_features
 from transit_ai.data.validators_lookup import get_validators_features
 from transit_ai.data.weather_openmeteo import get_weather_features
 
@@ -80,6 +81,10 @@ _POI_FEATURES: tuple[str, ...] = tuple(POI_FEATURE_NAMES)
 # T-172: Events-фичи (инфраструктурные открытия сентября-октября 2025).
 # Decay-weighted флаги по (date, route_id), вычисляются в _make_features.
 _EVENTS_FEATURES: tuple[str, ...] = tuple(EVENT_FEATURE_NAMES)
+
+# T-124: Traffic-фичи (пробки на перекрестках).
+# Per-stop: 3 фичи (n_intersections_500m, dist_main_road_km, jam_level_avg_500m).
+_TRAFFIC_FEATURES: tuple[str, ...] = tuple(TRAFFIC_FEATURE_NAMES)
 
 # T-174: разделение на base + flaggable groups
 _BASE_FEATURES: tuple[str, ...] = (
@@ -128,6 +133,8 @@ def build_feature_names(flags: FeatureFlags | None = None) -> tuple[str, ...]:
         names.extend(_POI_FEATURES)
     if flags.use_events:
         names.extend(_EVENTS_FEATURES)
+    if flags.use_traffic:
+        names.extend(_TRAFFIC_FEATURES)
     names.extend(_LAG_FEATURES)
     return tuple(names)
 
@@ -289,7 +296,27 @@ def _make_features(
             if ev_key not in event_cache:
                 event_cache[ev_key] = get_event_features(ev_key[0], ev_key[1])
         for feat_name in EVENT_FEATURE_NAMES:
-            df[feat_name] = [event_cache[k][feat_name] for k in zip(date_list, route_list)]
+            df[feat_name] = [
+                event_cache[k][feat_name] for k in zip(date_list, route_list)
+            ]
+
+    # T-124: traffic-фичи (если включены) — используем lat_mid/lon_mid как прокси
+    if flags.use_traffic:
+        if "lat_mid" not in df.columns or "lon_mid" not in df.columns:
+            raise ValueError(
+                "use_traffic=True требует use_geo_features=True (для lat_mid/lon_mid)"
+            )
+        traffic_cache: dict[tuple[float, float], dict[str, float]] = {}
+        lat_lon_pairs = list(zip(df["lat_mid"].values, df["lon_mid"].values))
+        for lat, lon in lat_lon_pairs:
+            key = (round(float(lat), 4), round(float(lon), 4))
+            if key not in traffic_cache:
+                traffic_cache[key] = get_traffic_features(float(lat), float(lon))
+        for feat_name in TRAFFIC_FEATURE_NAMES:
+            df[feat_name] = [
+                traffic_cache[(round(float(lat), 4), round(float(lon), 4))][feat_name]
+                for lat, lon in lat_lon_pairs
+            ]
 
     # T-160, T-161, T-162: внешние фичи по дате и (route, weekday, hour)
     # Сначала seasonal + weather по дате

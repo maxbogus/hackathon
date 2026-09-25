@@ -1,0 +1,5 @@
+# Variant: full (все фичи on, включая traffic)
+# Проверяем: full pipeline с traffic = reproducible v11_traffic
+
+features:
+  use_traffic: true

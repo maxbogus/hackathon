@@ -1,0 +1,5 @@
+# Variant: + traffic features (T-124)
+# Все defaults + use_traffic=True (3 новых фичи: intersections/dist/jam)
+
+features:
+  use_traffic: true
