@@ -26,11 +26,12 @@ YARN    ?= yarn
 PYTHON  ?= python3
 DC      ?= docker compose
 MACHINE ?= rtx5060    # rtx5060 | rtx4070_12gb
+REPO_ROOT := $(shell pwd)
 
 .PHONY: help install hooks-install up down \
         lint format typecheck test test-unit test-int check-all \
-        seed inventory train-baseline train-xgboost train-gru train-hybrid train-all \
-        predict calibrate evaluate sweep mc-scenario \
+        seed inventory inspect-real train-baseline train-xgboost train-gru train-hybrid train-all \
+        predict calibrate evaluate submission sweep mc-scenario \
         api-gen api-check fe-gen \
         assistant-test assistant-reasoning mcp-run \
         ledger-add ledger-list ledger-check ledger-export \
@@ -118,6 +119,13 @@ train-all: ## Train all models  [WIP: only baseline works, others pending]
 
 predict: ## Generate predictions with active model → predictions/*.parquet
 	$(UV) --directory ml run python scripts/predict.py
+
+inspect-real: ## Print hackathon real dataset summary (T-143)
+	$(UV) --directory ml run python scripts/inspect_real.py
+
+# T-145: submission pipeline (WAPE-score = 0.8681 baseline на holdout)
+submission: ## Generate submission.csv for hackathon platform (10 routes × 61 days × 24h) (T-145)
+	$(UV) --directory ml run python scripts/make_submission.py --output $(REPO_ROOT)/predictions/submission.csv
 
 calibrate: ## Apply per-bucket calibration
 	$(UV) --directory ml run python scripts/calibrate.py

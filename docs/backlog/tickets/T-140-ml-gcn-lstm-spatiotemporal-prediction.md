@@ -13,9 +13,9 @@ rice:
 depends_on: [T-029]
 blocks: []
 tags: [ml, neural, gcn, lstm, spatiotemporal, hackathon]
-status: ready
+status: backlog
 created: 2026-09-23
-updated: 2026-09-23
+updated: 2026-09-25
 assignee: ""
 ---
 

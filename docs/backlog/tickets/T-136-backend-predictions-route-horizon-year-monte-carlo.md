@@ -13,9 +13,9 @@ rice:
 depends_on: [T-036, T-134]
 blocks: []
 tags: [backend, api, predictions, horizon, year, monte-carlo, beneficiary, hackathon]
-status: ready
+status: backlog
 created: 2026-09-23
-updated: 2026-09-23
+updated: 2026-09-25
 assignee: "maxim"
 ---
 
