@@ -1,18 +1,26 @@
 # ============================================================================
 # Transit-AI — docker-compose для dev-окружения
 # ----------------------------------------------------------------------------
+# R3 reproducible: все сервисы имеют resource limits (см. T-163).
+# R6 time limits: обучение не в Docker (см. clinerule 10).
+#
 # Сервисы:
 #   postgres  — PostgreSQL 16 + TimescaleDB (гипертаблицы для predictions)
 #   redis     — кэш для API responses
 #   backend   — FastAPI :8000 (uvicorn)
 #   frontend  — Vite build → nginx :80 → проксирует /api/* на backend:8000
+#   k6        — load tester (профиль loadtest, T-160)
+#
+# Resource limits используют top-level формат (mem_limit, cpus, pids_limit)
+# потому что docker compose v2 deploy.resources работает только в swarm mode.
 #
 # ML artefacts + data монтируются read-only из хоста (не в Docker — clinerule 10).
 #
 # Usage:
-#   make up      # docker compose up -d
-#   make down    # docker compose down
-#   make logs    # docker compose logs -f
+#   make up            # docker compose up -d
+#   make up-loadtest   # docker compose --profile loadtest up -d
+#   make loadtest-smoke
+#   make down
 # ============================================================================
 
 name: transit-ai
@@ -21,6 +29,10 @@ services:
   postgres:
     image: timescale/timescaledb:latest-pg16
     restart: unless-stopped
+    # R3 reproducible: жёсткие лимиты ресурсов
+    mem_limit: 1g
+    mem_reservation: 512m
+    cpus: "1.0"
     environment:
       POSTGRES_DB: transit_dev
       POSTGRES_USER: transit
@@ -38,6 +50,9 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    mem_limit: 256m
+    mem_reservation: 128m
+    cpus: "0.25"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -65,6 +80,7 @@ services:
       ML_DATA_DIR: /app/data
       ENV: dev
       DEBUG: "true"
+      WEB_CONCURRENCY: "2"  # 2 uvicorn workers (не больше, RAM лимит 512MB)
     volumes:
       # ML artefacts + data с хоста (ML обучается скриптами, см. clinerule 10)
       - ./ml/artifacts:/app/ml/artifacts:rw
@@ -77,6 +93,11 @@ services:
     # В проде — за reverse proxy.
     ports:
       - "${BACKEND_HOST_PORT:-8000}:8000"
+    # R3 reproducible + R6 SLA: жёсткие лимиты для предсказуемой latency
+    mem_limit: 512m       # 256MB/worker × 2 workers (T-164)
+    mem_reservation: 256m
+    cpus: "1.0"
+    pids_limit: 200       # защита от fork-бомб
 
   frontend:
     build:
@@ -94,6 +115,32 @@ services:
       - transit-net
     ports:
       - "${FRONTEND_HOST_PORT:-5173}:80"
+    # nginx + static files — минимум ресурсов
+    mem_limit: 128m
+    mem_reservation: 32m
+    cpus: "0.25"
+
+  # === Load testing profile (T-160, T-162) ===
+  # Изолированный k6 контейнер с CPU pinning, чтобы наводящая нагрузка
+  # не влияла на измеряемый backend (T-163: cpuset "0,1" → ядра 0-1).
+  k6:
+    image: grafana/k6:0.54.0
+    container_name: transit-ai-k6
+    profiles: ["loadtest"]
+    network_mode: host  # Прямой доступ к localhost:8000 (где крутится backend)
+    # CPU pinning: k6 жмёт только ядра 0-1, backend не страдает от наводки
+    cpuset: "0,1"
+    mem_limit: 1g
+    mem_reservation: 512m
+    cpus: "2.0"
+    volumes:
+      - ./tests/load:/scripts:ro                                # k6 скрипты
+      - ./docs/load-profiles/reports:/reports:rw                # HTML + JSON отчёты
+    environment:
+      K6_WEB_DASHBOARD: "true"
+      K6_WEB_DASHBOARD_PORT: "5665"
+      K6_WEB_DASHBOARD_OPEN: "false"  # в headless Docker не пытаться открыть браузер
+    # command задаётся в Makefile (разный для каждого профиля нагрузки)
 
 volumes:
   postgres_data:
