@@ -1,18 +1,18 @@
 # STATUS.md — критический путь
 
-_Обновлено: 2026-09-25 (T-137+T-160+T-161+T-163+T-165+T-167 done). Блок валидации R3+R6 хакатона завершён — 8/8 тикетов (T-160..T-167). HACKATHON_CHECKLIST.md создан со всеми 14 секциями. Следующая цель — T-115 (README Russian) или T-125 (feature engineering)._
+_Обновлено: 2026-09-25 (T-168+T-169 ready, F-031). После успеха T-160..T-162 (external features batch v7 → holdout 0.9030 → 0.9009, +0.6pp, F-030) планируется следующая партия внешних фич: POI features (T-168) + anomaly-proneness (T-169). Submission #8 = POI, #9 = POI+anomaly. Цель — удержать/превысить holdout 0.9009 и подтвердить тренд на платформе (ожидание +5-15pp на ноя-дек за счёт event-driven маршрутов)._
 
 ## Сводка
 
 | Счётчик | Значение |
 |---|---|
 | Тикетов в `archive/` (done за всё время) | **49** (+T-137/T-160/T-161/T-163/T-165/T-167) |
-| Тикетов в `tickets/`: | **25** |
-| &nbsp;&nbsp;• `ready` (готовы к старту) | **25** |
+| Тикетов в `tickets/`: | **27** (+T-168 POI features, +T-169 anomaly-proneness) |
+| &nbsp;&nbsp;• `ready` (готовы к старту) | **27** |
 | &nbsp;&nbsp;• `backlog` (отложены) | **0** |
 | &nbsp;&nbsp;• `in-progress` | **0** |
-| Решений в ledger (`decisions.jsonl`) | **23** (D-001..D-022) |
-| Находок в ledger (`findings.jsonl`) | **19** (F-001..F-019) |
+| Решений в ledger (`decisions.jsonl`) | **24** (D-001..D-023) |
+| Находок в ledger (`findings.jsonl`) | **31** (F-001..F-031) |
 
 ## Готовые к старту (топ-5 по RICE score)
 
