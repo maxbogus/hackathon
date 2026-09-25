@@ -124,7 +124,9 @@ def main() -> int:
     test_pred = model.predict_batch(test_df)
     metrics_before = compute_metrics(test_df["boardings"].values, test_pred)
     print()
-    print(f"Holdout WAPE-score (сен–окт, без calibration): {metrics_before['wape_score']:.4f}")
+    print(
+        f"Holdout WAPE-score (сен–окт, без calibration): {metrics_before['wape_score']:.4f}"
+    )
     print(
         f"  MAE={metrics_before['mae']:.1f}, WAPE={metrics_before['wape']:.4f}, "
         f"RMSLE={metrics_before['rmsle']:.4f}"
@@ -160,9 +162,7 @@ def main() -> int:
     preds = model.predict_batch(pred_df)
 
     # Apply per-route bias correction (T-147)
-    preds = apply_route_bias(
-        preds, grid["route"].astype(int).values, route_biases
-    )
+    preds = apply_route_bias(preds, grid["route"].astype(int).values, route_biases)
 
     # Apply coefficients
     coef_product = args.coef_weather * args.coef_event * args.coef_season
