@@ -22,7 +22,7 @@ export const options = {
   },
 };
 
-const BASE_URL = __ENV.BACKEND_URL || 'http://localhost:8000'\;
+const BASE_URL = __ENV.BACKEND_URL || 'http://localhost:8000';
 const STOP_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 export default function () {
