@@ -247,6 +247,10 @@ def main() -> int:
     run_ts_str = datetime.now(tz=UTC).strftime("%Y%m%dT%H%M%SZ")
     if args.output:
         output = Path(args.output)
+        # F-035: если путь относительный, resolveировать относительно REPO_ROOT,
+        # иначе cwd=ml/ даст ml/predictions/ вместо predictions/
+        if not output.is_absolute():
+            output = (REPO_ROOT / output).resolve()
     else:
         csv_filename = f"submission_{args.model_id}_{start_date_str}_{end_date_str}_{run_ts_str}.csv"
         output = DEFAULT_OUTPUT_DIR / csv_filename
