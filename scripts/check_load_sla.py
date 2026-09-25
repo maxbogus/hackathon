@@ -7,6 +7,7 @@ Usage:
 
 R6 SLA: p95 <= 2000ms, error_rate <= 1%.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -49,13 +50,9 @@ def check_sla(
     """Return (pass, violations)."""
     violations: list[str] = []
     if report["p95_ms"] > p95_limit_ms:
-        violations.append(
-            f"p95={report['p95_ms']:.1f}ms > {p95_limit_ms:.0f}ms (R6 SLA breach)"
-        )
+        violations.append(f"p95={report['p95_ms']:.1f}ms > {p95_limit_ms:.0f}ms (R6 SLA breach)")
     if report["error_rate"] > error_rate_limit:
-        violations.append(
-            f"error_rate={report['error_rate']:.2%} > {error_rate_limit:.2%}"
-        )
+        violations.append(f"error_rate={report['error_rate']:.2%} > {error_rate_limit:.2%}")
     return (len(violations) == 0, violations)
 
 
@@ -80,10 +77,18 @@ def main() -> int:
         type=Path,
         default=Path("docs/load-profiles/reports"),
     )
-    parser.add_argument("--p95-ms", type=float, default=SLA_P95_MS,
-                        help=f"p95 threshold (default: {SLA_P95_MS}ms per R6)")
-    parser.add_argument("--error-rate", type=float, default=SLA_ERROR_RATE,
-                        help=f"Error rate threshold (default: {SLA_ERROR_RATE:.0%})")
+    parser.add_argument(
+        "--p95-ms",
+        type=float,
+        default=SLA_P95_MS,
+        help=f"p95 threshold (default: {SLA_P95_MS}ms per R6)",
+    )
+    parser.add_argument(
+        "--error-rate",
+        type=float,
+        default=SLA_ERROR_RATE,
+        help=f"Error rate threshold (default: {SLA_ERROR_RATE:.0%})",
+    )
     args = parser.parse_args()
 
     if args.latest or args.report is None:
@@ -93,8 +98,10 @@ def main() -> int:
 
     print(f"Checking SLA: {report_path}")
     metrics = parse_k6_report(report_path)
-    print(f"   p50={metrics['p50_ms']:.1f}ms  p95={metrics['p95_ms']:.1f}ms  "
-          f"p99={metrics['p99_ms']:.1f}ms  avg={metrics['avg_ms']:.1f}ms  max={metrics['max_ms']:.1f}ms")
+    print(
+        f"   p50={metrics['p50_ms']:.1f}ms  p95={metrics['p95_ms']:.1f}ms  "
+        f"p99={metrics['p99_ms']:.1f}ms  avg={metrics['avg_ms']:.1f}ms  max={metrics['max_ms']:.1f}ms"
+    )
     print(f"   errors={metrics['error_rate']:.2%}  requests={metrics['total_requests']}")
 
     passed, violations = check_sla(metrics, args.p95_ms, args.error_rate)

@@ -1,4 +1,5 @@
 """Tests for scripts/check_load_sla.py (T-161)."""
+
 from __future__ import annotations
 
 import json
@@ -16,9 +17,7 @@ def _run_sla(*args: str, report: Path | None = None) -> subprocess.CompletedProc
     cmd = [sys.executable, str(SCRIPT), *args]
     if report is not None:
         cmd.append(str(report))
-    return subprocess.run(
-        cmd, capture_output=True, text=True, cwd=REPO_ROOT, check=False
-    )
+    return subprocess.run(cmd, capture_output=True, text=True, cwd=REPO_ROOT, check=False)
 
 
 def _make_report(tmp_path: Path, p95: float, error_rate: float) -> Path:
@@ -36,7 +35,11 @@ def _make_report(tmp_path: Path, p95: float, error_rate: float) -> Path:
                 }
             },
             "http_req_failed": {
-                "values": {"rate": error_rate, "passes": int(1000 * (1 - error_rate)), "fails": int(1000 * error_rate)}
+                "values": {
+                    "rate": error_rate,
+                    "passes": int(1000 * (1 - error_rate)),
+                    "fails": int(1000 * error_rate),
+                }
             },
             "http_reqs": {"values": {"count": 1000}},
         }
@@ -109,10 +112,30 @@ def test_latest_finds_latest_report(tmp_path: Path) -> None:
     report_dir = tmp_path
     # Создать 2 файла с разным mtime
     old = report_dir / "old.json"
-    old.write_text(json.dumps({"metrics": {"http_req_duration": {"values": {"p(95)": 100}}, "http_req_failed": {"values": {"rate": 0}}, "http_reqs": {"values": {"count": 1}}}}))
+    old.write_text(
+        json.dumps(
+            {
+                "metrics": {
+                    "http_req_duration": {"values": {"p(95)": 100}},
+                    "http_req_failed": {"values": {"rate": 0}},
+                    "http_reqs": {"values": {"count": 1}},
+                }
+            }
+        )
+    )
     time.sleep(0.1)
     new = report_dir / "new.json"
-    new.write_text(json.dumps({"metrics": {"http_req_duration": {"values": {"p(95)": 2000}}, "http_req_failed": {"values": {"rate": 0}}, "http_reqs": {"values": {"count": 1}}}}))
+    new.write_text(
+        json.dumps(
+            {
+                "metrics": {
+                    "http_req_duration": {"values": {"p(95)": 2000}},
+                    "http_req_failed": {"values": {"rate": 0}},
+                    "http_reqs": {"values": {"count": 1}},
+                }
+            }
+        )
+    )
     result = _run_sla("--latest", "--reports-dir", str(report_dir))
     # latest — должен быть "new" (p95=2000, на грани)
     assert "Checking SLA" in result.stdout
