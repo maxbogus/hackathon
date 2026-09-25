@@ -141,3 +141,100 @@ def test_xgboost_route_requires_columns(full_data: pd.DataFrame) -> None:
     bad = full_data.drop(columns=["boardings"])
     with pytest.raises(ValueError, match="Missing columns"):
         model.fit(bad)
+
+
+# ────────────────────────────────────────────────────────────────────
+# T-153: Recursive lag forecasting (F-026, fix F-025 OOD)
+# ────────────────────────────────────────────────────────────────────
+
+
+def _build_future_grid(
+    history: pd.DataFrame, future_start: pd.Timestamp, future_days: int = 3
+) -> pd.DataFrame:
+    """Build a full grid (route × date × hour) for the future period.
+
+    Использует routes из history. Каждая ячейка имеет timestamp,
+    route_id, date, hour; boardings отсутствуют (= NaN).
+    """
+    routes = sorted(history["route_id"].unique().tolist())
+    rows: list[dict] = []
+    for d_offset in range(future_days):
+        cur = future_start + pd.Timedelta(days=d_offset)
+        for route in routes:
+            for hour in range(24):
+                ts = cur + pd.Timedelta(hours=hour)
+                rows.append(
+                    {
+                        "timestamp": ts,
+                        "route_id": int(route),
+                        "date": ts.normalize(),
+                        "hour": int(hour),
+                    }
+                )
+    return pd.DataFrame(rows)
+
+
+def test_xgboost_route_predict_recursive_method_exists(full_data: pd.DataFrame) -> None:
+    """T-153: predict_recursive доступен как метод модели."""
+    model = XGBoostRoutePredictor(
+        model_id="xgboost_recursive_v1", n_estimators=20, max_depth=3
+    )
+    model.fit(full_data)
+    assert hasattr(model, "predict_recursive"), (
+        "predict_recursive must exist on XGBoostRoutePredictor (T-153)"
+    )
+    assert callable(model.predict_recursive)
+
+
+def test_xgboost_route_predict_recursive_returns_correct_shape(
+    full_data: pd.DataFrame,
+) -> None:
+    """T-153: predict_recursive возвращает массив длиной = len(future_grid).
+
+    Используем короткое окно (3 дня) чтобы тест был быстрым.
+    """
+    model = XGBoostRoutePredictor(
+        model_id="xgboost_recursive_v2", n_estimators=20, max_depth=3
+    )
+    # train на январь-августе (без holdout, чтобы лаги были честные)
+    train_only = full_data[full_data["timestamp"] < pd.Timestamp("2025-09-01")].copy()
+    model.fit(train_only)
+
+    # future = 2025-09-01 .. 2025-09-03 (3 дня)
+    future = _build_future_grid(
+        train_only, pd.Timestamp("2025-09-01"), future_days=3
+    )
+    preds = model.predict_recursive(history=train_only, future_grid=future)
+
+    assert len(preds) == len(future), (
+        f"predict_recursive должен вернуть {len(future)} значений, "
+        f"получил {len(preds)}"
+    )
+    assert (preds >= 0).all(), "predictions должны быть >= 0"
+
+
+def test_xgboost_route_predict_recursive_reproducible(
+    full_data: pd.DataFrame,
+) -> None:
+    """T-153: predict_recursive — deterministic для одинаковых inputs.
+
+    F-026 investigation: recursive forecast с lag_lookup-like fallback
+    проигрывает lookup-fallback потому что recursive добавляет drift.
+    Поэтому здесь проверяем только детерминированность, не сравнение с lookup.
+    Лучшее улучшение — T-154 (новые фичи: month, holidays, full grid).
+    """
+    train_only = full_data[full_data["timestamp"] < pd.Timestamp("2025-09-01")].copy()
+    future = _build_future_grid(
+        train_only, pd.Timestamp("2025-09-01"), future_days=3
+    )
+
+    model = XGBoostRoutePredictor(
+        model_id="xgboost_recursive_repro", n_estimators=20, max_depth=3
+    )
+    model.fit(train_only)
+
+    p1 = model.predict_recursive(history=train_only, future_grid=future.copy())
+    p2 = model.predict_recursive(history=train_only, future_grid=future.copy())
+
+    np.testing.assert_allclose(p1, p2, rtol=1e-6, atol=1e-3)
+    assert (p1 >= 0).all()

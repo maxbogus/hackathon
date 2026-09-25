@@ -114,6 +114,17 @@ def main() -> int:
         help="Human-readable submission id (R5 clinerule 23, default=model_id).",
     )
     p.add_argument("--output", default=None, help="Output CSV path")
+    p.add_argument(
+        "--use-recursive",
+        action="store_true",
+        help="T-153: use predict_recursive (rolling-window) вместо predict_batch+lag_lookup",
+    )
+    p.add_argument(
+        "--recompute-days",
+        type=int,
+        default=7,
+        help="T-153: размер окна для recursive forecast (default 7)",
+    )
     args = p.parse_args()
 
     start_dt = datetime.strptime(args.start_date, "%Y-%m-%d").replace(tzinfo=UTC)
@@ -129,7 +140,9 @@ def main() -> int:
     # XGBoost использует полный ряд (train+holdout) для lag features
     if args.model_kind == "xgboost_route":
         all_df = src.load_ridership(DateRange(DEFAULT_TRAIN_START, DEFAULT_HOLDOUT_END))
-        train_df = all_df[all_df["timestamp"] < pd.Timestamp(DEFAULT_HOLDOUT_START).tz_localize(None)].copy()
+        train_df = all_df[
+            all_df["timestamp"] < pd.Timestamp(DEFAULT_HOLDOUT_START).tz_localize(None)
+        ].copy()
         print(
             f"Train rows: {len(train_df):,} ({DEFAULT_TRAIN_START.date()} → {DEFAULT_TRAIN_END.date()})"
         )
@@ -189,12 +202,25 @@ def main() -> int:
 
     # T-152-fallback: для XGBoost при inference (submission period) lag/rolling
     # фичей считаем через build_lag_lookup (mean из train по (route, weekday, hour)).
-    # Для RouteBaselineMean это не нужно (там фичи не используются).
+    # T-153: --use-recursive использует predict_recursive (rolling-window forecast).
     lag_lookup = None
     if args.model_kind == "xgboost_route":
         lag_lookup = build_lag_lookup(train_df)
-        print(f"Built lag_lookup: {len(lag_lookup):,} entries (route, weekday, hour) -> mean")
-        preds = model.predict_batch(pred_df, lag_lookup=lag_lookup)
+        print(
+            f"Built lag_lookup: {len(lag_lookup):,} entries (route, weekday, hour) -> mean"
+        )
+        if args.use_recursive:
+            print(
+                f"T-153: predict_recursive (window={args.recompute_days}d) "
+                f"→ {len(pred_df):,} predictions"
+            )
+            preds = model.predict_recursive(
+                history=train_df,
+                future_grid=pred_df,
+                recompute_every_days=args.recompute_days,
+            )
+        else:
+            preds = model.predict_batch(pred_df, lag_lookup=lag_lookup)
     else:
         preds = model.predict_batch(pred_df)
 

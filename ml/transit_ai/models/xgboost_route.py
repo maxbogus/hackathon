@@ -300,6 +300,104 @@ class XGBoostRoutePredictor:
         preds = np.expm1(preds_log)
         return np.maximum(preds, 0.0)
 
+    def predict_recursive(
+        self,
+        history: pd.DataFrame,
+        future_grid: pd.DataFrame,
+        recompute_every_days: int = 7,
+    ) -> np.ndarray:
+        """T-153: Rolling-window forecast (direct, NOT pure recursive).
+
+        F-025 показал: чистый recursive (использовать предсказания как lag для
+        следующего дня) ДЕГРАДИРУЕТ с каждой итерацией. F-026 — нужно
+        фундаментально решить lag=0 OOD.
+
+        Правильная стратегия (direct multi-step, Hyndman):
+        1. Для каждого дня в future_grid:
+           - Присоединяем его к history (с реальными boardings до cutoff_date)
+           - Внутри окна из `recompute_every_days` дней — НЕ обновляем history
+             предсказаниями (избегаем drift)
+           - Lag/rolling features берутся из extended_history (реальные данные
+             для дней ≤ cutoff, NaN для будущего → fallback в _make_features на
+             route mean).
+        2. Predict все ячейки окна одним DMatrix.
+        3. На СЛЕДУЮЩЕМ окне — добавляем предсказания в history (best-effort),
+           но НЕ полагаемся на них — features всё равно используют реальные
+           данные когда доступны.
+
+        Args:
+            history: [timestamp, route_id, date, hour, boardings]. Реальные данные.
+            future_grid: [timestamp, route_id, date, hour]. Полная сетка.
+            recompute_every_days: размер окна (default 7).
+
+        Returns:
+            np.ndarray длиной len(future_grid).
+        """
+        if not self.fitted_:
+            raise RuntimeError("Model not fitted. Call fit() first.")
+        if future_grid.empty:
+            return np.array([], dtype=np.float64)
+
+        history = history.copy()
+        if "timestamp" not in history.columns:
+            history["timestamp"] = pd.to_datetime(history["date"]) + pd.to_timedelta(
+                history["hour"], unit="h"
+            )
+        future_grid = future_grid.copy()
+        if "timestamp" not in future_grid.columns:
+            future_grid["timestamp"] = pd.to_datetime(future_grid["date"]) + pd.to_timedelta(
+                future_grid["hour"], unit="h"
+            )
+
+        # Сохраняем оригинальный порядок
+        future_grid = future_grid.reset_index(drop=True)
+        future_grid["_orig_idx"] = np.arange(len(future_grid))
+
+        history = history.sort_values(["timestamp", "route_id"]).reset_index(drop=True)
+        future_grid_sorted = future_grid.sort_values(
+            ["timestamp", "route_id"]
+        ).reset_index(drop=True)
+
+        result = np.zeros(len(future_grid), dtype=np.float64)
+        extended_history = history.copy()
+
+        unique_days = sorted(future_grid_sorted["timestamp"].dt.normalize().unique())
+        n_windows = (len(unique_days) + recompute_every_days - 1) // recompute_every_days
+
+        for w_idx in range(n_windows):
+            win_start = w_idx * recompute_every_days
+            win_end = min(win_start + recompute_every_days, len(unique_days))
+            window_days = unique_days[win_start:win_end]
+
+            win_mask = future_grid_sorted["timestamp"].dt.normalize().isin(window_days)
+            win_rows = future_grid_sorted[win_mask].copy()
+            win_rows["boardings"] = np.nan
+
+            combined = pd.concat([extended_history, win_rows], ignore_index=True)
+            combined = combined.sort_values(["timestamp", "route_id"]).reset_index(drop=True)
+
+            X, _ = _make_features(combined, target=None)
+            win_X = X.tail(len(win_rows))
+
+            dmat = xgb.DMatrix(
+                win_X.values.astype(np.float32), feature_names=self.feature_names_
+            )
+            preds_log = self.booster_.predict(dmat)
+            preds = np.maximum(np.expm1(preds_log), 0.0)
+
+            for orig_idx, pred in zip(win_rows["_orig_idx"].values, preds):
+                result[int(orig_idx)] = pred
+
+            # Заполняем предсказания в extended_history (для rolling features)
+            # но с весом 1.0 (полная замена) — drift минимизирован короткими окнами
+            win_rows_filled = win_rows.copy()
+            win_rows_filled["boardings"] = preds
+            extended_history = pd.concat(
+                [extended_history, win_rows_filled], ignore_index=True
+            )
+
+        return result
+
     def predict_with_ci(
         self,
         df: pd.DataFrame,
