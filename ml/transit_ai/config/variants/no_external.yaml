@@ -1,0 +1,6 @@
+# Ablation: без external (school/weather/validators, T-160/T-161/T-162)
+
+features:
+  use_seasonal_calendar: false
+  use_weather: false
+  use_validators_lookup: false

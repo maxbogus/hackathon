@@ -31,6 +31,7 @@ import numpy as np
 import pandas as pd
 import xgboost as xgb
 
+from transit_ai.config.flags import FeatureFlags, FlagsRegistry
 from transit_ai.data.calendar_rf import get_day_type
 from transit_ai.data.events_calendar import EVENT_FEATURE_NAMES, get_event_features
 from transit_ai.data.poi_features import POI_FEATURE_NAMES, get_route_poi_features
@@ -80,7 +81,8 @@ _POI_FEATURES: tuple[str, ...] = tuple(POI_FEATURE_NAMES)
 # Decay-weighted флаги по (date, route_id), вычисляются в _make_features.
 _EVENTS_FEATURES: tuple[str, ...] = tuple(EVENT_FEATURE_NAMES)
 
-FEATURE_NAMES: tuple[str, ...] = (
+# T-174: разделение на base + flaggable groups
+_BASE_FEATURES: tuple[str, ...] = (
     "hour",
     "weekday",
     "month",
@@ -92,10 +94,9 @@ FEATURE_NAMES: tuple[str, ...] = (
     "day_type_weekend",
     "day_type_holiday",
     "route_id",
-    *_GEO_FEATURES,  # T-156
-    *_EXTERNAL_FEATURES,  # T-160, T-161, T-162
-    *_POI_FEATURES,  # T-168: per-route avg POI density
-    *_EVENTS_FEATURES,  # T-172: инфраструктурные события (decay-weighted)
+)
+
+_LAG_FEATURES: tuple[str, ...] = (
     "lag_24h",
     "lag_168h",
     "lag_730h",
@@ -103,6 +104,36 @@ FEATURE_NAMES: tuple[str, ...] = (
     "rolling_mean_168h",
     "rolling_mean_30d",
 )
+
+
+def build_feature_names(flags: FeatureFlags | None = None) -> tuple[str, ...]:
+    """Построить FEATURE_NAMES в зависимости от флагов (T-174).
+
+    Args:
+        flags: FeatureFlags (если None — используются defaults.yaml).
+
+    Returns:
+        tuple имён фичей в порядке для DMatrix.
+    """
+    if flags is None:
+        flags = FlagsRegistry.default().features
+    names: list[str] = list(_BASE_FEATURES)
+    if flags.use_geo_features:
+        names.extend(_GEO_FEATURES)
+    if flags.use_seasonal_calendar or flags.use_weather or flags.use_validators_lookup:
+        # _EXTERNAL_FEATURES содержит 3 группы: seasonal, weather, validators
+        # Если хоть одна включена — добавляем все (один вычислительный блок)
+        names.extend(_EXTERNAL_FEATURES)
+    if flags.use_poi_features:
+        names.extend(_POI_FEATURES)
+    if flags.use_events:
+        names.extend(_EVENTS_FEATURES)
+    names.extend(_LAG_FEATURES)
+    return tuple(names)
+
+
+# Backward-compat: FEATURE_NAMES = все фичи on (= defaults)
+FEATURE_NAMES: tuple[str, ...] = build_feature_names(FeatureFlags())
 
 
 def _get_geo_lookup() -> dict[int, dict[str, float]]:
@@ -176,17 +207,24 @@ def _make_features(
     df: pd.DataFrame,
     target: pd.Series | None = None,
     lag_lookup: dict[tuple[int, int, int], float] | None = None,
+    flags: FeatureFlags | None = None,
 ) -> tuple[pd.DataFrame, pd.Series | None]:
     """Создать матрицу фичей + target.
 
     df должен содержать: [timestamp, route_id, date, hour, boardings (если есть)]
     Вычисляет: weekday, month, hour_sin/cos, is_weekend, is_holiday, day_type_*
 
+    flags (T-174): если переданы — пропускает feature groups с use_xxx=False.
+    По умолчанию — FlagsRegistry.default() (= все фичи on, как v9_events baseline).
+
     Lag/rolling features:
     - если df содержит boardings (training mode): вычисляются как shift() в группе
     - если НЕТ boardings (inference mode) И lag_lookup передан: используем lookup[(route, weekday, hour)]
     - если НЕТ boardings И lookup=None: 0 (legacy OOD, не рекомендуется)
     """
+    if flags is None:
+        flags = FlagsRegistry.default().features
+
     df = df.copy()
     df["timestamp"] = pd.to_datetime(df["timestamp"])
     df["weekday"] = df["timestamp"].dt.weekday
@@ -195,7 +233,8 @@ def _make_features(
     df["hour_cos"] = np.cos(2 * np.pi * df["hour"] / 24)
     df["is_weekend"] = (df["weekday"] >= 5).astype(int)
 
-    # is_holiday из T-148 calendar
+    # is_holiday из T-148 calendar (calendar_rf: holidays + weekend)
+    # Всегда вычисляется (нужно для base features is_holiday + day_type_*)
     df["is_holiday"] = (
         df["timestamp"].dt.date.map(get_day_type).eq("holiday").astype(int)
     )
@@ -206,55 +245,51 @@ def _make_features(
     df["day_type_weekend"] = (df["day_type"] == "weekend").astype(int)
     df["day_type_holiday"] = (df["day_type"] == "holiday").astype(int)
 
-    # T-156: geo-фичи из справочника
-    geo_lookup = _get_geo_lookup()
-    df["lat_mid"] = df["route_id"].map(
-        lambda r: geo_lookup.get(int(r), {}).get("lat_mid", 0.0)
-    )
-    df["lon_mid"] = df["route_id"].map(
-        lambda r: geo_lookup.get(int(r), {}).get("lon_mid", 0.0)
-    )
-    df["dist_center_km"] = df["route_id"].map(
-        lambda r: geo_lookup.get(int(r), {}).get("dist_center_km", 0.0)
-    )
-    df["n_stops_log"] = df["route_id"].map(
-        lambda r: geo_lookup.get(int(r), {}).get("n_stops_log", 0.0)
-    )
-    df["place_id_enc"] = df["route_id"].map(
-        lambda r: geo_lookup.get(int(r), {}).get("place_id_enc", 0.0)
-    )
-
-    # T-168: POI-фичи per-route (средние по остановкам маршрута).
-    # Кэш: route_id → {n_schools_500m, n_universities_1500m, ...}
-    poi_cache: dict[int, dict[str, float]] = {}
-    for rid in df["route_id"].astype(int).unique():
-        poi_df = get_route_poi_features(int(rid))
-        if not poi_df.empty:
-            # Среднее по остановкам маршрута (per-route aggregate)
-            poi_cache[int(rid)] = poi_df.mean(numeric_only=True).to_dict()
-        else:
-            poi_cache[int(rid)] = {k: 0.0 for k in POI_FEATURE_NAMES}
-
-    for feat_name in POI_FEATURE_NAMES:
-        df[feat_name] = df["route_id"].map(
-            lambda r: poi_cache.get(int(r), {}).get(feat_name, 0.0)
+    # T-156: geo-фичи из справочника (если включены)
+    if flags.use_geo_features:
+        geo_lookup = _get_geo_lookup()
+        df["lat_mid"] = df["route_id"].map(
+            lambda r: geo_lookup.get(int(r), {}).get("lat_mid", 0.0)
+        )
+        df["lon_mid"] = df["route_id"].map(
+            lambda r: geo_lookup.get(int(r), {}).get("lon_mid", 0.0)
+        )
+        df["dist_center_km"] = df["route_id"].map(
+            lambda r: geo_lookup.get(int(r), {}).get("dist_center_km", 0.0)
+        )
+        df["n_stops_log"] = df["route_id"].map(
+            lambda r: geo_lookup.get(int(r), {}).get("n_stops_log", 0.0)
+        )
+        df["place_id_enc"] = df["route_id"].map(
+            lambda r: geo_lookup.get(int(r), {}).get("place_id_enc", 0.0)
         )
 
-    # T-172: events-фичи (decay-weighted по date × route_id).
-    # На train-периоде (янв-авг 2025) — все флаги = 0 (событий ещё не было),
-    # поэтому фичи не влияют на train fit и валидируются только на holdout.
-    date_list = pd.to_datetime(df["timestamp"]).dt.date
-    route_list = df["route_id"].astype(int).values
+    # T-168: POI-фичи per-route (если включены)
+    if flags.use_poi_features:
+        poi_cache: dict[int, dict[str, float]] = {}
+        for rid in df["route_id"].astype(int).unique():
+            poi_df = get_route_poi_features(int(rid))
+            if not poi_df.empty:
+                poi_cache[int(rid)] = poi_df.mean(numeric_only=True).to_dict()
+            else:
+                poi_cache[int(rid)] = {k: 0.0 for k in POI_FEATURE_NAMES}
 
-    # Кэш: (date, route_id) → dict фичей (избегаем повторных вызовов)
-    event_cache: dict[tuple[date, int], dict[str, float]] = {}
-    for i in range(len(df)):
-        ev_key = (date_list.iloc[i], int(route_list[i]))
-        if ev_key not in event_cache:
-            event_cache[ev_key] = get_event_features(ev_key[0], ev_key[1])
+        for feat_name in POI_FEATURE_NAMES:
+            df[feat_name] = df["route_id"].map(
+                lambda r: poi_cache.get(int(r), {}).get(feat_name, 0.0)
+            )
 
-    for feat_name in EVENT_FEATURE_NAMES:
-        df[feat_name] = [event_cache[k][feat_name] for k in zip(date_list, route_list)]
+    # T-172: events-фичи (если включены)
+    if flags.use_events:
+        date_list = pd.to_datetime(df["timestamp"]).dt.date
+        route_list = df["route_id"].astype(int).values
+        event_cache: dict[tuple[date, int], dict[str, float]] = {}
+        for i in range(len(df)):
+            ev_key = (date_list.iloc[i], int(route_list[i]))
+            if ev_key not in event_cache:
+                event_cache[ev_key] = get_event_features(ev_key[0], ev_key[1])
+        for feat_name in EVENT_FEATURE_NAMES:
+            df[feat_name] = [event_cache[k][feat_name] for k in zip(date_list, route_list)]
 
     # T-160, T-161, T-162: внешние фичи по дате и (route, weekday, hour)
     # Сначала seasonal + weather по дате
@@ -360,7 +395,7 @@ def _make_features(
         ):
             df[col] = 0.0
 
-    X = df[list(FEATURE_NAMES)].copy()
+    X = df[list(build_feature_names(flags))].copy()
     y = (
         target
         if target is not None
@@ -388,13 +423,21 @@ class XGBoostRoutePredictor:
     booster_: Any = None  # xgb.Booster (median)
     boosters_: dict[float, xgb.Booster] = field(default_factory=dict)
     feature_names_: list[str] = field(default_factory=list)
+    flags_: FeatureFlags | None = None
     fitted_: bool = False
 
-    def fit(self, ridership: pd.DataFrame) -> None:
+    def fit(
+        self,
+        ridership: pd.DataFrame,
+        flags: FeatureFlags | None = None,
+    ) -> None:
         """Train XGBoost на route-level данных.
 
         ridership должен содержать: [timestamp, route_id, date, hour, boardings]
         Полный ряд (train + holdout) для корректных lag features.
+
+        flags (T-174): FeatureFlags для включения/выключения feature groups.
+        Если None — используются defaults.yaml (= все фичи on, кроме traffic/gru).
         """
         if ridership.empty:
             raise ValueError("Cannot fit XGBoostRoutePredictor on empty data")
@@ -409,11 +452,15 @@ class XGBoostRoutePredictor:
         if "hour" not in df.columns:
             df["hour"] = pd.to_datetime(df["timestamp"]).dt.hour
 
-        X, y = _make_features(df)
+        if flags is None:
+            flags = FlagsRegistry.default().features
+        self.flags_ = flags
+
+        X, y = _make_features(df, flags=flags)
         if y is None:
             raise ValueError("No target column found")
 
-        self.feature_names_ = list(FEATURE_NAMES)
+        self.feature_names_ = list(build_feature_names(flags))
 
         # XGBoost: 3 quantile boosters для CI
         dtrain = xgb.DMatrix(
@@ -643,4 +690,9 @@ class XGBoostRoutePredictor:
         return predictor
 
 
-__all__ = ["FEATURE_NAMES", "XGBoostRoutePredictor", "build_lag_lookup"]
+__all__ = [
+    "FEATURE_NAMES",
+    "XGBoostRoutePredictor",
+    "build_feature_names",
+    "build_lag_lookup",
+]

@@ -1,0 +1,10 @@
+# Ablation: только base features (без geo/external/poi/events)
+# Минимальный baseline для понимания важности каждой группы
+
+features:
+  use_geo_features: false
+  use_seasonal_calendar: false
+  use_weather: false
+  use_validators_lookup: false
+  use_poi_features: false
+  use_events: false

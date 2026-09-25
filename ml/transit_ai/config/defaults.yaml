@@ -1,0 +1,22 @@
+# ML pipeline defaults (T-174)
+# Repro: xgboost_v9_events baseline (wape_score=0.9051 raw, 0.8751 calibrated)
+
+features:
+  use_calendar_rf: true         # T-148 holidays/weekend
+  use_seasonal_calendar: true   # T-160 school/vacation
+  use_weather: true             # T-161
+  use_validators_lookup: true   # T-162
+  use_geo_features: true        # T-156
+  use_poi_features: true        # T-168 (146 POI per-route)
+  use_events: true              # T-172 (8 infrastructure events)
+  use_traffic: false            # T-124 (WIP, default off until T-175)
+
+models:
+  use_xgboost: true
+  use_catboost: true
+  use_gru: false                # T-029 (WIP, default off)
+
+modes:
+  blend_method: weighted_mean   # weighted_mean | rank_average
+  use_recursive: false          # T-153 rolling-window forecast
+  use_per_route_bias: true      # T-147 per-route log bias

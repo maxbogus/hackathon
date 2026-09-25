@@ -1,0 +1,5 @@
+# Ablation: без POI features (T-168)
+# Проверяем: насколько POI помогают на holdout?
+
+features:
+  use_poi_features: false

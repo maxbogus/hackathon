@@ -1,0 +1,6 @@
+# Ablation: без events features (T-172)
+# Проверяем: насколько events помогают на holdout?
+
+features:
+  use_events: false
+  # Остальные = defaults

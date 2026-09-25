@@ -93,6 +93,11 @@ def main() -> int:
     )
     p.add_argument("--model-id", default="route_baseline_v1", help="Model id")
     p.add_argument(
+        "--flags-file",
+        default=None,
+        help="Path to YAML flags file (T-174). Default: defaults.yaml из ml/transit_ai/config/.",
+    )
+    p.add_argument(
         "--model-kind",
         choices=["route_baseline", "xgboost_route"],
         default="route_baseline",
@@ -148,10 +153,23 @@ def main() -> int:
         print(
             f"Train rows: {len(train_df):,} ({DEFAULT_TRAIN_START.date()} → {DEFAULT_TRAIN_END.date()})"
         )
+        # T-174: load feature flags from --flags-file (or use defaults.yaml)
+        if args.flags_file:
+            from transit_ai.config.flags import FlagsRegistry
+            registry = FlagsRegistry.from_yaml(Path(args.flags_file))
+        else:
+            from transit_ai.config.flags import FlagsRegistry
+            registry = FlagsRegistry.default()
+        feature_flags = registry.features
+        print(f"Feature flags: use_poi={feature_flags.use_poi_features}, "
+              f"use_events={feature_flags.use_events}, use_traffic={feature_flags.use_traffic}, "
+              f"use_geo={feature_flags.use_geo_features}")
+
         # Train XGBoost на полном ряду
         model = XGBoostRoutePredictor(model_id=args.model_id)
-        model.fit(all_df)
-        print(f"Fit done: {model.n_estimators} trees x 3 quantiles")
+        model.fit(all_df, flags=feature_flags)
+        print(f"Fit done: {model.n_estimators} trees x 3 quantiles "
+              f"(features: {len(model.feature_names_)})")
     else:
         train_df = src.load_ridership(DateRange(DEFAULT_TRAIN_START, DEFAULT_TRAIN_END))
         print(
