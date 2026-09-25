@@ -7,7 +7,7 @@
 
 | # | File | Purpose |
 |---|---|---|
-| 00 | `00-AGENTS.md` (this) | Мастер-индекс + entry point |
+| 00 | `00-AGENTS.md` | Мастер-индекс + entry point |
 | 01 | `01-philosophy.md` | Data-driven, minimal scope, MVP first |
 | 02 | `02-architecture.md` | Монорепо apps/*, контракты артефактов, ML вне Docker |
 | 03 | `03-backlog-format.md` | YAML frontmatter spec + RICE + workflow |
@@ -29,6 +29,7 @@
 | 19 | `19-ml-benchmark-pipeline.md` | ML benchmark pipeline (offline) |
 | 20 | `20-text-constants-registry.md` | Frontend hybrid t(key) text registry |
 | 21 | `21-runtime-uv.md` | uv как единый package manager (Python↔Docker↔ML) |
+| 22 | `22-load-testing.md` | k6 load testing rules (smoke/baseline/stress/spike/soak, R6 SLA) |
 | — | `MEMORY-BUDGET.md` | Анти-краш: не читать >1MB JSON |
 
 ## Quick rules
@@ -54,6 +55,9 @@
     Никакого `pip install`, `python script.py` напрямую, `npm install`, `pnpm install`.
 13. **Makefile — single entry point:** все Python-скрипты (кроме фронтовых) подключены
     через `make <target>`. WIP-цели помечены `[WIP: T-NNN]` в help.
+14. **Load testing:** k6 запускается ТОЛЬКО в Docker (профиль `loadtest`), через
+    `make loadtest-*`. SLA gate — `make loadtest-check`. R6: p95 ≤ 2000ms, err ≤ 1%.
+    Подробности — `.clinerules/22-load-testing.md`.
 
 ## How Cline should work on this project
 
