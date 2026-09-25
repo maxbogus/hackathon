@@ -30,8 +30,14 @@ def test_baseline_can_fit(fitted_model: BaselineMean) -> None:
     assert len(fitted_model.global_table_) > 0
 
 
-def test_baseline_predict_returns_one_point_per_hour(fitted_model: BaselineMean) -> None:
-    pts = fitted_model.predict(stop_id=1, period_start=datetime(2026, 2, 1, 0, 0), period_end=datetime(2026, 2, 1, 3, 0))
+def test_baseline_predict_returns_one_point_per_hour(
+    fitted_model: BaselineMean,
+) -> None:
+    pts = fitted_model.predict(
+        stop_id=1,
+        period_start=datetime(2026, 2, 1, 0, 0),
+        period_end=datetime(2026, 2, 1, 3, 0),
+    )
     assert len(pts) == 3
     for p in pts:
         assert p.stop_id == 1
@@ -42,13 +48,23 @@ def test_baseline_predict_returns_one_point_per_hour(fitted_model: BaselineMean)
 
 def test_baseline_predict_handles_unknown_stop(fitted_model: BaselineMean) -> None:
     """Unknown stop falls back to global (weekday, hour) mean."""
-    pts_known = fitted_model.predict(stop_id=1, period_start=datetime(2026, 2, 2, 8, 0), period_end=datetime(2026, 2, 2, 9, 0))
-    pts_unknown = fitted_model.predict(stop_id=9999, period_start=datetime(2026, 2, 2, 8, 0), period_end=datetime(2026, 2, 2, 9, 0))
+    pts_known = fitted_model.predict(
+        stop_id=1,
+        period_start=datetime(2026, 2, 2, 8, 0),
+        period_end=datetime(2026, 2, 2, 9, 0),
+    )
+    pts_unknown = fitted_model.predict(
+        stop_id=9999,
+        period_start=datetime(2026, 2, 2, 8, 0),
+        period_end=datetime(2026, 2, 2, 9, 0),
+    )
     # Should be > 0 (global fallback) but possibly different
     assert pts_unknown[0].value >= 0
 
 
-def test_baseline_save_load_roundtrip(fitted_model: BaselineMean, tmp_path: Path) -> None:
+def test_baseline_save_load_roundtrip(
+    fitted_model: BaselineMean, tmp_path: Path
+) -> None:
     p = tmp_path / "model.pkl"
     fitted_model.save(str(p))
     assert p.exists()
@@ -78,7 +94,11 @@ def test_baseline_rmsle_below_threshold(fitted_model: BaselineMean) -> None:
     # Predict for each (stop, hour) bucket in test, compare to actual
     sq_errors: list[float] = []
     for (stop_id, ts), group in test.groupby([test["stop_id"], test["timestamp"]]):
-        pred = model.predict(int(stop_id), ts.to_pydatetime(), ts.to_pydatetime() + pd.Timedelta(hours=1).to_pytimedelta())
+        pred = model.predict(
+            int(stop_id),
+            ts.to_pydatetime(),
+            ts.to_pydatetime() + pd.Timedelta(hours=1).to_pytimedelta(),
+        )
         if pred:
             actual = group["passenger_count"].sum()
             # RMSLE: log1p(actual) - log1p(pred)
@@ -92,10 +112,18 @@ def test_baseline_rmsle_below_threshold(fitted_model: BaselineMean) -> None:
 def test_baseline_fails_on_empty_data() -> None:
     m = BaselineMean()
     with pytest.raises(ValueError):
-        m.fit(pd.DataFrame(columns=["timestamp", "stop_id", "route_id", "passenger_count"]))
+        m.fit(
+            pd.DataFrame(
+                columns=["timestamp", "stop_id", "route_id", "passenger_count"]
+            )
+        )
 
 
 def test_baseline_predict_requires_fit() -> None:
     m = BaselineMean()
     with pytest.raises(RuntimeError):
-        m.predict(stop_id=1, period_start=datetime(2026, 1, 1), period_end=datetime(2026, 1, 1, 1, 0))
+        m.predict(
+            stop_id=1,
+            period_start=datetime(2026, 1, 1),
+            period_end=datetime(2026, 1, 1, 1, 0),
+        )

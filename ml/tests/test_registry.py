@@ -22,20 +22,27 @@ def fitted_predictor() -> BaselineMean:
     return m
 
 
-def test_registry_creates_meta_json(fitted_predictor: BaselineMean, tmp_path: Path) -> None:
+def test_registry_creates_meta_json(
+    fitted_predictor: BaselineMean, tmp_path: Path
+) -> None:
     reg = ModelRegistry(tmp_path)
-    result = reg.save(fitted_predictor, version="v0.1.0", train_data_hash="abc", seed=42)
+    result = reg.save(
+        fitted_predictor, version="v0.1.0", train_data_hash="abc", seed=42
+    )
 
     meta_path = result.artifact_dir / "meta.json"
     assert meta_path.exists()
     import json
+
     meta = json.loads(meta_path.read_text())
     assert meta["model_id"] == "baseline_v1"
     assert meta["kind"] == "baseline"
     assert meta["version"] == "v0.1.0"
 
 
-def test_registry_validates_meta_against_schema(fitted_predictor: BaselineMean, tmp_path: Path) -> None:
+def test_registry_validates_meta_against_schema(
+    fitted_predictor: BaselineMean, tmp_path: Path
+) -> None:
     reg = ModelRegistry(tmp_path)
     reg.save(fitted_predictor, version="v0.1.0")
     # If schema validation passed, save() didn't raise. Verify meta is loadable.
@@ -44,7 +51,9 @@ def test_registry_validates_meta_against_schema(fitted_predictor: BaselineMean, 
     assert "trained_at" in meta
 
 
-def test_registry_activate_writes_active_json(fitted_predictor: BaselineMean, tmp_path: Path) -> None:
+def test_registry_activate_writes_active_json(
+    fitted_predictor: BaselineMean, tmp_path: Path
+) -> None:
     reg = ModelRegistry(tmp_path)
     reg.save(fitted_predictor)
     reg.activate("baseline_v1")
@@ -52,6 +61,7 @@ def test_registry_activate_writes_active_json(fitted_predictor: BaselineMean, tm
     active_path = tmp_path / "active.json"
     assert active_path.exists()
     import json
+
     assert json.loads(active_path.read_text()) == {"model_id": "baseline_v1"}
 
 
@@ -61,7 +71,9 @@ def test_registry_activate_rejects_missing_model(tmp_path: Path) -> None:
         reg.activate("ghost_v1")
 
 
-def test_registry_save_then_load_predictor(fitted_predictor: BaselineMean, tmp_path: Path) -> None:
+def test_registry_save_then_load_predictor(
+    fitted_predictor: BaselineMean, tmp_path: Path
+) -> None:
     reg = ModelRegistry(tmp_path)
     reg.save(fitted_predictor)
 
@@ -88,6 +100,7 @@ def test_git_commit_returns_string_or_none() -> None:
 
 def test_hash_dataframe_returns_hex_string() -> None:
     import pandas as pd
+
     df = pd.DataFrame({"a": [1, 2, 3]})
     h = hash_dataframe(df)
     assert isinstance(h, str)

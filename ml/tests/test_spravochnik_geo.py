@@ -3,6 +3,7 @@
 Использует реальные справочники из data/real/spravochniki/.
 RED-тесты пишутся ДО реализации (clinerule 16).
 """
+
 from __future__ import annotations
 
 from transit_ai.data.spravochnik_geo import (
@@ -30,8 +31,16 @@ def test_build_route_geo_features_has_required_columns() -> None:
     """T-156: обязательные колонки в результате."""
     geo = build_route_geo_features()
     required = {
-        "route", "n_stops", "lat_mid", "lon_mid", "lat_first", "lon_first",
-        "lat_last", "lon_last", "dist_center_km", "primary_place_id",
+        "route",
+        "n_stops",
+        "lat_mid",
+        "lon_mid",
+        "lat_first",
+        "lon_first",
+        "lat_last",
+        "lon_last",
+        "dist_center_km",
+        "primary_place_id",
     }
     assert required.issubset(geo.columns), f"missing: {required - set(geo.columns)}"
 

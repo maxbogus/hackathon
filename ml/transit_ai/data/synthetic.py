@@ -86,7 +86,11 @@ class SyntheticSource(DataSource):
         routes = []
         for r in range(1, c.n_routes + 1):
             n_stops_in_route = int(self._rng.integers(3, min(8, c.n_stops) + 1))
-            stop_ids = sorted(self._rng.choice(c.n_stops, size=n_stops_in_route, replace=False).tolist())
+            stop_ids = sorted(
+                self._rng.choice(
+                    c.n_stops, size=n_stops_in_route, replace=False
+                ).tolist()
+            )
             routes.append({"route_id": r, "name": f"Route-{r}", "stop_ids": stop_ids})
         return pd.DataFrame(routes)
 
@@ -104,22 +108,32 @@ class SyntheticSource(DataSource):
         actual_start = max(pd.Timestamp(date_range.start).normalize(), start_day)
         actual_end = min(pd.Timestamp(date_range.end).normalize(), end_day)
         if actual_start > actual_end:
-            return pd.DataFrame(columns=["timestamp", "stop_id", "route_id", "passenger_count"])
+            return pd.DataFrame(
+                columns=["timestamp", "stop_id", "route_id", "passenger_count"]
+            )
 
         # Build timestamps: every hour, every stop
-        hours = pd.date_range(actual_start, actual_end + pd.Timedelta(hours=23), freq="h")
+        hours = pd.date_range(
+            actual_start, actual_end + pd.Timedelta(hours=23), freq="h"
+        )
         # Cross join stops × hours
         stops_for_join = stops_df[["stop_id", "is_hub"]].copy()
         ridership_records = []
-        for stop_id, is_hub in zip(stops_for_join["stop_id"], stops_for_join["is_hub"], strict=True):
+        for stop_id, is_hub in zip(
+            stops_for_join["stop_id"], stops_for_join["is_hub"], strict=True
+        ):
             base = self._rng.uniform(c.ridership_min, c.ridership_max)
             if is_hub:
                 base *= 2.0
             mults = self._hour_multipliers(hours)
-            counts = np.maximum(0, self._rng.normal(base * mults, base * 0.1)).astype(int)
+            counts = np.maximum(0, self._rng.normal(base * mults, base * 0.1)).astype(
+                int
+            )
 
             # Find which routes serve this stop (without lambda in loop)
-            stop_routes = routes_df[routes_df["stop_ids"].apply(lambda s, sid=stop_id: sid in s)]
+            stop_routes = routes_df[
+                routes_df["stop_ids"].apply(lambda s, sid=stop_id: sid in s)
+            ]
             route_ids_for_stop = stop_routes["route_id"].tolist()
             if not route_ids_for_stop:
                 continue

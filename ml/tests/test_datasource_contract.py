@@ -14,7 +14,14 @@ class _FakeSource(DataSource):
     """Minimal DataSource impl used only to test the abstract contract."""
 
     def load_stops(self) -> pd.DataFrame:
-        return pd.DataFrame({"stop_id": [1, 2], "name": ["A", "B"], "lat": [55.0, 55.1], "lon": [37.0, 37.1]})
+        return pd.DataFrame(
+            {
+                "stop_id": [1, 2],
+                "name": ["A", "B"],
+                "lat": [55.0, 55.1],
+                "lon": [37.0, 37.1],
+            }
+        )
 
     def load_routes(self) -> pd.DataFrame:
         return pd.DataFrame({"route_id": [10], "stop_ids": [[1, 2]]})

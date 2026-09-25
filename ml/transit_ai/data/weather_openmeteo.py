@@ -8,6 +8,7 @@ Open-Meteo — бесплатный, без ключа, R4 hackathon-rules compl
 
 Покрытие: 2025-01-01 ... 2025-12-31 (включает train + holdout + submission).
 """
+
 from __future__ import annotations
 
 from datetime import date

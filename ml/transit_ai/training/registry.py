@@ -36,12 +36,20 @@ ACTIVE_FILE = "active.json"
 def git_commit() -> str | None:
     """Best-effort short SHA. None if not in a git repo."""
     try:
-        return subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"],
-            stderr=subprocess.DEVNULL,
-            timeout=2,
-        ).decode().strip()
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
+        return (
+            subprocess.check_output(
+                ["git", "rev-parse", "--short", "HEAD"],
+                stderr=subprocess.DEVNULL,
+                timeout=2,
+            )
+            .decode()
+            .strip()
+        )
+    except (
+        subprocess.CalledProcessError,
+        subprocess.TimeoutExpired,
+        FileNotFoundError,
+    ):
         return None
 
 
@@ -117,7 +125,9 @@ class ModelRegistry:
         jsonschema.validate(instance=meta, schema=self.schema)
 
         meta_path = artifact_dir / "meta.json"
-        meta_path.write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
+        meta_path.write_text(
+            json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
         return SaveResult(artifact_dir=artifact_dir, meta=meta)
 
     def activate(self, model_id: str) -> None:
@@ -128,7 +138,9 @@ class ModelRegistry:
 
         meta_path = artifact_dir / "meta.json"
         if not meta_path.is_file():
-            raise FileNotFoundError(f"Cannot activate: {meta_path} missing (run save() first)")
+            raise FileNotFoundError(
+                f"Cannot activate: {meta_path} missing (run save() first)"
+            )
 
         # Re-validate before activating (defensive)
         meta = json.loads(meta_path.read_text())

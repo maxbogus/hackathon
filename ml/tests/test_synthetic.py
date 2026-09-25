@@ -47,7 +47,9 @@ def test_synthetic_ridership_has_realistic_pattern() -> None:
     by_hour = rid.groupby("hour")["passenger_count"].sum()
 
     # Morning peak (8) > night (3)
-    assert by_hour[8] > by_hour[3], f"Expected peak hour 8 > night hour 3: {by_hour.to_dict()}"
+    assert by_hour[8] > by_hour[3], (
+        f"Expected peak hour 8 > night hour 3: {by_hour.to_dict()}"
+    )
 
 
 def test_synthetic_config_defaults_small() -> None:

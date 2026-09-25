@@ -13,6 +13,7 @@ Defaults:
     model_id = active.json if --model-id not given
     stop_ids = 1..10 (fallback) if --stop-ids not given
 """
+
 from __future__ import annotations
 
 import argparse
@@ -29,13 +30,13 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def main() -> int:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
+    )
 
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--horizon", choices=["day", "month", "year"], default="day")
-    p.add_argument(
-        "--granularity", choices=["hour", "day", "month"], default="hour"
-    )
+    p.add_argument("--granularity", choices=["hour", "day", "month"], default="hour")
     p.add_argument("--model-id", default=None, help="Override active.json")
     p.add_argument(
         "--from",

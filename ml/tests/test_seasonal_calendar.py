@@ -4,18 +4,19 @@ RED-тесты пишутся ДО реализации (clinerule 16).
 Школьные каникулы, начало учёбы, периоды отпусков — всё критично для
 прогноза ноябрь-декабрь 2025 (см. F-029 hard rule).
 """
+
 from __future__ import annotations
 
 from datetime import date
 
 from transit_ai.data.seasonal_calendar import (
+    days_to_new_year,
+    days_to_school_start,
     get_seasonal_features,
-    is_school_break,
-    is_school_start_day,
     is_mass_vacation,
     is_pre_holiday,
-    days_to_school_start,
-    days_to_new_year,
+    is_school_break,
+    is_school_start_day,
     is_workday_calendar_rf,
     uni_session_active,
 )
@@ -115,16 +116,16 @@ def test_days_to_new_year() -> None:
 
 def test_is_workday_calendar_rf_november_2025() -> None:
     """T-160: производственный календарь РФ на ноябрь 2025.
-    
+
     4 ноября — праздник (вт).
     1 ноября (сб) — выходной.
     3 ноября (пн) — рабочий (перенос с 1.11 по ПП №1335).
     """
     assert not is_workday_calendar_rf(date(2025, 11, 1))  # сб
     assert not is_workday_calendar_rf(date(2025, 11, 2))  # вс
-    assert is_workday_calendar_rf(date(2025, 11, 3))     # пн (перенос)
+    assert is_workday_calendar_rf(date(2025, 11, 3))  # пн (перенос)
     assert not is_workday_calendar_rf(date(2025, 11, 4))  # вт (праздник)
-    assert is_workday_calendar_rf(date(2025, 11, 5))     # ср (рабочий)
+    assert is_workday_calendar_rf(date(2025, 11, 5))  # ср (рабочий)
 
 
 def test_uni_session_active_december_january() -> None:
@@ -141,9 +142,14 @@ def test_get_seasonal_features_returns_dict() -> None:
     d = date(2025, 11, 5)  # после осенних каникул, рабочий
     feats = get_seasonal_features(d)
     expected_keys = {
-        "is_school_break", "is_school_start_day", "is_mass_vacation",
-        "is_pre_holiday", "days_to_school_start", "days_to_new_year",
-        "is_workday_calendar_rf", "uni_session_active",
+        "is_school_break",
+        "is_school_start_day",
+        "is_mass_vacation",
+        "is_pre_holiday",
+        "days_to_school_start",
+        "days_to_new_year",
+        "is_workday_calendar_rf",
+        "uni_session_active",
     }
     assert expected_keys.issubset(set(feats.keys())), (
         f"missing: {expected_keys - set(feats.keys())}"
@@ -157,6 +163,7 @@ def test_get_seasonal_features_returns_dict() -> None:
 def test_get_seasonal_features_for_submission_period() -> None:
     """T-160: проверяем все дни ноя-дек для стабильности."""
     import pandas as pd
+
     days = pd.date_range("2025-11-01", "2025-12-31")
     for d in days:
         feats = get_seasonal_features(d.date())

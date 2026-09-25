@@ -140,7 +140,9 @@ def count_poi_for_stop(
 ) -> int:
     """Подсчитать POI категории в радиусе от точки."""
     if category not in VALID_CATEGORIES:
-        raise ValueError(f"Unknown category: {category}. Valid: {sorted(VALID_CATEGORIES)}")
+        raise ValueError(
+            f"Unknown category: {category}. Valid: {sorted(VALID_CATEGORIES)}"
+        )
     if radius_km is None:
         radius_km = CATEGORY_RADIUS_KM[category]
     catalog = load_poi_catalog()
@@ -162,8 +164,7 @@ def dist_to_nearest(lat: float, lon: float, category: str | None = None) -> floa
         if category is not None and p["category"] != category:
             continue
         d = _haversine_km(lat, lon, float(p["lat"]), float(p["lon"]))
-        if d < best:
-            best = d
+        best = min(best, d)
     return best
 
 
@@ -176,7 +177,9 @@ def get_stop_poi_features(lat: float, lon: float) -> dict[str, float]:
         n = count_poi_for_stop(lat=lat, lon=lon, category=cat)
         feats[_column_name(cat, radius)] = float(n)
         total_score += n * CATEGORY_WEIGHTS[cat]
-    feats["dist_to_nearest_metro_km"] = dist_to_nearest(lat=lat, lon=lon, category="metro_hub")
+    feats["dist_to_nearest_metro_km"] = dist_to_nearest(
+        lat=lat, lon=lon, category="metro_hub"
+    )
     feats["poi_score"] = total_score
     return feats
 
@@ -194,7 +197,9 @@ def get_route_poi_features(route_id: int) -> pd.DataFrame:
         feats["stop_name"] = stop["name"]
         rows.append(feats)
     if not rows:
-        return pd.DataFrame(columns=list(POI_FEATURE_NAMES) + ["stop_name"]).set_index("stop_name")
+        return pd.DataFrame(columns=list(POI_FEATURE_NAMES) + ["stop_name"]).set_index(
+            "stop_name"
+        )
     df = pd.DataFrame(rows).set_index("stop_name")
     return df[list(POI_FEATURE_NAMES)]
 
@@ -219,7 +224,9 @@ def build_all_route_poi_features() -> pd.DataFrame:
 
 
 # Legacy API (per-route) — сохранён для обратной совместимости.
-def count_poi_in_radius(route_id: int, category: str, radius_km: float | None = None) -> int:
+def count_poi_in_radius(
+    route_id: int, category: str, radius_km: float | None = None
+) -> int:
     """DEPRECATED: per-route count от ближайшей точки маршрута."""
     from transit_ai.data.spravochnik_geo import build_route_geo_features
 

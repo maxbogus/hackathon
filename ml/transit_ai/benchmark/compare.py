@@ -3,6 +3,7 @@
 Usage:
     uv run python -m transit_ai.benchmark.compare --reports docs/reports/benchmark_*.json
 """
+
 from __future__ import annotations
 
 import argparse
@@ -25,6 +26,7 @@ def load_reports(patterns: list[str]) -> list[BenchmarkResult]:
             for item in data.get("results", []):
                 # Reconstruct BenchmarkResult
                 from transit_ai.benchmark.configs import BenchmarkConfig
+
                 cfg = BenchmarkConfig(**item["config"])
                 item["config"] = cfg
                 results.append(BenchmarkResult(**item))
@@ -33,7 +35,9 @@ def load_reports(patterns: list[str]) -> list[BenchmarkResult]:
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--reports", nargs="+", required=True, help="Glob patterns for JSON reports")
+    p.add_argument(
+        "--reports", nargs="+", required=True, help="Glob patterns for JSON reports"
+    )
     p.add_argument("--output", type=Path, default=Path("docs/reports/leaderboard.md"))
     args = p.parse_args()
 

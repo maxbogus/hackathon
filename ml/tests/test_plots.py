@@ -8,6 +8,7 @@
 - Каждая функция возвращает Path к PNG-файлу
 - Использует transit_ai.reports.metrics.compute_metrics (D-006)
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -161,7 +162,7 @@ def test_plots_module_imports_metrics() -> None:
     """plots должен импортировать compute_metrics (D-006 single source)."""
     import transit_ai.reports.plots as plots_module
 
-    src = (plots_module.__file__ or "")
+    src = plots_module.__file__ or ""
     assert "metrics" not in src or "reports/metrics" in src
     # Доп. проверка: compute_metrics доступен через reports.metrics
     from transit_ai.reports import metrics

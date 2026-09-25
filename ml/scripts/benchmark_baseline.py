@@ -5,6 +5,7 @@ Usage:
     cd ml && uv run python scripts/benchmark_baseline.py
     make benchmark-baseline
 """
+
 from __future__ import annotations
 
 import sys
@@ -17,10 +18,12 @@ from transit_ai.benchmark.cli import run_benchmark_sweep
 
 if __name__ == "__main__":
     output = ROOT.parent / "docs" / "reports" / "benchmark_baseline_smoke.md"
-    sys.exit(run_benchmark_sweep(
-        strategy="grid",
-        max_configs=1,  # только BaselineMean
-        output=output,
-        seed=42,
-        folds=2,  # быстрый smoke (2 folds)
-    ))
+    sys.exit(
+        run_benchmark_sweep(
+            strategy="grid",
+            max_configs=1,  # только BaselineMean
+            output=output,
+            seed=42,
+            folds=2,  # быстрый smoke (2 folds)
+        )
+    )

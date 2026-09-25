@@ -18,12 +18,11 @@ from transit_ai.data.poi_features import (
     build_all_route_poi_features,
     count_poi_for_stop,
     dist_to_nearest,
-    get_stop_poi_features,
     get_route_poi_features,
+    get_stop_poi_features,
     load_poi_catalog,
     load_stops_catalog,
 )
-
 
 # --- Acceptance 1: load_poi_catalog() работает ---
 
@@ -40,9 +39,19 @@ def test_load_poi_catalog_has_required_fields() -> None:
     catalog = load_poi_catalog()
     required = {"name", "category", "lat", "lon"}
     valid_categories = {
-        "school", "university", "stadium", "park", "mall", "theater",
-        "culture", "market", "clinic", "hospital", "cinema",
-        "train_station", "metro_hub",
+        "school",
+        "university",
+        "stadium",
+        "park",
+        "mall",
+        "theater",
+        "culture",
+        "market",
+        "clinic",
+        "hospital",
+        "cinema",
+        "train_station",
+        "metro_hub",
     }
     cats_found = set()
     for p in catalog:
@@ -163,7 +172,9 @@ def test_build_all_route_poi_features_shape() -> None:
     """T-168: 142 строки (10 маршрутов × в среднем 14 остановок), 15 фичей."""
     df = build_all_route_poi_features()
     assert df.shape[0] == 142, f"Expected 142 stops, got {df.shape[0]}"
-    assert df.shape[1] == 15 + 2, f"Expected 17 cols (15 feats + route_id + stop_name), got {df.shape[1]}"
+    assert df.shape[1] == 15 + 2, (
+        f"Expected 17 cols (15 feats + route_id + stop_name), got {df.shape[1]}"
+    )
     assert "route_id" in df.columns
     assert "stop_name" in df.columns
     assert set(POI_FEATURE_NAMES).issubset(set(df.columns))
@@ -182,7 +193,9 @@ def test_get_route_poi_features_route_26_has_universities() -> None:
     df = get_route_poi_features(route_id=26)
     assert df.shape[0] == 9, f"Expected 9 stops, got {df.shape[0]}"
     n_uni_col = [c for c in df.columns if c.startswith("n_universit")][0]
-    assert (df[n_uni_col] > 0).any(), f"Route 26 should have at least one stop near university: {df[n_uni_col].tolist()}"
+    assert (df[n_uni_col] > 0).any(), (
+        f"Route 26 should have at least one stop near university: {df[n_uni_col].tolist()}"
+    )
 
 
 # --- Acceptance 7: файлы существуют и не пустые ---
@@ -192,11 +205,17 @@ def test_poi_catalog_file_exists() -> None:
     """T-168: файл data/external/poi_moscow.json существует и не пустой."""
     path = Path(__file__).resolve().parents[2] / "data" / "external" / "poi_moscow.json"
     assert path.exists(), f"POI catalog not found: {path}"
-    assert path.stat().st_size > 5000, f"POI catalog too small: {path.stat().st_size} bytes"
+    assert path.stat().st_size > 5000, (
+        f"POI catalog too small: {path.stat().st_size} bytes"
+    )
 
 
 def test_stops_catalog_file_exists() -> None:
     """T-168: файл data/external/stops_routes.json существует и не пустой."""
-    path = Path(__file__).resolve().parents[2] / "data" / "external" / "stops_routes.json"
+    path = (
+        Path(__file__).resolve().parents[2] / "data" / "external" / "stops_routes.json"
+    )
     assert path.exists(), f"Stops catalog not found: {path}"
-    assert path.stat().st_size > 5000, f"Stops catalog too small: {path.stat().st_size} bytes"
+    assert path.stat().st_size > 5000, (
+        f"Stops catalog too small: {path.stat().st_size} bytes"
+    )

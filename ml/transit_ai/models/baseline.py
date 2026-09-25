@@ -32,8 +32,12 @@ class BaselineMean(Predictor):
     kind: str = "baseline"
 
     # Fitted state
-    table_: dict[tuple[int, int, int], tuple[float, float]] = field(default_factory=dict)
-    global_table_: dict[tuple[int, int], tuple[float, float]] = field(default_factory=dict)
+    table_: dict[tuple[int, int, int], tuple[float, float]] = field(
+        default_factory=dict
+    )
+    global_table_: dict[tuple[int, int], tuple[float, float]] = field(
+        default_factory=dict
+    )
     fitted_: bool = False
 
     # ---- Fit ----
@@ -54,7 +58,11 @@ class BaselineMean(Predictor):
         stats = grouped.agg(["mean", "std"]).reset_index()
         for row in stats.itertuples(index=False):
             row_dict = row._asdict()
-            key = (int(row_dict["stop_id"]), int(row_dict["weekday"]), int(row_dict["hour"]))
+            key = (
+                int(row_dict["stop_id"]),
+                int(row_dict["weekday"]),
+                int(row_dict["hour"]),
+            )
             mean = float(row_dict["mean"])
             std = float(row_dict["std"]) if not pd.isna(row_dict["std"]) else 0.0
             self.table_[key] = (mean, std)
@@ -73,7 +81,9 @@ class BaselineMean(Predictor):
 
     # ---- Predict ----
 
-    def _bucket_value(self, stop_id: int, weekday: int, hour: int) -> tuple[float, float]:
+    def _bucket_value(
+        self, stop_id: int, weekday: int, hour: int
+    ) -> tuple[float, float]:
         """Mean and std for one (stop, weekday, hour) bucket."""
         if (stop_id, weekday, hour) in self.table_:
             return self.table_[(stop_id, weekday, hour)]

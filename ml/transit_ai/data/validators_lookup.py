@@ -6,6 +6,7 @@
 Используется как фича XGBoostRoutePredictor для submission period (где boardings
 неизвестны, но паттерн выпуска вагонов стабилен).
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -13,7 +14,11 @@ from typing import Any
 
 import pandas as pd
 
-__all__ = ["build_validators_lookup", "get_validators_features", "load_validators_lookup"]
+__all__ = [
+    "build_validators_lookup",
+    "get_validators_features",
+    "load_validators_lookup",
+]
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _CACHE_PATH = _REPO_ROOT / "data" / "external" / "validators_lookup.csv"
@@ -41,7 +46,13 @@ def build_validators_lookup(use_cache_only: bool = False) -> pd.DataFrame:
         _TRAIN_CSV,
         sep=";",
         chunksize=500_000,
-        usecols=["tran_date_time", "validation_result", "device_no", "garage_number", "ngpt_route"],
+        usecols=[
+            "tran_date_time",
+            "validation_result",
+            "device_no",
+            "garage_number",
+            "ngpt_route",
+        ],
     ):
         chunk = chunk[chunk["validation_result"] == 1].copy()
         chunk["route_id"] = chunk["ngpt_route"].str.extract(r"(\d+)").astype(int)
@@ -57,29 +68,60 @@ def build_validators_lookup(use_cache_only: bool = False) -> pd.DataFrame:
     full = pd.concat(chunks)
     lookup = full.groupby(level=[0, 1, 2]).mean()
     lookup = lookup.reset_index()
-    lookup.columns = ["route_id", "weekday", "hour", "n_validators_mean", "n_trams_mean"]
+    lookup.columns = [
+        "route_id",
+        "weekday",
+        "hour",
+        "n_validators_mean",
+        "n_trams_mean",
+    ]
 
     # Fallback: для каждого (route, weekday, hour) если данных нет — route-mean по этому route.
-    route_means = lookup.groupby("route_id")[["n_validators_mean", "n_trams_mean"]].mean()
+    route_means = lookup.groupby("route_id")[
+        ["n_validators_mean", "n_trams_mean"]
+    ].mean()
     routes_in_train = sorted(lookup["route_id"].unique())
     full_rows = []
     for route in routes_in_train:
-        rm_v = float(route_means.loc[route, "n_validators_mean"]) if route in route_means.index else 0.0
-        rm_t = float(route_means.loc[route, "n_trams_mean"]) if route in route_means.index else 0.0
+        rm_v = (
+            float(route_means.loc[route, "n_validators_mean"])
+            if route in route_means.index
+            else 0.0
+        )
+        rm_t = (
+            float(route_means.loc[route, "n_trams_mean"])
+            if route in route_means.index
+            else 0.0
+        )
         for wd in range(7):
             for h in range(24):
-                sub = lookup[(lookup["route_id"] == route) & (lookup["weekday"] == wd) & (lookup["hour"] == h)]
+                sub = lookup[
+                    (lookup["route_id"] == route)
+                    & (lookup["weekday"] == wd)
+                    & (lookup["hour"] == h)
+                ]
                 if sub.empty:
-                    full_rows.append({
-                        "route_id": route, "weekday": wd, "hour": h,
-                        "n_validators_mean": rm_v, "n_trams_mean": rm_t,
-                    })
+                    full_rows.append(
+                        {
+                            "route_id": route,
+                            "weekday": wd,
+                            "hour": h,
+                            "n_validators_mean": rm_v,
+                            "n_trams_mean": rm_t,
+                        }
+                    )
                 else:
-                    full_rows.append({
-                        "route_id": route, "weekday": wd, "hour": h,
-                        "n_validators_mean": float(sub.iloc[0]["n_validators_mean"]),
-                        "n_trams_mean": float(sub.iloc[0]["n_trams_mean"]),
-                    })
+                    full_rows.append(
+                        {
+                            "route_id": route,
+                            "weekday": wd,
+                            "hour": h,
+                            "n_validators_mean": float(
+                                sub.iloc[0]["n_validators_mean"]
+                            ),
+                            "n_trams_mean": float(sub.iloc[0]["n_trams_mean"]),
+                        }
+                    )
     lookup = pd.DataFrame(full_rows)
 
     _CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)

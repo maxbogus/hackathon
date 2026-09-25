@@ -1,4 +1,5 @@
 """Tests for weather_openmeteo.py (T-161)."""
+
 from __future__ import annotations
 
 from datetime import date
@@ -6,9 +7,9 @@ from datetime import date
 import pandas as pd
 
 from transit_ai.data.weather_openmeteo import (
-    load_weather_2025,
-    get_weather_for_date,
     get_weather_features,
+    get_weather_for_date,
+    load_weather_2025,
 )
 
 

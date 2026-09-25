@@ -16,6 +16,7 @@ Output:
     - ml/artifacts/<model_id>/meta.json: metrics обновлён
     - docs/reports/evaluate_<model>_<date>.md: подробный markdown отчёт
 """
+
 from __future__ import annotations
 
 import argparse
@@ -66,7 +67,9 @@ def _load_holdout_data(n_days: int) -> pd.DataFrame:
 
 
 def main() -> int:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
+    )
 
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument(

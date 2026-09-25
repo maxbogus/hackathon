@@ -7,6 +7,7 @@ Usage:
 
 ⚠ Может занять 5-10 минут на RTX 5060 (GRU configs самые тяжёлые).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -27,11 +28,18 @@ if __name__ == "__main__":
     p.add_argument("--seed", type=int, default=42)
     args = p.parse_args()
 
-    output = ROOT.parent / "docs" / "reports" / f"benchmark_{datetime.now(UTC).date().isoformat()}.md"
-    sys.exit(run_benchmark_sweep(
-        strategy=args.strategy,
-        max_configs=args.max_configs,
-        output=output,
-        seed=args.seed,
-        folds=args.folds,
-    ))
+    output = (
+        ROOT.parent
+        / "docs"
+        / "reports"
+        / f"benchmark_{datetime.now(UTC).date().isoformat()}.md"
+    )
+    sys.exit(
+        run_benchmark_sweep(
+            strategy=args.strategy,
+            max_configs=args.max_configs,
+            output=output,
+            seed=args.seed,
+            folds=args.folds,
+        )
+    )

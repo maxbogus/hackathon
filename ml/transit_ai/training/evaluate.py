@@ -11,6 +11,7 @@ Pipeline:
 
 In-memory подход (не parquet): T-035 независим от T-033 (predict.py).
 """
+
 from __future__ import annotations
 
 import json
@@ -203,9 +204,7 @@ def evaluate_artifact(
     elapsed = time.time() - start
 
     # Достаём git_commit из свежепрочитанной meta.json (для отчёта)
-    meta = json.loads(
-        (registry.artifacts_dir / model_id / "meta.json").read_text()
-    )
+    meta = json.loads((registry.artifacts_dir / model_id / "meta.json").read_text())
 
     report_path = _write_report(
         EvaluationResult(

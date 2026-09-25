@@ -3,6 +3,7 @@
 Контракт: каждая BenchmarkResult содержит seed, git_commit, train_data_hash
 для воспроизводимости (R6 hackathon-rules).
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -15,8 +16,8 @@ from typing import Any
 class BenchmarkConfig:
     """Single experiment config: model + features + hyperparams + cv params."""
 
-    model_id: str                           # "baseline_v1", "xgboost_v2", "gru_v1"
-    feature_set: str = "minimal"            # "minimal" | "extended" | "all"
+    model_id: str  # "baseline_v1", "xgboost_v2", "gru_v1"
+    feature_set: str = "minimal"  # "minimal" | "extended" | "all"
     hyperparams: dict[str, Any] = field(default_factory=dict)
     cv_folds: int = 4
     seed: int = 42
@@ -36,13 +37,13 @@ class BenchmarkResult:
     """Single experiment result: metrics + per-fold scores + provenance."""
 
     config: BenchmarkConfig
-    metrics: dict[str, float]              # {"rmsle": 0.42, "mae": 12.3, "mape": 0.18}
-    fold_scores: list[float]               # per-fold RMSLE
+    metrics: dict[str, float]  # {"rmsle": 0.42, "mae": 12.3, "mape": 0.18}
+    fold_scores: list[float]  # per-fold RMSLE
     train_time_sec: float = 0.0
     git_commit: str = "unknown"
     train_data_hash: str = "unknown"
-    timestamp: str = ""                    # ISO-8601 UTC
-    notes: str = ""                        # human-readable comment
+    timestamp: str = ""  # ISO-8601 UTC
+    notes: str = ""  # human-readable comment
 
     def to_json_dict(self) -> dict[str, Any]:
         """Serialize for JSON report (tuple → list, dataclass → dict)."""

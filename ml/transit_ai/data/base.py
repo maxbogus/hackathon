@@ -26,7 +26,9 @@ class DateRange:
 
     def __post_init__(self) -> None:
         if self.start > self.end:
-            raise ValueError(f"DateRange start ({self.start}) must be <= end ({self.end})")
+            raise ValueError(
+                f"DateRange start ({self.start}) must be <= end ({self.end})"
+            )
 
 
 class DataSource(ABC):

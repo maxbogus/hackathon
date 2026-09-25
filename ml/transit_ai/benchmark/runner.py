@@ -4,6 +4,7 @@ Source: contest/ecup26-user-value/scripts/benchmark_t3.py (адаптация п
 
 Walk-forward (не train_test_split!) — обязательно для timeseries, иначе утечка будущего.
 """
+
 from __future__ import annotations
 
 import logging
@@ -55,7 +56,11 @@ def walk_forward_splits(
         train_end = min_date + chunk * i
         val_start = train_end
         val_end = train_end + chunk
-        splits.append(FoldSplit(fold_idx=i, train_end=train_end, val_start=val_start, val_end=val_end))
+        splits.append(
+            FoldSplit(
+                fold_idx=i, train_end=train_end, val_start=val_start, val_end=val_end
+            )
+        )
     return splits
 
 
@@ -83,7 +88,9 @@ def run_single_benchmark(
         Это заглушка — реальные модели подключатся в T-027..T-030.
         Сейчас возвращает synthetic scores на основе mean prediction.
     """
-    logger.info(f"Running benchmark: {config.model_id} (config_hash={config.config_hash()})")
+    logger.info(
+        f"Running benchmark: {config.model_id} (config_hash={config.config_hash()})"
+    )
     start = time.time()
 
     dates = pd.DatetimeIndex(data[date_col])

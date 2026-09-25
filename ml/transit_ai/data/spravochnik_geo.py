@@ -17,6 +17,7 @@
 
 Используется XGBoostRoutePredictor (T-156) как дополнительные фичи.
 """
+
 from __future__ import annotations
 
 import json
@@ -135,10 +136,23 @@ def _load_spravochnik_routes() -> pd.DataFrame:
     """
     df = _read_xlsx_sheet("Порядок_с_координатами")
     df.columns = [
-        "route_id", "route_short_name", "reg_num", "route_type", "trip_id",
-        "trip_short_name", "direction_id", "start_date", "end_date",
-        "stop_sequence", "stop_id", "actual_date", "stop_mode", "is_addpoint",
-        "stop_name", "stop_lat", "stop_lon",
+        "route_id",
+        "route_short_name",
+        "reg_num",
+        "route_type",
+        "trip_id",
+        "trip_short_name",
+        "direction_id",
+        "start_date",
+        "end_date",
+        "stop_sequence",
+        "stop_id",
+        "actual_date",
+        "stop_mode",
+        "is_addpoint",
+        "stop_name",
+        "stop_lat",
+        "stop_lon",
     ]
     df = df.iloc[1:].copy()
     df["route_short_name"] = df["route_short_name"].astype(str)
@@ -216,9 +230,7 @@ def build_route_geo_features() -> pd.DataFrame:
             source = "spravochnik"
         else:
             if route not in user_routes:
-                raise KeyError(
-                    f"Route {route} не в справочнике и нет user-data"
-                )
+                raise KeyError(f"Route {route} не в справочнике и нет user-data")
             agg = _aggregate_user_route(route, user_routes[route])
             source = "user"
 

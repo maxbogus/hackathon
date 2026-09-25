@@ -1,14 +1,11 @@
 """Tests for validators_lookup.py (T-162)."""
+
 from __future__ import annotations
-
-from datetime import UTC, datetime
-
-import pandas as pd
 
 from transit_ai.data.validators_lookup import (
     build_validators_lookup,
-    load_validators_lookup,
     get_validators_features,
+    load_validators_lookup,
 )
 
 

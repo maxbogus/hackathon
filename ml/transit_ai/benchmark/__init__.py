@@ -7,4 +7,5 @@ Templates:
 
 Не импортируется из runtime (apps/*). R9 hackathon-rules.
 """
+
 __version__ = "0.1.0"
