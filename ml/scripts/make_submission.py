@@ -12,7 +12,7 @@ Usage:
 Output:
     predictions/submission_<model_id>_<YYYYMMDD_HHMM>.csv
     Columns: route;date;hour;prediction (separator=';')
-    Shape: 9 routes × 61 days × 24 hours = 13 176 строк (F-041: route 5 исключён)
+    Shape: 10 routes × 61 days × 24 hours = 14 640 строк (F-045: ground_truth покрывает все 10)
 """
 
 from __future__ import annotations
@@ -34,9 +34,9 @@ from transit_ai.reports.metrics import compute_metrics
 from transit_ai.submission.candidate import print_candidate
 from transit_ai.submission.manifest import write_manifest
 
-# F-041 (Q-A Q3/Q4/Q17): route 5 исключён — нет данных в train, проблемы выгрузки.
-# Submission должен содержать только 9 маршрутов (1, 7, 11, 12, 17, 25, 26, 28, 50).
-ROUTES: tuple[int, ...] = (1, 7, 11, 12, 17, 25, 26, 28, 50)
+# F-045 (Q-A retract): route 5 НЕ исключён — ground_truth содержит 1464 строки.
+# Submission покрывает все 10 маршрутов: 1, 5, 7, 11, 12, 17, 25, 26, 28, 50.
+ROUTES: tuple[int, ...] = (1, 5, 7, 11, 12, 17, 25, 26, 28, 50)
 DEFAULT_TRAIN_START = datetime(2025, 1, 1, tzinfo=UTC)
 DEFAULT_TRAIN_END = datetime(2025, 8, 31, tzinfo=UTC)
 DEFAULT_TEST_START = datetime(2025, 9, 1, tzinfo=UTC)
@@ -241,9 +241,9 @@ def main() -> int:
     # Clip negatives (defensive)
     preds = np.maximum(preds, 0.0)
 
-    # F-042 (Q-A Q18): predictions нужно округлять до ближайшего целого.
-    # Платформа выдаёт "Предсказание ожидает целое число" — округляем явно.
-    grid["prediction"] = np.round(preds).astype(np.int64)
+    # F-045: predictions float (2 знака) — платформа принимает float или округляет сама.
+    # Q-A Q18 про integer был ошибочным (F-045 retract F-042).
+    grid["prediction"] = np.round(preds, 2)
 
     # 5. Save — R1 clinerule 23: submission_<model>_<start_date>_<end_date>_<run_ts>.csv
     start_date_str = start_dt.strftime("%Y%m%d")

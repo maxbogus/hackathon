@@ -47,11 +47,11 @@ def _run_submission(
     return out
 
 
-def test_submission_has_13176_rows(tmp_path: Path) -> None:
+def test_submission_has_14640_rows(tmp_path: Path) -> None:
     out = _run_submission(tmp_path)
     df = pd.read_csv(out, sep=";")
-    # 9 routes × 61 days × 24 hours = 13 176 (F-041: route 5 excluded)
-    assert len(df) == 13176, f"Expected 13176, got {len(df)}"
+    # 10 routes × 61 days × 24 hours = 14 640
+    assert len(df) == 14640, f"Expected 14640, got {len(df)}"
 
 
 def test_submission_has_correct_columns(tmp_path: Path) -> None:
@@ -63,7 +63,7 @@ def test_submission_has_correct_columns(tmp_path: Path) -> None:
 def test_submission_covers_all_routes(tmp_path: Path) -> None:
     out = _run_submission(tmp_path)
     df = pd.read_csv(out, sep=";")
-    assert set(df["route"].unique()) == {1, 7, 11, 12, 17, 25, 26, 28, 50}
+    assert set(df["route"].unique()) == {1, 5, 7, 11, 12, 17, 25, 26, 28, 50}
 
 
 def test_submission_date_range(tmp_path: Path) -> None:
@@ -86,10 +86,10 @@ def test_submission_predictions_non_negative(tmp_path: Path) -> None:
 
 
 def test_submission_custom_range(tmp_path: Path) -> None:
-    """Свой диапазон: 7 дней → 9 × 7 × 24 = 1512."""
+    """Свой диапазон: 7 дней → 10 × 7 × 24 = 1680."""
     out = _run_submission(tmp_path, start="2025-12-01", end="2025-12-07")
     df = pd.read_csv(out, sep=";")
-    assert len(df) == 1512
+    assert len(df) == 1680
     assert df["date"].min() == "2025-12-01"
     assert df["date"].max() == "2025-12-07"
 
@@ -126,4 +126,4 @@ def test_submission_with_coefs(tmp_path: Path) -> None:
     # Также ratio может быть 1.75 (round(7/4) = 2).
     mask = df_default["prediction"] > 0
     ratio = df_coef[mask]["prediction"] / df_default[mask]["prediction"]
-    assert (ratio >= 1.0).all() and (ratio < 3.5).all(), f"Ratios: {ratio.unique()[:5]}"
+    assert (ratio > 1.9).all() and (ratio < 2.1).all(), f"Ratios: {ratio.unique()[:5]}"
