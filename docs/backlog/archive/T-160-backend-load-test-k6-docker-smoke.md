@@ -13,7 +13,7 @@ rice:
 depends_on: []
 blocks: [T-161, T-162]
 tags: [backend, loadtest, k6, docker, sla, r6, mandatory]
-status: ready
+status: done
 created: 2026-09-25
 updated: 2026-09-25
 assignee: "maxim"

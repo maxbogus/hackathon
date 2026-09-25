@@ -69,7 +69,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["ANN", "PLR2004", "S101"]  # assert OK в тестах, магические числа
+"tests/**/*.py" = ["ANN", "PLR2004", "S101", "RUF002", "RUF003"]  # tests OK: assert, магические числа, кириллица в docstrings
 "**/scripts/**/*.py" = ["T201", "PLR2004"]   # print() в скриптах OK
 "__init__.py" = ["F401", "F403"]             # re-exports OK
 
