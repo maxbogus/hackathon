@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import pickle
 from dataclasses import dataclass, field
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +32,7 @@ import pandas as pd
 import xgboost as xgb
 
 from transit_ai.data.calendar_rf import get_day_type
+from transit_ai.data.events_calendar import EVENT_FEATURE_NAMES, get_event_features
 from transit_ai.data.poi_features import POI_FEATURE_NAMES, get_route_poi_features
 from transit_ai.data.seasonal_calendar import get_seasonal_features
 from transit_ai.data.spravochnik_geo import build_route_geo_features
@@ -74,6 +76,10 @@ _EXTERNAL_FEATURES: tuple[str, ...] = (
 # Эти фичи постоянны для каждого route_id (не зависят от даты/часа).
 _POI_FEATURES: tuple[str, ...] = tuple(POI_FEATURE_NAMES)
 
+# T-172: Events-фичи (инфраструктурные открытия сентября-октября 2025).
+# Decay-weighted флаги по (date, route_id), вычисляются в _make_features.
+_EVENTS_FEATURES: tuple[str, ...] = tuple(EVENT_FEATURE_NAMES)
+
 FEATURE_NAMES: tuple[str, ...] = (
     "hour",
     "weekday",
@@ -89,6 +95,7 @@ FEATURE_NAMES: tuple[str, ...] = (
     *_GEO_FEATURES,  # T-156
     *_EXTERNAL_FEATURES,  # T-160, T-161, T-162
     *_POI_FEATURES,  # T-168: per-route avg POI density
+    *_EVENTS_FEATURES,  # T-172: инфраструктурные события (decay-weighted)
     "lag_24h",
     "lag_168h",
     "lag_730h",
@@ -232,6 +239,23 @@ def _make_features(
         df[feat_name] = df["route_id"].map(
             lambda r: poi_cache.get(int(r), {}).get(feat_name, 0.0)
         )
+
+    # T-172: events-фичи (decay-weighted по date × route_id).
+    # На train-периоде (янв-авг 2025) — все флаги = 0 (событий ещё не было),
+    # поэтому фичи не влияют на train fit и валидируются только на holdout.
+    date_list = pd.to_datetime(df["timestamp"]).dt.date
+    route_list = df["route_id"].astype(int).values
+
+    # Кэш: (date, route_id) → dict фичей (избегаем повторных вызовов)
+    event_cache: dict[tuple[date, int], dict[str, float]] = {}
+    for i in range(len(df)):
+        ev_key = (date_list.iloc[i], int(route_list[i]))
+        if ev_key not in event_cache:
+            event_cache[ev_key] = get_event_features(ev_key[0], ev_key[1])
+
+    for feat_name in EVENT_FEATURE_NAMES:
+        df[feat_name] = [event_cache[k][feat_name] for k in
+                         zip(date_list, route_list)]
 
     # T-160, T-161, T-162: внешние фичи по дате и (route, weekday, hour)
     # Сначала seasonal + weather по дате
