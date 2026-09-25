@@ -1,6 +1,6 @@
 # STATUS.md — критический путь
 
-_Обновлено: 2026-09-25 (T-168+T-169 ready, F-031). После успеха T-160..T-162 (external features batch v7 → holdout 0.9030 → 0.9009, +0.6pp, F-030) планируется следующая партия внешних фич: POI features (T-168) + anomaly-proneness (T-169). Submission #8 = POI, #9 = POI+anomaly. Цель — удержать/превысить holdout 0.9009 и подтвердить тренд на платформе (ожидание +5-15pp на ноя-дек за счёт event-driven маршрутов)._
+_Обновлено: 2026-09-25 (T-168 done, F-033..F-035, D-024..D-026, clinerules 25-27, skills 05-06). Submission #8 (POI features, 146 POI × 142 остановки × 15 фичей) готов: holdout WAPE-score=0.8751 (calibrated) — выше цели жюри 0.85. БАГ: submission записан в ml/predictions/, а не в predictions/ (F-035) — нужно исправить путь перед заливкой на платформу._
 
 ## Сводка
 
@@ -12,7 +12,8 @@ _Обновлено: 2026-09-25 (T-168+T-169 ready, F-031). После успе�
 | &nbsp;&nbsp;• `backlog` (отложены) | **0** |
 | &nbsp;&nbsp;• `in-progress` | **0** |
 | Решений в ledger (`decisions.jsonl`) | **24** (D-001..D-023) |
-| Находок в ledger (`findings.jsonl`) | **31** (F-001..F-031) |
+| Находок в ledger (`findings.jsonl`) | **35** (F-001..F-035) |
+| Решений в ledger (`decisions.jsonl`) | **27** (D-001..D-026) |
 
 ## Готовые к старту (топ-5 по RICE score)
 

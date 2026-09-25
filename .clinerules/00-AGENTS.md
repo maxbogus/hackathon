@@ -32,6 +32,9 @@
 | 22 | `22-load-testing.md` | k6 load testing rules (smoke/baseline/stress/spike/soak, R6 SLA) |
 | 23 | `23-submission-versioning.md` | Submission = (date-range, model-version, run-ts) + manifest.json (F-021) |
 | 24 | `24-ml-candidate-output.md` | SUBMISSION CANDIDATE block после каждого ML запуска (T-149) |
+| 25 | `25-poi-radius-selection.md` | Per-category радиусы POI по реальным расстояниям (T-168, D-024) |
+| 26 | `26-per-route-feature-aggregation.md` | Per-stop → per-route mean aggregation для route-only XGBoost (D-025) |
+| 27 | `27-wape-score-vs-wape.md` | WAPE ∈ [0,+∞) vs WAPE-score ∈ [0,1] = 1-WAPE (F-033) |
 | — | `MEMORY-BUDGET.md` | Анти-краш: не читать >1MB JSON |
 
 ## Quick rules
