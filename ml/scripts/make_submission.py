@@ -30,6 +30,7 @@ from transit_ai.data.base import DateRange
 from transit_ai.data.real import RealSource
 from transit_ai.models.route_baseline import RouteBaselineMean
 from transit_ai.reports.metrics import compute_metrics
+from transit_ai.submission.manifest import write_manifest
 
 ROUTES: tuple[int, ...] = (1, 5, 7, 11, 12, 17, 25, 26, 28, 50)
 DEFAULT_TRAIN_START = datetime(2025, 1, 1, tzinfo=UTC)
@@ -96,6 +97,11 @@ def main() -> int:
     )
     p.add_argument(
         "--coef-season", type=float, default=1.0, help="Season correction coef (T-147)"
+    )
+    p.add_argument(
+        "--submission-id",
+        default=None,
+        help="Human-readable submission id (R5 clinerule 23, default=model_id).",
     )
     p.add_argument("--output", default=None, help="Output CSV path")
     args = p.parse_args()
@@ -178,17 +184,61 @@ def main() -> int:
 
     grid["prediction"] = np.round(preds, 2)
 
-    # 5. Save
+    # 5. Save — R1 clinerule 23: submission_<model>_<start_date>_<end_date>_<run_ts>.csv
+    start_date_str = start_dt.strftime("%Y%m%d")
+    end_date_str = end_dt.strftime("%Y%m%d")
+    run_ts_str = datetime.now(tz=UTC).strftime("%Y%m%dT%H%M%SZ")
     if args.output:
         output = Path(args.output)
     else:
-        ts = datetime.now(tz=UTC).strftime("%Y%m%d_%H%M")
-        output = DEFAULT_OUTPUT_DIR / f"submission_{args.model_id}_{ts}.csv"
+        csv_filename = f"submission_{args.model_id}_{start_date_str}_{end_date_str}_{run_ts_str}.csv"
+        output = DEFAULT_OUTPUT_DIR / csv_filename
     output.parent.mkdir(parents=True, exist_ok=True)
     grid.to_csv(output, sep=";", index=False)
     print(f"Saved to: {output}")
     print(f"Total rows: {len(grid)} (expected {expected_rows})")
     print(f"Total predictions: {grid['prediction'].sum():,.0f} boardings")
+
+    # 6. Write manifest.json рядом с CSV (R2 clinerule 23, T-148a)
+    submission_id = args.submission_id or args.model_id
+    coef_product = args.coef_weather * args.coef_event * args.coef_season
+    applied_coefs = {
+        "weather": args.coef_weather,
+        "event": args.coef_event,
+        "season": args.coef_season,
+    }
+    post_processing = ["clip_negatives"]
+    if coef_product != 1.0:
+        post_processing.append("coef_multiplier")
+    if route_biases:
+        post_processing.append("per_route_log_bias_calibration")
+
+    model_uri = f"ml/artifacts/{args.model_id}/model.pkl"
+    manifest_path = write_manifest(
+        out_dir=output.parent,
+        csv_filename=output.name,
+        model_id=args.model_id,
+        model_uri=model_uri,
+        train_range=(
+            DEFAULT_TRAIN_START.strftime("%Y-%m-%d"),
+            DEFAULT_TRAIN_END.strftime("%Y-%m-%d"),
+        ),
+        sub_range=(args.start_date, args.end_date),
+        row_count=len(grid),
+        expected_rows=expected_rows,
+        total_predictions=float(grid["prediction"].sum()),
+        coefficients=applied_coefs,
+        post_processing=post_processing,
+        holdout_wape_score=metrics_after["wape_score"],
+        submission_id=submission_id,
+    )
+    print(f"Manifest: {manifest_path} (submission_id={submission_id})")
+
+    # 7. Convenience alias predictions/submission.csv (R3 clinerule 23) — не source-of-truth
+    alias = output.parent / "submission.csv"
+    alias.write_text(output.read_text())
+    print(f"Alias: {alias} (convenience, NOT source-of-truth)")
+
     return 0
 
 
