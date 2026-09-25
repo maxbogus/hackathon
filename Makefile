@@ -127,6 +127,10 @@ inspect-real: ## Print hackathon real dataset summary (T-143)
 submission: ## Generate submission.csv for hackathon platform (10 routes × 61 days × 24h) (T-145)
 	$(UV) --directory ml run python scripts/make_submission.py --output $(REPO_ROOT)/predictions/submission.csv
 
+# T-146: per-route WAPE diagnose
+diagnose: ## Per-route / per-hour / per-weekday WAPE diagnose (T-146)
+	$(UV) --directory ml run python scripts/diagnose_per_route.py
+
 calibrate: ## Apply per-bucket calibration
 	$(UV) --directory ml run python scripts/calibrate.py
 

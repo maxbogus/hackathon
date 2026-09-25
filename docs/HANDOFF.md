@@ -5,11 +5,12 @@
 
 ## Цель
 
-Hackathon submission готов: WAPE-score = **0.8681** на holdout (сен–окт 2025),
-что соответствует **максимальным 10/10 баллам** по Критерию 1 (>0.88).
-Submission pipeline (T-145) → `make submission` → `predictions/submission.csv`
-(14640 строк, формат платформы). Следующие шаги: залить на платформу
-(до 27.09 23:59 МСК), затем улучшать до submission с exogenous (T-123, T-124, T-125).
+Hackathon submission #1 залит 25.09.2026 13:47 МСК → **WAPE-score = 0.72568**
+(выше 0.48 baseline на 51%, но ниже нашего holdout-прокси 0.8681 из-за
+cold-start route=5 и зимнего спада). Цель на 2-й submission: **0.80+**
+через per-route calibration + exogenous (weather + holidays) + XGBoost.
+
+Лимит попыток: осталось 35 всего / 23 успешных до 27.09 23:59 МСК.
 
 ## Прогресс
 
