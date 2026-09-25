@@ -1,4 +1,5 @@
 """Tests for make_submission pipeline (T-145)."""
+
 from __future__ import annotations
 
 import subprocess
@@ -18,15 +19,20 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def _run_submission(tmp_path: Path, start: str = "2025-11-01", end: str = "2025-12-31") -> Path:
+def _run_submission(
+    tmp_path: Path, start: str = "2025-11-01", end: str = "2025-12-31"
+) -> Path:
     out = tmp_path / "submission.csv"
     result = subprocess.run(
         [
             sys.executable,
             str(SCRIPT),
-            "--start-date", start,
-            "--end-date", end,
-            "--output", str(out),
+            "--start-date",
+            start,
+            "--end-date",
+            end,
+            "--output",
+            str(out),
         ],
         capture_output=True,
         text=True,
@@ -34,7 +40,9 @@ def _run_submission(tmp_path: Path, start: str = "2025-11-01", end: str = "2025-
         check=False,
     )
     if result.returncode != 0:
-        pytest.fail(f"make_submission failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}")
+        pytest.fail(
+            f"make_submission failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+        )
     assert out.exists(), f"Output not created: {out}"
     return out
 
@@ -96,10 +104,14 @@ def test_submission_with_coefs(tmp_path: Path) -> None:
         [
             sys.executable,
             str(SCRIPT),
-            "--start-date", "2025-12-01",
-            "--end-date", "2025-12-02",
-            "--coef-weather", "2.0",
-            "--output", str(out_coef),
+            "--start-date",
+            "2025-12-01",
+            "--end-date",
+            "2025-12-02",
+            "--coef-weather",
+            "2.0",
+            "--output",
+            str(out_coef),
         ],
         capture_output=True,
         text=True,

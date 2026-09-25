@@ -1,4 +1,5 @@
 """Tests for RouteBaselineMean — route-level baseline (T-145)."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -25,13 +26,15 @@ def _make_ridership() -> pd.DataFrame:
                     b = 0
                 else:
                     b = 50 + route
-                rows.append({
-                    "timestamp": d + pd.Timedelta(hours=h),
-                    "route_id": route,
-                    "date": d,
-                    "hour": h,
-                    "boardings": float(b),
-                })
+                rows.append(
+                    {
+                        "timestamp": d + pd.Timedelta(hours=h),
+                        "route_id": route,
+                        "date": d,
+                        "hour": h,
+                        "boardings": float(b),
+                    }
+                )
     return pd.DataFrame(rows)
 
 

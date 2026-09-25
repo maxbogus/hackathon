@@ -1,4 +1,5 @@
 """Tests for WAPE/WAPE-score metrics (T-144)."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -68,11 +69,19 @@ def test_compute_metrics_returns_all_5_keys() -> None:
 def test_wape_score_negative_clamped_to_zero() -> None:
     """Если WAPE > 1 (overprediction в 2x), score = 0 (НЕ отрицательный)."""
     y = np.array([100.0])
-    p = np.array([300.0])  # overprediction 200%; WAPE = 200/100 = 2.0; score = max(0, 1−2) = 0
+    p = np.array(
+        [300.0]
+    )  # overprediction 200%; WAPE = 200/100 = 2.0; score = max(0, 1−2) = 0
     assert wape_score(y, p) == 0.0
 
 
 def test_compute_metrics_with_empty() -> None:
     """Пустые массивы не падают."""
     metrics = compute_metrics(np.array([]), np.array([]))
-    assert metrics == {"rmsle": 0.0, "mae": 0.0, "mape": 0.0, "wape": 0.0, "wape_score": 0.0}
+    assert metrics == {
+        "rmsle": 0.0,
+        "mae": 0.0,
+        "mape": 0.0,
+        "wape": 0.0,
+        "wape_score": 0.0,
+    }

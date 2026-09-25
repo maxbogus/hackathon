@@ -8,6 +8,7 @@
   - update meta.json.metrics (через ModelRegistry.update_metrics)
   - write markdown report в docs/reports/
 """
+
 from __future__ import annotations
 
 import json

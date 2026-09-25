@@ -16,6 +16,7 @@
 
 Раньше метрики жили в benchmark/runner.py — теперь вынесены в общий модуль (DRY).
 """
+
 from __future__ import annotations
 
 import numpy as np

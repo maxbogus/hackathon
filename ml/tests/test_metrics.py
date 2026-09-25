@@ -3,6 +3,7 @@
 Это общий модуль метрик: перенесён из ml/transit_ai/benchmark/runner.py.
 Используется в evaluate.py (T-035), benchmark (T-038), plots (T-037).
 """
+
 from __future__ import annotations
 
 import numpy as np

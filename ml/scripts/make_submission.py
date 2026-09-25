@@ -99,9 +99,7 @@ def main() -> int:
     p.add_argument("--output", default=None, help="Output CSV path")
     args = p.parse_args()
 
-    start_dt = datetime.strptime(args.start_date, "%Y-%m-%d").replace(
-        tzinfo=UTC
-    )
+    start_dt = datetime.strptime(args.start_date, "%Y-%m-%d").replace(tzinfo=UTC)
     end_dt = datetime.strptime(args.end_date, "%Y-%m-%d").replace(tzinfo=UTC)
 
     print("=" * 60)
