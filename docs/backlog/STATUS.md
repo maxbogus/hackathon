@@ -1,6 +1,6 @@
 # STATUS.md — критический путь
 
-_Обновлено: 2026-09-25 (T-168 done, F-033..F-035 + F-039..F-040, clinerules 25-28 + обновлён 23). Submission #8 перегенерирован БЕЗ --output: `submission_xgboost_v8_poi_20251101_20251231_20260925T184938Z.csv` (R1 clinerule 23). Local holdout WAPE-score=0.8751, но платформа вернула 0.73231 (default baseline) из-за F-039 (filename collision в предыдущей заливке). Платформа score = baseline (F-023) — наш submission #8 не докатился. После исправления имени нужно залить заново и записать F-NNN с реальным platform_score + drift._
+_Обновлено: 2026-09-25 22:00 (T-168 done, F-033..F-043 + T-171 in-progress, 48h до дедлайна 27.09). После Q-A сессии: route 5 исключён (только 9 маршрутов, F-041), predictions округлены до integer (F-042), дедлайн 27.09 (F-043). Submission #9 готов: `submission_xgboost_v8_poi_20251101_20251231_20260925T191625Z.csv` (13176 строк, 9 маршрутов, int). Holdout WAPE-score=0.8751 (calibrated). Ждём заливки и platform score (предыдущий best v6=0.12253)._
 
 ## Сводка
 
@@ -12,7 +12,7 @@ _Обновлено: 2026-09-25 (T-168 done, F-033..F-035 + F-039..F-040, cliner
 | &nbsp;&nbsp;• `backlog` (отложены) | **0** |
 | &nbsp;&nbsp;• `in-progress` | **0** |
 | Решений в ledger (`decisions.jsonl`) | **24** (D-001..D-023) |
-| Находок в ledger (`findings.jsonl`) | **40** (F-001..F-040) |
+| Находок в ledger (`findings.jsonl`) | **43** (F-001..F-043) |
 | Решений в ledger (`decisions.jsonl`) | **27** (D-001..D-026) |
 
 ## Готовые к старту (топ-5 по RICE score)

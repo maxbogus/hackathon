@@ -32,6 +32,30 @@ submission_<model_id>_<start_date>_<end_date>_<run_ts>.csv
 - `<start_date>` / `<end_date>` — `YYYYMMDD` (НЕ ISO, чтобы не было двоеточий в имени)
 - `<run_ts>` — `YYYYMMDDTHHMMSSZ` (UTC, ISO-8601 compact)
 
+### R6. Submission содержит только 9 маршрутов (F-041)
+
+⚠️ Маршрут 5 ИСКЛЮЧЁН из submission (Q-A Q3/Q17):
+- В `data/real/train.csv` нет данных для route 5
+- Submission покрывает: 1, 7, 11, 12, 17, 25, 26, 28, 50 (9 маршрутов)
+- Grid size: 9 × 61 × 24 = **13176 строк** (НЕ 14640!)
+
+### R7. Predictions округлены до integer (F-042)
+
+⚠️ Q-A Q18: "Предсказание ожидает целое число":
+```python
+# ml/scripts/make_submission.py:243-246
+grid["prediction"] = np.round(preds).astype(np.int64)
+```
+
+Никогда не `np.round(preds, 2)` — это float с 2 знаками, не подходит.
+
+### R8. Без route 5 = 13176 строк (F-041)
+
+`expected_rows` в `write_manifest()` должно быть 13176 (НЕ 14640):
+- 9 маршрутов × 61 день × 24 часа = 13176
+
+Если в submission 14640 строк — это **bug** (лишний route или дабл-счёт).
+
 `predictions/submission.csv` (без суффиксов) — **convenience alias**,
 копия последнего прогона для удобства заливки. **НЕ source-of-truth.**
 Создаётся последним шагом пайплайна как `cp` или symlink.
