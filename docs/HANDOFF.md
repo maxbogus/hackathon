@@ -1,44 +1,41 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-25T10:40:32.655853+00:00
+> Последнее обновление: 2026-09-25T11:13:50.514906+00:00
 > Обновлено: автоматически через `make handoff-update`
 
 ## Цель
 
-Hackathon submission #1 залит 25.09.2026 13:47 МСК → **WAPE-score = 0.72568**
-(выше 0.48 baseline на 51%, но ниже нашего holdout-прокси 0.8681 из-за
-cold-start route=5 и зимнего спада). Цель на 2-й submission: **0.80+**
-через per-route calibration + exogenous (weather + holidays) + XGBoost.
-
-Лимит попыток: осталось 35 всего / 23 успешных до 27.09 23:59 МСК.
+Продолжить разработку скелета Transit-AI
 
 ## Прогресс
 
-Phase 2 (ML) critical path готов:
-- T-143 RealSource — DataSource для labels_day_*.csv (12 tests, schema validate)
-- T-144 WAPE-score в metrics.py — primary метрика (16 tests)
-- T-145 submission pipeline → submission.csv (14 640 строк, 8 tests)
-- T-136 (year-horizon) + T-140 (GCN-LSTM stop-level) → backlog (отменены орг.)
-
-Submission файл: `predictions/submission.csv` — 14 640 строк,
-10 routes × 61 day × 24 hour, separator `;`, формат совпадает с платформой.
-
-**Holdout WAPE-score = 0.8681** (сен–окт 2025), MAE=148.6, WAPE=0.1319, RMSLE=0.4959.
-baseline = 0.48 → мы на 0.8681 (в 1.81× лучше baseline).
+Phase 0 (toolchain + clinerules + ledger)
 
 ## Git state
 
 ```
-commit: d82044c
-status: M ml/scripts/make_submission.py
- M ml/tests/test_evaluate.py
- M ml/tests/test_make_submission.py
- M ml/tests/test_metrics.py
- M ml/tests/test_metrics_wape.py
- M ml/tests/test_route_baseline.py
- M ml/transit_ai/reports/metrics.py
+commit: e527f86
+status: M Makefile
+ M docker-compose.yml
+ M docs/ledger/decisions.jsonl
+ M pyproject.toml
 ?? data/real/README.md
-?? "docs/\320\230\320\230-\320\277\321\200\320\276\320\263\320\275\320\276\320\267 \320\267\320\260\320\263\321\200\321\203\320\267\320\272\320\270 \321\202\321\200\320\260\320\274\320\262\320\260\320\271\320\275\321\213\321\205 \320\274\320\260\321\200\321\210\321\200\321\203\321\202\320\276\320\262.pdf"
+?? docs/backlog/tickets/T-160-backend-load-test-k6-docker-smoke.md
+?? docs/backlog/tickets/T-161-backend-load-sla-regression-gate.md
+?? docs/backlog/tickets/T-162-backend-load-profiles-baseline-stress-spike-soak.md
+?? docs/backlog/tickets/T-163-docker-compose-deploy-resources-loadtest-profile.md
+?? docs/backlog/tickets/T-164-backend-dockerfile-non-root-hardening.md
+?? docs/backlog/tickets/T-165-ml-training-pipeline-resource-budget-time-gate.md
+?? docs/backlog/tickets/T-166-clinerule-22-skill-02-load-testing-playbook.md
+?? docs/backlog/tickets/T-167-hackathon-checklist-sla-resources-loadtest.md
+?? docs/load-profiles/
+?? scripts/check_load_sla.py
+?? scripts/check_training_time.py
+?? tests/load/
+?? tests/test_check_load_sla.py
+?? tests/test_check_training_time.py
+?? tests/test_compose_resources.py
+?? tests/test_loadtest_makefile.py
 ```
 
 ## Что в работе (0)
@@ -68,15 +65,15 @@ _(показаны последние 5 из 40)_
 
 ## Последние решения в ledger
 
-- **D-016**: uv как единый package manager: Python локально, в Docker backend, и в ML — везде через uv
-- **D-016**: WAPE-score становится primary метрикой хакатона (вместо RMSLE)
-- **D-017**: RealSource заменяет SyntheticSource в production pipeline (но SyntheticSource сохраняется для тестов)
+- **D-019**: 5 профилей нагрузки k6 как повторяемая методология
+- **D-020**: SLA p95 ≤ 2000ms как hard gate в make check-all (R6 compliance)
+- **D-021**: Container resources hardcoded в docker-compose для R3 reproducible
 
 ## Последние находки
 
-- **F-016**: Организаторы подтвердили: year-horizon не требуется, WAPE-score вместо RMSLE
 - **F-017**: WAPE-score требует поддержки корректирующих коэффициентов в API
 - **F-018**: Реальный dataset хакатона НЕ полная сетка 24h — трамваи не ходят 0-3 ночи
+- **F-019**: Первый сабмит submission.csv на платформе хакатона — WAPE-score=0.72568
 
 ## Открытые вопросы
 

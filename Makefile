@@ -36,7 +36,7 @@ REPO_ROOT := $(shell pwd)
         assistant-test assistant-reasoning mcp-run \
         ledger-add ledger-list ledger-check ledger-export \
         note-from-finding promote handoff handoff-update \
-        backlog-ready backlog-list ticket docs         pyscn pyscn-compare pyscn-baseline         arch-dbml arch-dbml-check         benchmark-baseline benchmark-all benchmark-compare         run-benchmark
+        backlog-ready backlog-list ticket docs         pyscn pyscn-compare pyscn-baseline         arch-dbml arch-dbml-check         benchmark-baseline benchmark-all benchmark-compare         run-benchmark         loadtest-smoke loadtest-baseline loadtest-stress loadtest-spike loadtest-soak loadtest-all loadtest-check up-loadtest check-training-time
 
 # ---------------------------------------------------------------------------
 # HELP
@@ -334,5 +334,79 @@ run-benchmark: ## Generic benchmark entry (delegates to ml.transit_ai.benchmark.
 # ---------------------------------------------------------------------------
 # CI gate (расширенный): все проверки включая структурный анализ
 # ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# LOAD TESTING (k6) — T-160..T-165
+# ---------------------------------------------------------------------------
+# R6 hackathon-rules: p95 ≤ 2000ms, error_rate ≤ 1%.
+# k6 запускается в Docker (профиль loadtest, см. docker-compose.yml).
+# SLA gate: scripts/check_load_sla.py парсит JSON и валидирует thresholds.
+
+# === Smoke (CI gate, 10 VU × 30s) ===
+loadtest-smoke: ## 10 VU × 30s smoke (R6 SLA p95 ≤ 2s) — CI gate
+	@mkdir -p docs/load-profiles/reports
+	@TIMESTAMP=$$(date +%Y%m%d_%H%M%S); \
+	docker compose --profile loadtest run --rm \
+		-e K6_WEB_DASHBOARD_EXPORT=/reports/smoke_$$TIMESTAMP.html \
+		-e K6_WEB_DASHBOARD_OPEN=false \
+		k6 run /scripts/smoke_dispatcher.js
+	@printf "\n\033[32m✓ Smoke test complete. Reports in docs/load-profiles/reports/\033[0m\n"
+
+# === Baseline (50 VU × 5 min, нормальная нагрузка ЕДЦ) ===
+loadtest-baseline: ## 50 VU × 5 min baseline load test (R6 SLA p95 ≤ 2s)
+	@mkdir -p docs/load-profiles/reports
+	@TIMESTAMP=$$(date +%Y%m%d_%H%M%S); \
+	docker compose --profile loadtest run --rm \
+		-e K6_WEB_DASHBOARD_EXPORT=/reports/baseline_$$TIMESTAMP.html \
+		-e K6_WEB_DASHBOARD_OPEN=false \
+		k6 run /scripts/baseline_dispatcher.js
+	@printf "\n\033[32m✓ Baseline test complete\033[0m\n"
+
+# === Stress (100 VU × 3 min, по запросу пользователя) ===
+loadtest-stress: ## 100 VU × 3 min stress test (R6 допуск p95 ≤ 3s)
+	@mkdir -p docs/load-profiles/reports
+	@TIMESTAMP=$$(date +%Y%m%d_%H%M%S); \
+	docker compose --profile loadtest run --rm \
+		-e K6_WEB_DASHBOARD_EXPORT=/reports/stress_$$TIMESTAMP.html \
+		-e K6_WEB_DASHBOARD_OPEN=false \
+		k6 run /scripts/stress_dispatcher.js
+	@printf "\n\033[32m✓ Stress test complete\033[0m\n"
+
+# === Spike (резкий скачок 10→200 VU) ===
+loadtest-spike: ## Spike test: 10 VU → 200 VU за 10 сек (resilience check)
+	@mkdir -p docs/load-profiles/reports
+	@TIMESTAMP=$$(date +%Y%m%d_%H%M%S); \
+	docker compose --profile loadtest run --rm \
+		-e K6_WEB_DASHBOARD_EXPORT=/reports/spike_$$TIMESTAMP.html \
+		-e K6_WEB_DASHBOARD_OPEN=false \
+		k6 run /scripts/spike_dispatcher.js
+	@printf "\n\033[32m✓ Spike test complete\033[0m\n"
+
+# === Soak (30 VU × 30 min, memory/connection leak detection) ===
+loadtest-soak: ## 30 VU × 30 min soak test (memory leak detection)
+	@mkdir -p docs/load-profiles/reports
+	@TIMESTAMP=$$(date +%Y%m%d_%H%M%S); \
+	docker compose --profile loadtest run --rm \
+		-e K6_WEB_DASHBOARD_EXPORT=/reports/soak_$$TIMESTAMP.html \
+		-e K6_WEB_DASHBOARD_OPEN=false \
+		k6 run /scripts/soak_dispatcher.js
+	@printf "\n\033[32m✓ Soak test complete\033[0m\n"
+
+# === Run all profiles sequentially ===
+loadtest-all: loadtest-smoke loadtest-baseline loadtest-stress loadtest-spike ## Run smoke + baseline + stress + spike
+	@printf "\n\033[32m✓ All load tests complete (soak excluded — run manually)\033[0m\n"
+
+# === SLA gate: parse latest JSON, verify thresholds ===
+loadtest-check: ## Parse latest k6 JSON, verify R6 SLA (p95 ≤ 2s, err ≤ 1%)
+	$(UV) run python scripts/check_load_sla.py --latest
+
+# === up-loadtest: поднять backend + k6 контейнер ===
+up-loadtest: ## Run backend + k6 load tester (profile: loadtest)
+	$(DC) --profile loadtest up -d
+	@printf "\n\033[32m✓ Stack + k6 up. Backend: http://localhost:8000 | k6 dashboard: http://localhost:5665\033[0m\n"
+
+# === Training time gate (R6 ≤ 60 мин) ===
+check-training-time: ## R6 gate: суммарное время обучения ML ≤ 60 мин
+	$(UV) run python scripts/check_training_time.py
 
 check-all: lint typecheck test api-check ledger-check frontend-text-check arch-dbml-check pyscn-compare ## Run all checks (CI gate)
