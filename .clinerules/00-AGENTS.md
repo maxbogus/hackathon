@@ -31,6 +31,7 @@
 | 21 | `21-runtime-uv.md` | uv как единый package manager (Python↔Docker↔ML) |
 | 22 | `22-load-testing.md` | k6 load testing rules (smoke/baseline/stress/spike/soak, R6 SLA) |
 | 23 | `23-submission-versioning.md` | Submission = (date-range, model-version, run-ts) + manifest.json (F-021) |
+| 24 | `24-ml-candidate-output.md` | SUBMISSION CANDIDATE block после каждого ML запуска (T-149) |
 | — | `MEMORY-BUDGET.md` | Анти-краш: не читать >1MB JSON |
 
 ## Quick rules

@@ -30,6 +30,7 @@ from transit_ai.data.base import DateRange
 from transit_ai.data.real import RealSource
 from transit_ai.models.route_baseline import RouteBaselineMean
 from transit_ai.reports.metrics import compute_metrics
+from transit_ai.submission.candidate import print_candidate
 from transit_ai.submission.manifest import write_manifest
 
 ROUTES: tuple[int, ...] = (1, 5, 7, 11, 12, 17, 25, 26, 28, 50)
@@ -238,6 +239,20 @@ def main() -> int:
     alias = output.parent / "submission.csv"
     alias.write_text(output.read_text())
     print(f"Alias: {alias} (convenience, NOT source-of-truth)")
+
+    # 8. SUBMISSION CANDIDATE block (T-149, clinerule 24)
+    print_candidate(
+        csv_path=output,
+        manifest_path=manifest_path,
+        model_id=args.model_id,
+        submission_id=submission_id,
+        holdout_wape=metrics_after["wape_score"],
+        submission_start=args.start_date,
+        submission_end=args.end_date,
+        row_count=len(grid),
+        total_predictions=float(grid["prediction"].sum()),
+        expected_rows=expected_rows,
+    )
 
     return 0
 
