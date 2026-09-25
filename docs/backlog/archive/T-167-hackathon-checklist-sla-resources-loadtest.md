@@ -13,7 +13,7 @@ rice:
 depends_on: [T-137, T-161]
 blocks: []
 tags: [docs, hackathon, checklist, sla, r3, r6]
-status: ready
+status: done
 created: 2026-09-25
 updated: 2026-09-25
 assignee: "maxim"

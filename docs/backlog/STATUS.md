@@ -1,30 +1,30 @@
 # STATUS.md — критический путь
 
-_Обновлено: 2026-09-23 (T-135 done). Реализован URL-based routing через TanStack Router — 5 file-based маршрутов, header с `<Link>`, redirect `/` → `/passenger`. F-014 зафиксирован. Следующая цель — T-122 (MapProvider для визуальной части демо)._
+_Обновлено: 2026-09-25 (T-137+T-160+T-161+T-163+T-165+T-167 done). Блок валидации R3+R6 хакатона завершён — 8/8 тикетов (T-160..T-167). HACKATHON_CHECKLIST.md создан со всеми 14 секциями. Следующая цель — T-115 (README Russian) или T-125 (feature engineering)._
 
 ## Сводка
 
 | Счётчик | Значение |
 |---|---|
-| Тикетов в `archive/` (done за всё время) | **39** (+T-135) |
-| Тикетов в `tickets/`: | **23** |
-| &nbsp;&nbsp;• `ready` (готовы к старту) | **22** |
+| Тикетов в `archive/` (done за всё время) | **49** (+T-137/T-160/T-161/T-163/T-165/T-167) |
+| Тикетов в `tickets/`: | **25** |
+| &nbsp;&nbsp;• `ready` (готовы к старту) | **25** |
 | &nbsp;&nbsp;• `backlog` (отложены) | **0** |
 | &nbsp;&nbsp;• `in-progress` | **0** |
-| Решений в ledger (`decisions.jsonl`) | **14** (D-001..D-014) |
-| Находок в ledger (`findings.jsonl`) | **12** (F-001..F-014) |
+| Решений в ledger (`decisions.jsonl`) | **23** (D-001..D-022) |
+| Находок в ledger (`findings.jsonl`) | **19** (F-001..F-019) |
 
 ## Готовые к старту (топ-5 по RICE score)
 
 | ID | RICE | Усилие | Что |
 |---|---|---|---|
 | **T-115** | 10.00 | 1h | README Russian + Handover (scope-down: без English) |
-| **T-137** | 6.00 | 2h | docs/HACKATHON_CHECKLIST.md (R8 submission, P0) |
 | **T-125** | 5.40 | 2h | Feature engineering: weather + traffic фичи |
 | **T-122** | 2.70 | 4h | MapProvider + LeafletMap + YandexMap (следующая цель после T-135) |
 | **T-134** | 2.50 | 2h | backend predictions route horizon=month |
+| **T-138** | 2.50 | 2h | ML submission pipeline end-to-end |
 
-> Цепочка `T-127 → T-128 → T-129 → T-130 → T-131 → T-141 → T-135` — все архивированы. Демо жюри готово: ETA + capacity + alerts + text registry + URL routing.
+> Блок валидации R3+R6 хакатона завершён (T-160..T-167). Цепочка `T-127 → T-128 → T-129 → T-130 → T-131 → T-141 → T-135` — все архивированы. Демо жюри готово: ETA + capacity + alerts + text registry + URL routing + load testing + SLA gate + HACKATHON_CHECKLIST.md.
 
 ## Backlog (отложены)
 

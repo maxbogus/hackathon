@@ -1,6 +1,6 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-25T11:29:42.026284+00:00
+> Последнее обновление: 2026-09-25T14:16:42.051290+00:00
 > Обновлено: автоматически через `make handoff-update`
 
 ## Цель
@@ -14,22 +14,14 @@ Phase 0 (toolchain + clinerules + ledger)
 ## Git state
 
 ```
-commit: db1567f
-status: M docker-compose.yml
+commit: dad34f9
+status: A  data/real/README.md
+M  docs/HACKATHON_CHECKLIST.md
+M  docs/backlog/STATUS.md
+M  docs/backlog/archive/T-137-docs-hackathon-checklist-r8-submission.md
+R  docs/backlog/tickets/T-167-hackathon-checklist-sla-resources-loadtest.md -> docs/backlog/archive/T-167-hackathon-checklist-sla-resources-loadtest.md
  D docs/backlog/tickets/T-164-backend-dockerfile-non-root-hardening.md
  D docs/backlog/tickets/T-166-clinerule-22-skill-02-load-testing-playbook.md
- M pyproject.toml
- M tests/test_clinerule_index.py
- M tests/test_dockerfile_hardening.py
- M tests/test_load_profiles.py
-?? data/real/README.md
-?? docs/load-profiles/
-?? scripts/check_load_sla.py
-?? scripts/check_training_time.py
-?? tests/test_check_load_sla.py
-?? tests/test_check_training_time.py
-?? tests/test_compose_resources.py
-?? tests/test_loadtest_makefile.py
 ```
 
 ## Что в работе (0)
@@ -38,20 +30,20 @@ _пусто_
 
 ## Что сделано (5)
 
-- T-141-frontend-text-constants-registry-hybrid.md
-- T-142-frontend-typed-config-with-stub-fallback.md
+- T-160-backend-load-test-k6-docker-smoke.md
 - T-162-backend-load-profiles-baseline-stress-spike-soak.md
 - T-164-backend-dockerfile-non-root-hardening.md
 - T-166-clinerule-22-skill-02-load-testing-playbook.md
+- T-167-hackathon-checklist-sla-resources-loadtest.md
 
-## Архив (done за всё время): 43
+## Архив (done за всё время): 46
 
-- T-141-frontend-text-constants-registry-hybrid.md
-- T-142-frontend-typed-config-with-stub-fallback.md
+- T-160-backend-load-test-k6-docker-smoke.md
 - T-162-backend-load-profiles-baseline-stress-spike-soak.md
 - T-164-backend-dockerfile-non-root-hardening.md
 - T-166-clinerule-22-skill-02-load-testing-playbook.md
-_(показаны последние 5 из 43)_
+- T-167-hackathon-checklist-sla-resources-loadtest.md
+_(показаны последние 5 из 46)_
 
 ## Следующая задача
 

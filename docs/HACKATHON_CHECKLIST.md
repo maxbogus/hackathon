@@ -205,21 +205,75 @@ make loadtest-smoke && make loadtest-check
 
 ---
 
-## Секция 12. SLA Compliance (R6) — _T-167_
+## Секция 12. SLA Compliance (R6)
 
-_(T-167 добавит эту секцию со ссылками на docs/load-profiles/reports/)_
+| Требование | Статус | Доказательство | Команда проверки |
+|---|---|---|---|
+| p95 latency <= 2000ms | ✅ | T-161 — `scripts/check_load_sla.py` | `make loadtest-check` |
+| error_rate <= 1% | ✅ | `scripts/check_load_sla.py` (SLA_ERROR_RATE=0.01) | `make loadtest-check` |
+| HTML-отчёт с графиками | ⚠️ | `docs/load-profiles/reports/` (генерится при `make loadtest-*`) | `ls docs/load-profiles/reports/*.html` |
+| Smoke test в CI gate | ✅ | T-160 + Makefile `loadtest-smoke` | `make -n loadtest-smoke` |
+| SLA verdict в консоль | ✅ | `scripts/check_load_sla.py` → "SLA PASS" / "FAIL: ..." | `uv run python scripts/check_load_sla.py --help` |
+
+**Команды:**
+
+```bash
+make loadtest-smoke              # 10 VU x 30s, R6 SLA check
+make loadtest-check              # парсинг JSON -> PASS/FAIL
+uv run python scripts/check_load_sla.py --latest
+```
 
 ---
 
-## Секция 13. Container Resources (R3) — _T-167_
+## Секция 13. Container Resources (R3 reproducible)
 
-_(T-167 добавит таблицу resource limits всех сервисов)_
+| Сервис | CPU limit | Memory limit | PIDs | Доказательство |
+|---|---|---|---|---|
+| postgres | 1.0 | 1G | - | `docker compose config \| grep -A 3 postgres` |
+| redis | 0.25 | 256M | - | `docker compose config \| grep -A 3 redis` |
+| backend | 1.0 | 512M | 200 | `docker compose config \| grep -A 5 backend` |
+| frontend | 0.25 | 128M | - | `docker compose config \| grep -A 3 frontend` |
+| k6 (loadtest profile) | 2.0 + cpuset 0,1 | 1G | - | `docker compose --profile loadtest config \| grep -A 5 k6` |
+
+**Изоляция нагрузки (D-018):** k6 pinned на CPU 0-1, backend работает на остальных
+ядрах. Нагрузка НЕ наводится на измеряемый сервис — повторяемые p95/SLA измерения.
+
+**Команды:**
+
+```bash
+docker compose config --quiet && echo "compose valid"
+docker compose --profile loadtest config | grep cpuset   # должен показать "0,1"
+docker stats --no-stream backend                         # MEM LIMIT 512MiB
+```
 
 ---
 
-## Секция 14. Load Testing Methodology — _T-167_
+## Секция 14. Load Testing Methodology
 
-_(T-167 добавит таблицу 5 профилей k6)_
+| Профиль | VU | Длительность | SLA p95 | err rate | Когда запускать |
+|---|---|---|---|---|---|
+| smoke | 10 | 30s | <= 2s | <= 1% | pre-push hook (CI gate) |
+| baseline | 50 | 5min | <= 2s | <= 1% | перед каждым PR |
+| stress | 100 | 3min | <= 3s | <= 2% | перед submission |
+| spike | 10 -> 200 | 3min | <= 4s | <= 2% | еженедельно (resilience) |
+| soak | 30 | 30min | <= 2s | <= 0.5% | раз в неделю (memory leaks) |
+
+**Скрипты:** `tests/load/{smoke,baseline,stress,spike,soak}_dispatcher.js`
+**Документация:** `docs/load-profiles/README.md` + `.clinerules/22-load-testing.md`
+**HTML-отчёты:** `docs/load-profiles/reports/*.html` (генерируются через `K6_WEB_DASHBOARD_EXPORT`)
+**CI gate:** `make loadtest-check` парсит JSON через `scripts/check_load_sla.py`
+
+**Команды:**
+
+```bash
+make loadtest-smoke               # CI gate (10 VU x 30s)
+make loadtest-baseline            # PR gate (50 VU x 5min)
+make loadtest-stress              # submission prep (100 VU x 3min)
+make loadtest-spike               # resilience (10 -> 200 VU)
+make loadtest-soak                # memory leaks (30 VU x 30min)
+make loadtest-all                 # все кроме soak
+make loadtest-check               # парсинг JSON -> PASS/FAIL
+```
 
 ---
 
@@ -232,7 +286,7 @@ _(T-167 добавит таблицу 5 профилей k6)_
 ## Cross-references
 
 - T-137 — этот чек-лист (P0, RICE 6.0)
-- T-167 — секции 12-14 (P1, RICE 6.0, depends_on T-137+T-161)
+- T-167 — секции 12-14 (P1, RICE 6.0, done в этом PR)
 - T-160..T-166 — load testing + SLA infrastructure
 - `.clinerules/05-hackathon-rules.md` — R1..R10 hard rules
 - `.clinerules/22-load-testing.md` — load testing methodology
