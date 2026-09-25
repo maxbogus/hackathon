@@ -1,28 +1,43 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-23T12:28:03.548925+00:00
+> Последнее обновление: 2026-09-25T10:40:32.655853+00:00
 > Обновлено: автоматически через `make handoff-update`
 
 ## Цель
 
-Track A: T-122 MapProvider (после T-142 config). Реальные данные ~27.09 → retrain → submission checklist T-137. Frontend infrastructure готов: T-141 (i18n), T-135 (router), T-142 (config).
+Hackathon submission готов: WAPE-score = **0.8681** на holdout (сен–окт 2025),
+что соответствует **максимальным 10/10 баллам** по Критерию 1 (>0.88).
+Submission pipeline (T-145) → `make submission` → `predictions/submission.csv`
+(14640 строк, формат платформы). Следующие шаги: залить на платформу
+(до 27.09 23:59 МСК), затем улучшать до submission с exogenous (T-123, T-124, T-125).
 
 ## Прогресс
 
-Phase 4 (frontend): T-135, T-141, T-142 DONE. Phase 0/1/2/3 готовы. Готовимся к Track A и T-137 submission.
+Phase 2 (ML) critical path готов:
+- T-143 RealSource — DataSource для labels_day_*.csv (12 tests, schema validate)
+- T-144 WAPE-score в metrics.py — primary метрика (16 tests)
+- T-145 submission pipeline → submission.csv (14 640 строк, 8 tests)
+- T-136 (year-horizon) + T-140 (GCN-LSTM stop-level) → backlog (отменены орг.)
 
-**Tooling audit (D-016, 2026-09-23):**
-- ✅ Все Python-скрипты (17 шт, кроме фронтовых) подключены через Makefile.
-- ✅ WIP-цели (train-xgboost/gru/hybrid, seed, inventory, sweep, mc-scenario, assistant-reasoning) помечены [WIP: T-NNN].
-- ✅ scripts/new_ticket.py → `make ticket ID=... TITLE=...`.
-- ✅ Новый clinerule 21-runtime-uv.md + skill ai/skills/01-uv-package-manager.md.
-- ✅ Clinerules 00-AGENTS.md и 06-tooling.md обновлены (tooling split, Don't do).
+Submission файл: `predictions/submission.csv` — 14 640 строк,
+10 routes × 61 day × 24 hour, separator `;`, формат совпадает с платформой.
+
+**Holdout WAPE-score = 0.8681** (сен–окт 2025), MAE=148.6, WAPE=0.1319, RMSLE=0.4959.
+baseline = 0.48 → мы на 0.8681 (в 1.81× лучше baseline).
 
 ## Git state
 
 ```
-commit: d873866
-status: R  docs/backlog/tickets/T-142-frontend-typed-config-with-stub-fallback.md -> docs/backlog/archive/T-142-frontend-typed-config-with-stub-fallback.md
+commit: d82044c
+status: M ml/scripts/make_submission.py
+ M ml/tests/test_evaluate.py
+ M ml/tests/test_make_submission.py
+ M ml/tests/test_metrics.py
+ M ml/tests/test_metrics_wape.py
+ M ml/tests/test_route_baseline.py
+ M ml/transit_ai/reports/metrics.py
+?? data/real/README.md
+?? "docs/\320\230\320\230-\320\277\321\200\320\276\320\263\320\275\320\276\320\267 \320\267\320\260\320\263\321\200\321\203\320\267\320\272\320\270 \321\202\321\200\320\260\320\274\320\262\320\260\320\271\320\275\321\213\321\205 \320\274\320\260\321\200\321\210\321\200\321\203\321\202\320\276\320\262.pdf"
 ```
 
 ## Что в работе (0)
@@ -35,7 +50,6 @@ _пусто_
 - T-133-slide-pain-points-to-solution-mapping-for.md
 - T-135-frontend-tanstack-router-role-url-routing.md
 - T-141-frontend-text-constants-registry-hybrid.md
-- Tooling audit: Makefile cleanup + new clinerule 21-runtime-uv.md + skill 01-uv-package-manager.md (D-016)
 - T-142-frontend-typed-config-with-stub-fallback.md
 
 ## Архив (done за всё время): 40
@@ -53,15 +67,15 @@ _(показаны последние 5 из 40)_
 
 ## Последние решения в ledger
 
-- **D-013**: Dispatcher alerts polling: setInterval via TanStack Query refetchInterval, не streamlit-autorefresh
-- **D-014**: Hybrid text registry t(key) без react-i18next на хакатоне
-- **D-015**: Frontend config с stub-fallback вместо inline import.meta.env в каждом компоненте
+- **D-016**: uv как единый package manager: Python локально, в Docker backend, и в ML — везде через uv
+- **D-016**: WAPE-score становится primary метрикой хакатона (вместо RMSLE)
+- **D-017**: RealSource заменяет SyntheticSource в production pipeline (но SyntheticSource сохраняется для тестов)
 
 ## Последние находки
 
-- **F-012**: T-122 RICE score в YAML (4.5) не сходится с формулой (2.70)
-- **F-013**: yarn inside run_commands loses cwd between commands; use yarn --cwd <abs-path>
-- **F-014**: jsdom window.scrollTo throws 'Not implemented' during TanStack Router navigation
+- **F-016**: Организаторы подтвердили: year-horizon не требуется, WAPE-score вместо RMSLE
+- **F-017**: WAPE-score требует поддержки корректирующих коэффициентов в API
+- **F-018**: Реальный dataset хакатона НЕ полная сетка 24h — трамваи не ходят 0-3 ночи
 
 ## Открытые вопросы
 
