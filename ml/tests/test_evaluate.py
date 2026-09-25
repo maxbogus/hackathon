@@ -118,7 +118,7 @@ def test_evaluate_artifact_returns_evaluation_result(
     )
     assert isinstance(result, EvaluationResult)
     assert result.model_id == "baseline_v1"
-    assert set(result.metrics.keys()) == {"rmsle", "mae", "mape"}
+    assert set(result.metrics.keys()) == {"rmsle", "mae", "mape", "wape", "wape_score"}
     assert result.n_points > 0
     assert result.eval_seconds >= 0.0
     assert result.holdout_start < result.holdout_end
