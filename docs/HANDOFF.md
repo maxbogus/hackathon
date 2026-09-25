@@ -1,6 +1,6 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-25T11:13:50.514906+00:00
+> Последнее обновление: 2026-09-25T11:29:42.026284+00:00
 > Обновлено: автоматически через `make handoff-update`
 
 ## Цель
@@ -14,24 +14,18 @@ Phase 0 (toolchain + clinerules + ledger)
 ## Git state
 
 ```
-commit: e527f86
-status: M Makefile
- M docker-compose.yml
- M docs/ledger/decisions.jsonl
+commit: db1567f
+status: M docker-compose.yml
+ D docs/backlog/tickets/T-164-backend-dockerfile-non-root-hardening.md
+ D docs/backlog/tickets/T-166-clinerule-22-skill-02-load-testing-playbook.md
  M pyproject.toml
+ M tests/test_clinerule_index.py
+ M tests/test_dockerfile_hardening.py
+ M tests/test_load_profiles.py
 ?? data/real/README.md
-?? docs/backlog/tickets/T-160-backend-load-test-k6-docker-smoke.md
-?? docs/backlog/tickets/T-161-backend-load-sla-regression-gate.md
-?? docs/backlog/tickets/T-162-backend-load-profiles-baseline-stress-spike-soak.md
-?? docs/backlog/tickets/T-163-docker-compose-deploy-resources-loadtest-profile.md
-?? docs/backlog/tickets/T-164-backend-dockerfile-non-root-hardening.md
-?? docs/backlog/tickets/T-165-ml-training-pipeline-resource-budget-time-gate.md
-?? docs/backlog/tickets/T-166-clinerule-22-skill-02-load-testing-playbook.md
-?? docs/backlog/tickets/T-167-hackathon-checklist-sla-resources-loadtest.md
 ?? docs/load-profiles/
 ?? scripts/check_load_sla.py
 ?? scripts/check_training_time.py
-?? tests/load/
 ?? tests/test_check_load_sla.py
 ?? tests/test_check_training_time.py
 ?? tests/test_compose_resources.py
@@ -44,20 +38,20 @@ _пусто_
 
 ## Что сделано (5)
 
-- T-131-dispatcher-alerts-overload-predictions-15.md
-- T-133-slide-pain-points-to-solution-mapping-for.md
-- T-135-frontend-tanstack-router-role-url-routing.md
 - T-141-frontend-text-constants-registry-hybrid.md
 - T-142-frontend-typed-config-with-stub-fallback.md
+- T-162-backend-load-profiles-baseline-stress-spike-soak.md
+- T-164-backend-dockerfile-non-root-hardening.md
+- T-166-clinerule-22-skill-02-load-testing-playbook.md
 
-## Архив (done за всё время): 40
+## Архив (done за всё время): 43
 
-- T-131-dispatcher-alerts-overload-predictions-15.md
-- T-133-slide-pain-points-to-solution-mapping-for.md
-- T-135-frontend-tanstack-router-role-url-routing.md
 - T-141-frontend-text-constants-registry-hybrid.md
 - T-142-frontend-typed-config-with-stub-fallback.md
-_(показаны последние 5 из 40)_
+- T-162-backend-load-profiles-baseline-stress-spike-soak.md
+- T-164-backend-dockerfile-non-root-hardening.md
+- T-166-clinerule-22-skill-02-load-testing-playbook.md
+_(показаны последние 5 из 43)_
 
 ## Следующая задача
 
@@ -65,9 +59,9 @@ _(показаны последние 5 из 40)_
 
 ## Последние решения в ledger
 
-- **D-019**: 5 профилей нагрузки k6 как повторяемая методология
 - **D-020**: SLA p95 ≤ 2000ms как hard gate в make check-all (R6 compliance)
 - **D-021**: Container resources hardcoded в docker-compose для R3 reproducible
+- **D-022**: Dockerfile hardening: multi-stage + non-root user + production healthcheck
 
 ## Последние находки
 
