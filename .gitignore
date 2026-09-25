@@ -78,10 +78,14 @@ data/real/*.parquet
 data/real/*.csv
 data/real/*.zip
 data/real/*.json
+data/real/labels/
+data/real/spravochniki/
 data/validation_reports/*.json
 ml/artifacts/*/
 ml/artifacts/active.json
 !ml/artifacts/.gitkeep
+ml/predictions/*
+!ml/predictions/.gitkeep
 predictions/*.parquet
 predictions/*.csv
 !predictions/.gitkeep
