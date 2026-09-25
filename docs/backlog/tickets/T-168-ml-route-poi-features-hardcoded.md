@@ -1,19 +1,19 @@
 ---
 id: T-168
 phase: 2
-title: POI features для маршрутов — schools/universities/stadiums/parks/malls/theaters (hardcoded Moscow)
+title: POI features для маршрутов — schools/universities/stadiums/parks/malls/theaters/hospitals/cinemas/transit (hardcoded Moscow, 13 категорий, 146 POI)
 priority: P1
-effort: 3
+effort: 4
 unit: hours
 rice:
   R: 8
-  I: 2.0
-  C: 0.7
-  score: 3.73
+  I: 2.5
+  C: 0.8
+  score: 4.00
 depends_on: [T-156, T-160, T-161, T-162]
 blocks: [T-169]
 tags: [ml, feature-engineering, poi, route-context, gis]
-status: ready
+status: in-progress
 created: 2026-09-25
 updated: 2026-09-25
 assignee: maxim

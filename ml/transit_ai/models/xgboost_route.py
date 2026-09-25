@@ -31,6 +31,7 @@ import pandas as pd
 import xgboost as xgb
 
 from transit_ai.data.calendar_rf import get_day_type
+from transit_ai.data.poi_features import POI_FEATURE_NAMES, get_route_poi_features
 from transit_ai.data.seasonal_calendar import get_seasonal_features
 from transit_ai.data.spravochnik_geo import build_route_geo_features
 from transit_ai.data.validators_lookup import get_validators_features
@@ -39,21 +40,39 @@ from transit_ai.data.weather_openmeteo import get_weather_features
 # Фичи в порядке (порядок важен для DMatrix)
 # Geo-фичи из справочника (T-156)
 _GEO_FEATURES: tuple[str, ...] = (
-    "lat_mid", "lon_mid", "dist_center_km",
-    "n_stops_log", "place_id_enc",
+    "lat_mid",
+    "lon_mid",
+    "dist_center_km",
+    "n_stops_log",
+    "place_id_enc",
 )
 
 # Внешние сезонные фичи (T-160, T-161, T-162)
 _EXTERNAL_FEATURES: tuple[str, ...] = (
     # T-160: school/uni/vacation
-    "is_school_break", "is_school_start_day", "is_mass_vacation",
-    "is_pre_holiday", "days_to_school_start", "days_to_new_year",
-    "is_workday_calendar_rf", "uni_session_active",
+    "is_school_break",
+    "is_school_start_day",
+    "is_mass_vacation",
+    "is_pre_holiday",
+    "days_to_school_start",
+    "days_to_new_year",
+    "is_workday_calendar_rf",
+    "uni_session_active",
     # T-161: weather
-    "temp_max", "temp_min", "precipitation_sum", "snowfall_sum", "wind_speed_max",
+    "temp_max",
+    "temp_min",
+    "precipitation_sum",
+    "snowfall_sum",
+    "wind_speed_max",
     # T-162: validators
-    "n_validators_mean", "n_trams_mean",
+    "n_validators_mean",
+    "n_trams_mean",
 )
+
+# POI-фичи per-route (T-168): средние по остановкам маршрута (route-only данные
+# не содержат stop_id, поэтому агрегируем per-stop → per-route).
+# Эти фичи постоянны для каждого route_id (не зависят от даты/часа).
+_POI_FEATURES: tuple[str, ...] = tuple(POI_FEATURE_NAMES)
 
 FEATURE_NAMES: tuple[str, ...] = (
     "hour",
@@ -69,6 +88,7 @@ FEATURE_NAMES: tuple[str, ...] = (
     "route_id",
     *_GEO_FEATURES,  # T-156
     *_EXTERNAL_FEATURES,  # T-160, T-161, T-162
+    *_POI_FEATURES,  # T-168: per-route avg POI density
     "lag_24h",
     "lag_168h",
     "lag_730h",
@@ -105,10 +125,16 @@ def _geo_for_route(route_id: int) -> dict[str, float]:
     global _GEO_CACHE
     if _GEO_CACHE is None:
         _GEO_CACHE = _get_geo_lookup()
-    return _GEO_CACHE.get(int(route_id), {
-        "lat_mid": 0.0, "lon_mid": 0.0, "dist_center_km": 0.0,
-        "n_stops_log": 0.0, "place_id_enc": 0.0,
-    })
+    return _GEO_CACHE.get(
+        int(route_id),
+        {
+            "lat_mid": 0.0,
+            "lon_mid": 0.0,
+            "dist_center_km": 0.0,
+            "n_stops_log": 0.0,
+            "place_id_enc": 0.0,
+        },
+    )
 
 
 def build_lag_lookup(train_df: pd.DataFrame) -> dict[tuple[int, int, int], float]:
@@ -190,6 +216,22 @@ def _make_features(
     df["place_id_enc"] = df["route_id"].map(
         lambda r: geo_lookup.get(int(r), {}).get("place_id_enc", 0.0)
     )
+
+    # T-168: POI-фичи per-route (средние по остановкам маршрута).
+    # Кэш: route_id → {n_schools_500m, n_universities_1500m, ...}
+    poi_cache: dict[int, dict[str, float]] = {}
+    for rid in df["route_id"].astype(int).unique():
+        poi_df = get_route_poi_features(int(rid))
+        if not poi_df.empty:
+            # Среднее по остановкам маршрута (per-route aggregate)
+            poi_cache[int(rid)] = poi_df.mean(numeric_only=True).to_dict()
+        else:
+            poi_cache[int(rid)] = {k: 0.0 for k in POI_FEATURE_NAMES}
+
+    for feat_name in POI_FEATURE_NAMES:
+        df[feat_name] = df["route_id"].map(
+            lambda r: poi_cache.get(int(r), {}).get(feat_name, 0.0)
+        )
 
     # T-160, T-161, T-162: внешние фичи по дате и (route, weekday, hour)
     # Сначала seasonal + weather по дате
