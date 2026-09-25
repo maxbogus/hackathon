@@ -36,6 +36,7 @@
 | 26 | `26-per-route-feature-aggregation.md` | Per-stop → per-route mean aggregation для route-only XGBoost (D-025) |
 | 27 | `27-wape-score-vs-wape.md` | WAPE ∈ [0,+∞) vs WAPE-score ∈ [0,1] = 1-WAPE (F-033) |
 | 28 | `28-submission-workflow-local-vs-platform.md` | Submission workflow: sanity-check 5 критериев + drift учёт (F-039, F-040) |
+| 29 | `29-zsh-shell-quirks.md` | zsh на Ubuntu — gotchas с `{}`, f-string в `-c "..."`, heredoc vs bash |
 | — | `MEMORY-BUDGET.md` | Анти-краш: не читать >1MB JSON |
 
 ## Quick rules
@@ -64,6 +65,10 @@
 14. **Load testing:** k6 запускается ТОЛЬКО в Docker (профиль `loadtest`), через
     `make loadtest-*`. SLA gate — `make loadtest-check`. R6: p95 ≤ 2000ms, err ≤ 1%.
     Подробности — `.clinerules/22-load-testing.md`.
+15. **Shell = zsh на Ubuntu:** не bash. Brace expansion `{i}`, f-string в
+    `python3 -c "..."`, heredoc — всё ломается по-разному. Подробности —
+    `.clinerules/29-zsh-shell-quirks.md`. Использовать editor tool для правок
+    файлов вместо shell sed/python heredoc когда возможно.
 
 ## How Cline should work on this project
 

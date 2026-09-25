@@ -5,6 +5,7 @@ route 90, стадион Металлург, ТРЦ Краски, новые о�
 поликлиники). Decay-weighted фичи: `event_metro_troitskaya_30d`,
 `event_baumana_campus_30d`, `event_route_90_active`, `n_events_active_30d`.
 """
+
 from __future__ import annotations
 
 from datetime import date
@@ -56,7 +57,15 @@ def test_load_events_returns_at_least_8() -> None:
 
 def test_load_events_required_fields() -> None:
     """Каждое событие имеет обязательные поля."""
-    required = {"id", "date", "category", "magnitude", "tau_days", "affected_routes", "notes"}
+    required = {
+        "id",
+        "date",
+        "category",
+        "magnitude",
+        "tau_days",
+        "affected_routes",
+        "notes",
+    }
     for ev in load_events():
         missing = required - set(ev.keys())
         assert not missing, f"Event {ev.get('id', '?')!r} missing fields: {missing}"

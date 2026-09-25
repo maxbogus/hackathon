@@ -254,8 +254,7 @@ def _make_features(
             event_cache[ev_key] = get_event_features(ev_key[0], ev_key[1])
 
     for feat_name in EVENT_FEATURE_NAMES:
-        df[feat_name] = [event_cache[k][feat_name] for k in
-                         zip(date_list, route_list)]
+        df[feat_name] = [event_cache[k][feat_name] for k in zip(date_list, route_list)]
 
     # T-160, T-161, T-162: внешние фичи по дате и (route, weekday, hour)
     # Сначала seasonal + weather по дате

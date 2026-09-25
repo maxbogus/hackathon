@@ -13,7 +13,7 @@ rice:
 depends_on: [T-156, T-160, T-161, T-162, T-168]
 blocks: [T-173]
 tags: [ml, feature-engineering, events, infrastructure, hackathon-context]
-status: in-progress
+status: done
 created: 2026-09-25
 updated: 2026-09-25
 assignee: maxim
