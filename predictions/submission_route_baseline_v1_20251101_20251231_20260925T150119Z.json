@@ -28,8 +28,8 @@
     "clip_negatives",
     "per_route_log_bias_calibration"
   ],
-  "platform_submitted": false,
-  "platform_score": null,
-  "platform_score_submitted_at": null,
+  "platform_submitted": true,
+  "platform_score": 0.73231,
+  "platform_score_submitted_at": "2026-09-25T18:10:00+03:00",
   "holdout_wape_score": 0.8750789104456979
 }

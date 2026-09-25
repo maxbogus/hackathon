@@ -5,7 +5,7 @@
 
 ## Цель
 
-Поднять WAPE submission с 0.72568 → 0.78-0.80 до дедлайна 27.09. Frontend coef-slider для К2.в, README Handover
+Поднять WAPE submission с 0.72568 → 0.73231 (T-147) → 0.78-0.80 (T-152 XGBoost) до дедлайна 27.09. Frontend coef-slider для К2.в, README Handover
 
 ## Прогресс
 
