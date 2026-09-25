@@ -136,7 +136,7 @@ def print_candidate(
         prev_score = prev[0] if prev else None
         prev_sub_id = prev[1] if prev else None
         prev_ev_id = prev[2] if prev else None
-    except Exception:  # R5: не блокировать вывод
+    except (OSError, json.JSONDecodeError, KeyError, IndexError):  # R5
         prev_score = prev_sub_id = prev_ev_id = None
 
     info = CandidateInfo(
