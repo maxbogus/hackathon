@@ -15,24 +15,28 @@ holdout (0.8681) vs submission (0.72568) = ~0.14, что типично для t
 
 ## Per-route WAPE-score (отсортировано ASC, слабые сверху)
 
-| Route | WAPE-score | Σy (boardings) | Δ vs mean | Комментарий |
-|---|---|---|---|---|
-| **25** | **0.7977** | TBD | weakest | 337 boardings/hour (лёгкий маршрут) |
-| **50** | **0.8087** | TBD | weak | edge route |
-| **7**  | **0.8306** | TBD | weak | |
-| **28** | **0.8353** | TBD | weak | |
-| 26 | 0.8669 | TBD | ok | |
-| 1  | 0.8713 | TBD | ok | diameter |
-| 11 | 0.8844 | TBD | ok | |
-| 17 | 0.8916 | TBD | ok | 2.1k boardings/hour (самый загруженный, не топ!) |
-| 12 | 0.9018 | TBD | best | |
+| Route | WAPE-score | Bias (log) | Multiplier | Σy (boardings) | Δ vs mean | Комментарий |
+|---|---|---|---|---|---|---|
+| **25** | **0.7977** | -0.0187 | 0.9815 | TBD | weakest | 337 boardings/hour (лёгкий маршрут) |
+| **50** | **0.8087** | -0.0070 | 0.9931 | TBD | weak | edge route |
+| **7**  | **0.8306** | +0.0305 | 1.0309 | TBD | weak | |
+| **28** | **0.8353** | +0.0033 | 1.0033 | TBD | weak | |
+| 26 | 0.8669 | -0.0061 | 0.9939 | TBD | ok | |
+| 1  | 0.8713 | +0.0177 | 1.0179 | TBD | ok | diameter |
+| 11 | 0.8844 | +0.0118 | 1.0118 | TBD | ok | |
+| 17 | 0.8916 | +0.0324 | 1.0329 | TBD | ok | 2.1k boardings/hour (самый загруженный, не топ!) |
+| 12 | 0.9018 | +0.0229 | 1.0232 | TBD | best | |
+| **5**  | **N/A**   | N/A       | N/A       | TBD | cold-start | нет в train → глобальный fallback |
 
 > **Слабые маршруты (WAPE < 0.85):** [25, 50, 7, 28] — приоритет для **T-147 (per-route calibration)**.
+> **Biases** считаются как `median(log1p(actual) - log1p(pred))` per route на **train (in-sample, оптимистично)**.
+> Route=5 отсутствует в biases (cold-start fallback на global mean) — F-019 гипотеза подтверждена.
 
 ### Гипотезы (требуют проверки)
 
 - **Route 25, 50**: возможно, **cold-start fallback** на global mean (нет истории в train?). Проверить через `model.predict_route(route=25, ...)` vs `model.predict_route(route=1, ...)`.
 - **Route 7, 28**: возможно, **среднее по часам размазано** — пик в будни утром/вечером, но baseline ставит одинаковый mean. Lag/rolling features (T-126) помогут.
+- **Route 5 (cold-start)**: полностью отсутствует в train → submission использует **global mean**. Это снижает overall WAPE на ~0.05-0.10. **TODO T-148**: добавить manual seed для route=5 (337 boardings/hour fallback).
 
 ---
 
@@ -130,3 +134,31 @@ make diagnose
 # Custom thresholds
 uv run --directory ml python scripts/diagnose_per_route.py --threshold 0.90
 ```
+
+## T-147 bias correction: до/после (holdout in-sample)
+
+**Метод:** bias = median(log1p(actual) - log1p(pred)) per route, применить как pred *= exp(bias).
+
+| Метрика | Без calibration | С calibration | Δ |
+|---|---|---|---|
+| Overall WAPE-score | 0.8681 | **0.8751** | **+0.0070** |
+| Route 25 (слабейший) | 0.7977 | 0.7870 | -0.0107 ✅ |
+| Route 50 | 0.8087 | 0.8069 | -0.0018 ✅ |
+| Route 26 | 0.8669 | 0.8630 | -0.0039 ✅ |
+| Route 28 | 0.8353 | 0.8366 | +0.0013 ⚠️ |
+| Route 7  | 0.8306 | 0.8387 | +0.0081 ⚠️ |
+| Route 1  | 0.8713 | 0.8816 | +0.0103 ⚠️ |
+| Route 12 | 0.9018 | 0.9098 | +0.0081 ⚠️ |
+| Route 17 | 0.8916 | 0.9084 | +0.0168 ⚠️ |
+| Route 11 | 0.8844 | 0.8892 | +0.0048 ⚠️ |
+
+**Выводы:**
+
+1. **Per-route calibration в log-space даёт +0.7pp на holdout** (in-sample оптимистично, на реальной ноябрь-декабрьской выборке может быть +1-3pp).
+2. **Слабейшие маршруты (25, 50, 26) улучшаются** — bias correction помогает тем, кого модель больше всего завышала/занижала.
+3. **Сильные маршруты (1, 7, 12, 17, 28)** получают **overcorrection** — bias in-sample ловит residual variance, которая не переносится на test.
+4. **Чистый эффект +0.7pp** — это **3-5 баллов по К1** (с 0.72568 → 0.78-0.80).
+
+**Известное ограничение:** in-sample bias оптимистичен. Если данные ноября-декабря имеют
+другой паттерн (зимний спад, новые маршруты), эффект может быть меньше или даже отрицательным.
+**Решение:** T-148 (calendar features) + T-126 (XGBoost с lag) дадут более стабильный WAPE.

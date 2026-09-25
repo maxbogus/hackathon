@@ -25,6 +25,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from transit_ai.calibration.route_bias import apply_route_bias, compute_route_bias
 from transit_ai.data.base import DateRange
 from transit_ai.data.real import RealSource
 from transit_ai.models.route_baseline import RouteBaselineMean
@@ -118,14 +119,34 @@ def main() -> int:
     model.fit(train_df)
     print(f"Fit done: {len(model.table_)} (route, weekday, hour) buckets")
 
-    # 2. Evaluate on test (holdout: sep-oct)
+    # 2. Evaluate on test (holdout: sep-oct) — first WITHOUT calibration
     test_df = src.load_ridership(DateRange(DEFAULT_TEST_START, DEFAULT_TEST_END))
     test_pred = model.predict_batch(test_df)
-    metrics = compute_metrics(test_df["boardings"].values, test_pred)
+    metrics_before = compute_metrics(test_df["boardings"].values, test_pred)
     print()
-    print(f"Holdout WAPE-score (сен–окт): {metrics['wape_score']:.4f}")
+    print(f"Holdout WAPE-score (сен–окт, без calibration): {metrics_before['wape_score']:.4f}")
     print(
-        f"  MAE={metrics['mae']:.1f}, WAPE={metrics['wape']:.4f}, RMSLE={metrics['rmsle']:.4f}"
+        f"  MAE={metrics_before['mae']:.1f}, WAPE={metrics_before['wape']:.4f}, "
+        f"RMSLE={metrics_before['rmsle']:.4f}"
+    )
+
+    # 2b. Compute per-route bias on TRAIN (in-sample) → apply to test (T-147)
+    # In-sample bias — оптимистичная оценка (модель видела эти данные),
+    # но показывает верхнюю границу эффекта calibration.
+    train_pred_in_sample = model.predict_batch(train_df)
+    route_biases = compute_route_bias(
+        train_actual=train_df["boardings"],
+        train_pred=pd.Series(train_pred_in_sample),
+        route_ids=train_df["route_id"],
+    )
+    print(f"Per-route biases (log-space): {route_biases}")
+    test_pred_calibrated = apply_route_bias(
+        test_pred, test_df["route_id"].astype(int).values, route_biases
+    )
+    metrics_after = compute_metrics(test_df["boardings"].values, test_pred_calibrated)
+    print(
+        f"Holdout WAPE-score (сен–окт, calibrated): {metrics_after['wape_score']:.4f} "
+        f"(Δ {metrics_after['wape_score'] - metrics_before['wape_score']:+.4f})"
     )
 
     # 3. Build full grid for submission
@@ -137,6 +158,11 @@ def main() -> int:
     pred_df = grid.rename(columns={"route": "route_id"})
     pred_df["date"] = pd.to_datetime(pred_df["date"])
     preds = model.predict_batch(pred_df)
+
+    # Apply per-route bias correction (T-147)
+    preds = apply_route_bias(
+        preds, grid["route"].astype(int).values, route_biases
+    )
 
     # Apply coefficients
     coef_product = args.coef_weather * args.coef_event * args.coef_season

@@ -13,7 +13,7 @@ rice:
 depends_on: [T-145]
 blocks: [T-147]
 tags: [ml, diagnostics, per-route, hackathon, p0]
-status: ready
+status: done
 created: 2026-09-25
 updated: 2026-09-25
 assignee: "maxim"
@@ -35,22 +35,18 @@ assignee: "maxim"
 
 ## Acceptance Criteria
 
-- [ ] `ml/transit_ai/reports/diagnose.py` с функцией:
+- [x] `ml/transit_ai/reports/diagnose.py` с функцией:
   - `per_route_wape(test_df, predictions) -> dict[int, float]`
   - `per_hour_wape(test_df, predictions) -> dict[int, float]`
   - `per_weekday_wape(test_df, predictions) -> dict[int, float]`
   - `diagnose(test_df, predictions) -> dict` (всё вместе)
-- [ ] `ml/scripts/diagnose_per_route.py` CLI:
+- [x] `ml/scripts/diagnose_per_route.py` CLI:
   - `uv run --directory ml python scripts/diagnose_per_route.py`
   - Печатает: overall WAPE, per-route, per-hour, per-weekday
   - Указывает слабые места (WAPE < 0.85)
-- [ ] `make diagnose` target
-- [ ] Unit-тест `ml/tests/test_diagnose.py`: 5+ кейсов:
-  - Идеальный прогноз → все WAPE=1.0
-  - 50% ошибка только на route=1 → per_route[1] = 0.5
-  - 50% ошибка только на hour=8 → per_hour[8] = 0.5
-  - Пустой DF → returns {}
-  - Сумма per-route * Σy[route] должна быть = overall WAPE * Σy
+- [x] `make diagnose` target
+- [x] Unit-тест `ml/tests/test_diagnose.py`: 8 кейсов (perfect / route-specific / per-hour / per-weekday / empty / keys / weighted-avg / integration с RouteBaselineMean + RealSource) — **8/8 passed**
+- [x] **Deliverable:** `docs/reports/diagnose_per_route.md` с per-route / per-hour / per-weekday таблицами + действия
 
 ## Technical Notes
 

@@ -20,6 +20,10 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+
+from transit_ai.calibration.route_bias import apply_route_bias, compute_route_bias
 from transit_ai.data.base import DateRange
 from transit_ai.data.real import RealSource
 from transit_ai.models.route_baseline import RouteBaselineMean
@@ -76,10 +80,10 @@ def main() -> int:
     model.fit(train)
     preds = model.predict_batch(test)
 
-    # Diagnose
+    # Diagnose (без calibration)
     result = diagnose(test, preds)
     print()
-    print(f"Overall WAPE-score: {_fmt(result['overall'])}")
+    print(f"Overall WAPE-score (без calibration): {_fmt(result['overall'])}")
     print(
         f"N points: {result['n_points']:,}, Total boardings: {result['total_boardings']:,.0f}"
     )
@@ -102,6 +106,37 @@ def main() -> int:
     print("Per-weekday (0=Mon, 6=Sun):")
     print("-" * 40)
     _print_dict_sorted(result["per_weekday"], asc=True)
+
+    # --- T-147: compare with bias correction ---
+    print()
+    print("=" * 60)
+    print("After per-route bias correction (T-147, log-space median)")
+    print("=" * 60)
+    # Biases вычисляются на train (in-sample, оптимистично).
+    train_pred_in_sample = model.predict_batch(train)
+    biases = compute_route_bias(
+        train_actual=train["boardings"],
+        train_pred=pd.Series(train_pred_in_sample),
+        route_ids=train["route_id"],
+    )
+    print("Per-route biases (log-space):")
+    for r, b in sorted(biases.items()):
+        ratio = np.exp(b)
+        print(f"  route {r:>3}: bias={b:+.4f} → multiplier={ratio:.4f}")
+
+    preds_calibrated = apply_route_bias(
+        preds, test["route_id"].astype(int).values, biases
+    )
+    result_cal = diagnose(test, preds_calibrated)
+    print()
+    print(f"Overall WAPE-score (calibrated): {_fmt(result_cal['overall'])}")
+    print(f"Δ = {result_cal['overall'] - result['overall']:+.4f}")
+    print()
+    print("Per-route (calibrated, sorted ASC, weak first):")
+    print("-" * 40)
+    for r, s in sorted(result_cal["per_route"].items(), key=lambda kv: kv[1]):
+        before = result["per_route"].get(int(r), 0.0)
+        print(f"  {r!s:>10} : {_fmt(s)} (Δ {s - before:+.4f})")
     return 0
 
 
