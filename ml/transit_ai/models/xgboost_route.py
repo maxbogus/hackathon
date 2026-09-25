@@ -31,8 +31,30 @@ import pandas as pd
 import xgboost as xgb
 
 from transit_ai.data.calendar_rf import get_day_type
+from transit_ai.data.seasonal_calendar import get_seasonal_features
+from transit_ai.data.spravochnik_geo import build_route_geo_features
+from transit_ai.data.validators_lookup import get_validators_features
+from transit_ai.data.weather_openmeteo import get_weather_features
 
 # Фичи в порядке (порядок важен для DMatrix)
+# Geo-фичи из справочника (T-156)
+_GEO_FEATURES: tuple[str, ...] = (
+    "lat_mid", "lon_mid", "dist_center_km",
+    "n_stops_log", "place_id_enc",
+)
+
+# Внешние сезонные фичи (T-160, T-161, T-162)
+_EXTERNAL_FEATURES: tuple[str, ...] = (
+    # T-160: school/uni/vacation
+    "is_school_break", "is_school_start_day", "is_mass_vacation",
+    "is_pre_holiday", "days_to_school_start", "days_to_new_year",
+    "is_workday_calendar_rf", "uni_session_active",
+    # T-161: weather
+    "temp_max", "temp_min", "precipitation_sum", "snowfall_sum", "wind_speed_max",
+    # T-162: validators
+    "n_validators_mean", "n_trams_mean",
+)
+
 FEATURE_NAMES: tuple[str, ...] = (
     "hour",
     "weekday",
@@ -45,6 +67,8 @@ FEATURE_NAMES: tuple[str, ...] = (
     "day_type_weekend",
     "day_type_holiday",
     "route_id",
+    *_GEO_FEATURES,  # T-156
+    *_EXTERNAL_FEATURES,  # T-160, T-161, T-162
     "lag_24h",
     "lag_168h",
     "lag_730h",
@@ -52,6 +76,39 @@ FEATURE_NAMES: tuple[str, ...] = (
     "rolling_mean_168h",
     "rolling_mean_30d",
 )
+
+
+def _get_geo_lookup() -> dict[int, dict[str, float]]:
+    """Ленивая загрузка geo-фичей из справочника + user-data.
+
+    Returns:
+        dict[int, dict]: ключ = route_id, значение = {lat_mid, lon_mid, ...}.
+    """
+    geo = build_route_geo_features()
+    result: dict[int, dict[str, float]] = {}
+    for _, row in geo.iterrows():
+        result[int(row["route"])] = {
+            "lat_mid": float(row["lat_mid"]),
+            "lon_mid": float(row["lon_mid"]),
+            "dist_center_km": float(row["dist_center_km"]),
+            "n_stops_log": float(np.log1p(row["n_stops"])),
+            "place_id_enc": float(row["primary_place_id"] - 39706),  # 39706 -> 0
+        }
+    return result
+
+
+_GEO_CACHE: dict[int, dict[str, float]] | None = None
+
+
+def _geo_for_route(route_id: int) -> dict[str, float]:
+    """Получить geo-фичи для маршрута (с кэшем)."""
+    global _GEO_CACHE
+    if _GEO_CACHE is None:
+        _GEO_CACHE = _get_geo_lookup()
+    return _GEO_CACHE.get(int(route_id), {
+        "lat_mid": 0.0, "lon_mid": 0.0, "dist_center_km": 0.0,
+        "n_stops_log": 0.0, "place_id_enc": 0.0,
+    })
 
 
 def build_lag_lookup(train_df: pd.DataFrame) -> dict[tuple[int, int, int], float]:
@@ -115,6 +172,53 @@ def _make_features(
     df["day_type_workday"] = (df["day_type"] == "workday").astype(int)
     df["day_type_weekend"] = (df["day_type"] == "weekend").astype(int)
     df["day_type_holiday"] = (df["day_type"] == "holiday").astype(int)
+
+    # T-156: geo-фичи из справочника
+    geo_lookup = _get_geo_lookup()
+    df["lat_mid"] = df["route_id"].map(
+        lambda r: geo_lookup.get(int(r), {}).get("lat_mid", 0.0)
+    )
+    df["lon_mid"] = df["route_id"].map(
+        lambda r: geo_lookup.get(int(r), {}).get("lon_mid", 0.0)
+    )
+    df["dist_center_km"] = df["route_id"].map(
+        lambda r: geo_lookup.get(int(r), {}).get("dist_center_km", 0.0)
+    )
+    df["n_stops_log"] = df["route_id"].map(
+        lambda r: geo_lookup.get(int(r), {}).get("n_stops_log", 0.0)
+    )
+    df["place_id_enc"] = df["route_id"].map(
+        lambda r: geo_lookup.get(int(r), {}).get("place_id_enc", 0.0)
+    )
+
+    # T-160, T-161, T-162: внешние фичи по дате и (route, weekday, hour)
+    # Сначала seasonal + weather по дате
+    seasonal_cache = {}
+    weather_cache = {}
+    date_list = pd.to_datetime(df["timestamp"]).dt.date
+    for d_val in set(date_list):
+        seasonal_cache[d_val] = get_seasonal_features(d_val)
+        weather_cache[d_val] = get_weather_features(d_val)
+
+    seasonal_df = pd.DataFrame([seasonal_cache[d] for d in date_list], index=df.index)
+    weather_df = pd.DataFrame([weather_cache[d] for d in date_list], index=df.index)
+    df = pd.concat([df, seasonal_df, weather_df], axis=1)
+
+    # Validators lookup: per (route, weekday, hour)
+    val_cache = {}
+    routes = df["route_id"].astype(int).values
+    weekdays = df["weekday"].astype(int).values
+    hours = df["hour"].astype(int).values
+    n_validators = np.zeros(len(df), dtype=np.float32)
+    n_trams = np.zeros(len(df), dtype=np.float32)
+    for i in range(len(df)):
+        key = (int(routes[i]), int(weekdays[i]), int(hours[i]))
+        if key not in val_cache:
+            val_cache[key] = get_validators_features(*key)
+        n_validators[i] = val_cache[key]["n_validators_mean"]
+        n_trams[i] = val_cache[key]["n_trams_mean"]
+    df["n_validators_mean"] = n_validators
+    df["n_trams_mean"] = n_trams
 
     # lag features: сортируем по (route, date, hour) и groupby route
     df = df.sort_values(["route_id", "timestamp"]).reset_index(drop=True)
@@ -345,9 +449,9 @@ class XGBoostRoutePredictor:
             )
         future_grid = future_grid.copy()
         if "timestamp" not in future_grid.columns:
-            future_grid["timestamp"] = pd.to_datetime(future_grid["date"]) + pd.to_timedelta(
-                future_grid["hour"], unit="h"
-            )
+            future_grid["timestamp"] = pd.to_datetime(
+                future_grid["date"]
+            ) + pd.to_timedelta(future_grid["hour"], unit="h")
 
         # Сохраняем оригинальный порядок
         future_grid = future_grid.reset_index(drop=True)
@@ -362,7 +466,9 @@ class XGBoostRoutePredictor:
         extended_history = history.copy()
 
         unique_days = sorted(future_grid_sorted["timestamp"].dt.normalize().unique())
-        n_windows = (len(unique_days) + recompute_every_days - 1) // recompute_every_days
+        n_windows = (
+            len(unique_days) + recompute_every_days - 1
+        ) // recompute_every_days
 
         for w_idx in range(n_windows):
             win_start = w_idx * recompute_every_days
@@ -374,7 +480,9 @@ class XGBoostRoutePredictor:
             win_rows["boardings"] = np.nan
 
             combined = pd.concat([extended_history, win_rows], ignore_index=True)
-            combined = combined.sort_values(["timestamp", "route_id"]).reset_index(drop=True)
+            combined = combined.sort_values(["timestamp", "route_id"]).reset_index(
+                drop=True
+            )
 
             X, _ = _make_features(combined, target=None)
             win_X = X.tail(len(win_rows))

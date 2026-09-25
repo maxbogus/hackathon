@@ -201,14 +201,11 @@ def test_xgboost_route_predict_recursive_returns_correct_shape(
     model.fit(train_only)
 
     # future = 2025-09-01 .. 2025-09-03 (3 дня)
-    future = _build_future_grid(
-        train_only, pd.Timestamp("2025-09-01"), future_days=3
-    )
+    future = _build_future_grid(train_only, pd.Timestamp("2025-09-01"), future_days=3)
     preds = model.predict_recursive(history=train_only, future_grid=future)
 
     assert len(preds) == len(future), (
-        f"predict_recursive должен вернуть {len(future)} значений, "
-        f"получил {len(preds)}"
+        f"predict_recursive должен вернуть {len(future)} значений, получил {len(preds)}"
     )
     assert (preds >= 0).all(), "predictions должны быть >= 0"
 
@@ -224,9 +221,7 @@ def test_xgboost_route_predict_recursive_reproducible(
     Лучшее улучшение — T-154 (новые фичи: month, holidays, full grid).
     """
     train_only = full_data[full_data["timestamp"] < pd.Timestamp("2025-09-01")].copy()
-    future = _build_future_grid(
-        train_only, pd.Timestamp("2025-09-01"), future_days=3
-    )
+    future = _build_future_grid(train_only, pd.Timestamp("2025-09-01"), future_days=3)
 
     model = XGBoostRoutePredictor(
         model_id="xgboost_recursive_repro", n_estimators=20, max_depth=3

@@ -1,27 +1,30 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-25T14:45:14.923610+00:00
+> Последнее обновление: 2026-09-25T16:23:58.060407+00:00
 > Обновлено: автоматически через `make handoff-update`
 
 ## Цель
 
-WAPE BREAKTHROUGH: 0.72568 -> 0.73231 (T-147) -> **0.14734 (T-152 XGBoost)**. Цель перевыполнена в 5 раз. до дедлайна 27.09. Frontend coef-slider для К2.в, README Handover
+Продолжить разработку скелета Transit-AI
 
 ## Прогресс
 
-T-146+T-147 backend done. Submission #2 готов с bias correction. Frontend deferred (слайдеры coef_weather/event/season). Open: T-148 calendar, T-123 weather, T-115 README Handover, frontend coef slider.
+Phase 0 (toolchain + clinerules + ledger)
 
 ## Git state
 
 ```
-commit: 47daf59
-status: M docs/HANDOFF.md
+commit: f83b1c2
+status: M ml/tests/test_xgboost_inference.py
+ M ml/tests/test_xgboost_route.py
+ M ml/transit_ai/models/xgboost_route.py
 ?? data/real/README.md
 ```
 
-## Что в работе (0)
+## Что в работе (2)
 
-_пусто_
+- T-149-submission-candidate-block.md
+- T-152-xgboost-retrain-with-per-route-lag.md
 
 ## Что сделано (5)
 
@@ -52,9 +55,9 @@ _(показаны последние 5 из 48)_
 
 ## Последние находки
 
-- **F-018**: Реальный dataset хакатона НЕ полная сетка 24h — трамваи не ходят 0-3 ночи
-- **F-019**: Первый сабмит submission.csv на платформе хакатона — WAPE-score=0.72568
-- **F-020**: Per-route WAPE диагностика (T-146): слабые маршруты [25, 50, 7, 28], слабые часы [0-4, 22-23], слабые weekday [Сб, Вс]
+- **F-025**: XGBoost v6 (lag_lookup fallback) на платформе — WAPE=0.12253 vs v5 0.14734 (х уж е)
+- **F-026**: WAPE 0.147 — это ОТВРАТИТЕЛЬНО (цель жюри ≥ 0.95, WAPE ≤ 0.05)
+- **F-027**: T-153 recursive forecast: holdout WAPE_score=0.0639 vs lookup 0.2129 — в 3.3 раза лучше
 
 ## Открытые вопросы
 

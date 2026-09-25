@@ -1,0 +1,53 @@
+{
+  "_comment": "User-provided data for routes 17/25/26/28/50 (отсутствуют в GTFS справочнике). Source: user 2026-09-25 + аналитика координат конечных остановок. n_stops = сумма для обоих направлений.",
+  "17": {
+    "n_stops": 52,
+    "n_stops_per_dir": 26,
+    "name": "Останкино — Медведково",
+    "lat_first": 55.8228,
+    "lon_first": 37.6171,
+    "lat_last": 55.8875,
+    "lon_last": 37.6528,
+    "source": "user-provided 2026-09-25"
+  },
+  "25": {
+    "n_stops": 34,
+    "n_stops_per_dir": "14/20",
+    "name": "Останкино — Сокольническая Застава",
+    "lat_first": 55.8228,
+    "lon_first": 37.6171,
+    "lat_last": 55.7890,
+    "lon_last": 37.6789,
+    "source": "user-provided 2026-09-25"
+  },
+  "26": {
+    "n_stops": 50,
+    "n_stops_per_dir": 25,
+    "name": "Метро Университет — Метро Октябрьская",
+    "lat_first": 55.6929,
+    "lon_first": 37.5346,
+    "lat_last": 55.7293,
+    "lon_last": 37.6111,
+    "source": "user-provided 2026-09-25"
+  },
+  "28": {
+    "n_stops": 29,
+    "n_stops_per_dir": 29,
+    "name": "Проспект Маршала Жукова — Метро Сокол",
+    "lat_first": 55.7757,
+    "lon_first": 37.4467,
+    "lat_last": 55.8058,
+    "lon_last": 37.5086,
+    "source": "user-provided 2026-09-25"
+  },
+  "50": {
+    "n_stops": 82,
+    "n_stops_per_dir": 41,
+    "name": "Метро Новослободская — ДК Компрессор",
+    "lat_first": 55.7796,
+    "lon_first": 37.6002,
+    "lat_last": 55.7700,
+    "lon_last": 37.6900,
+    "source": "user-provided 2026-09-25"
+  }
+}
