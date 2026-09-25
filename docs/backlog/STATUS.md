@@ -12,7 +12,7 @@ _Обновлено: 2026-09-25 22:00 (T-168 done, F-033..F-043 + T-171 in-progr
 | &nbsp;&nbsp;• `backlog` (отложены) | **0** |
 | &nbsp;&nbsp;• `in-progress` | **0** |
 | Решений в ledger (`decisions.jsonl`) | **24** (D-001..D-023) |
-| Находок в ledger (`findings.jsonl`) | **43** (F-001..F-043) |
+| Находок в ledger (`findings.jsonl`) | **40** (F-001..F-043) |
 | Решений в ledger (`decisions.jsonl`) | **27** (D-001..D-026) |
 
 ## Готовые к старту (топ-5 по RICE score)
