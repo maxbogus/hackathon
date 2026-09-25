@@ -1,6 +1,6 @@
 # STATUS.md — критический путь
 
-_Обновлено: 2026-09-25 (T-168 done, F-033..F-035, D-024..D-026, clinerules 25-27, skills 05-06). Submission #8 (POI features, 146 POI × 142 остановки × 15 фичей) готов: holdout WAPE-score=0.8751 (calibrated) — выше цели жюри 0.85. БАГ: submission записан в ml/predictions/, а не в predictions/ (F-035) — нужно исправить путь перед заливкой на платформу._
+_Обновлено: 2026-09-25 (T-168 done, F-033..F-035 + F-039..F-040, clinerules 25-28 + обновлён 23). Submission #8 перегенерирован БЕЗ --output: `submission_xgboost_v8_poi_20251101_20251231_20260925T184938Z.csv` (R1 clinerule 23). Local holdout WAPE-score=0.8751, но платформа вернула 0.73231 (default baseline) из-за F-039 (filename collision в предыдущей заливке). Платформа score = baseline (F-023) — наш submission #8 не докатился. После исправления имени нужно залить заново и записать F-NNN с реальным platform_score + drift._
 
 ## Сводка
 
@@ -12,7 +12,7 @@ _Обновлено: 2026-09-25 (T-168 done, F-033..F-035, D-024..D-026, clineru
 | &nbsp;&nbsp;• `backlog` (отложены) | **0** |
 | &nbsp;&nbsp;• `in-progress` | **0** |
 | Решений в ledger (`decisions.jsonl`) | **24** (D-001..D-023) |
-| Находок в ledger (`findings.jsonl`) | **35** (F-001..F-035) |
+| Находок в ledger (`findings.jsonl`) | **40** (F-001..F-040) |
 | Решений в ledger (`decisions.jsonl`) | **27** (D-001..D-026) |
 
 ## Готовые к старту (топ-5 по RICE score)

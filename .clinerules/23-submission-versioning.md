@@ -36,6 +36,35 @@ submission_<model_id>_<start_date>_<end_date>_<run_ts>.csv
 копия последнего прогона для удобства заливки. **НЕ source-of-truth.**
 Создаётся последним шагом пайплайна как `cp` или symlink.
 
+### ⚠️ F-039: НЕ указывать `--output predictions/submission.csv`!
+
+**КРИТИЧНО**: `--output` перезаписывает автоматическое уникальное именование.
+С `--output predictions/submission.csv`:
+- Создаётся `predictions/submission.csv` (НЕ уникальное имя)
+- Manifest имеет `csv_filename: "submission.csv"`
+- Платформа может дедуплицировать по имени и вернуть score от старого submission
+- Нет traceability — невозможно отследить какой submission залит
+
+**Правильный вызов:**
+```bash
+# ❌ НЕПРАВИЛЬНО (F-039):
+uv run python scripts/make_submission.py --model-id xgboost_v8_poi \
+    --output predictions/submission.csv
+
+# ✅ ПРАВИЛЬНО (R1):
+uv run python scripts/make_submission.py --model-id xgboost_v8_poi \
+    --submission-id v8-poi
+# → predictions/submission_xgboost_v8_poi_20251101_20251231_<run_ts>.csv
+# → predictions/submission_xgboost_v8_poi_20251101_20251231_<run_ts>.json
+```
+
+Если нужно **перезаписать существующий** файл (для repro):
+```bash
+# ТОЛЬКО если ты понимаешь что делаешь:
+uv run python scripts/make_submission.py --model-id xgboost_v8_poi \
+    --output predictions/submission_xgboost_v8_poi_20251101_20251231_<existing_ts>.csv
+```
+
 ### R2. Рядом с CSV обязательно `submission_manifest.json`
 
 Один и тот же basename + расширение `.json`:

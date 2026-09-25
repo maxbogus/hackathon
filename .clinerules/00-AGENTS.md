@@ -35,6 +35,7 @@
 | 25 | `25-poi-radius-selection.md` | Per-category радиусы POI по реальным расстояниям (T-168, D-024) |
 | 26 | `26-per-route-feature-aggregation.md` | Per-stop → per-route mean aggregation для route-only XGBoost (D-025) |
 | 27 | `27-wape-score-vs-wape.md` | WAPE ∈ [0,+∞) vs WAPE-score ∈ [0,1] = 1-WAPE (F-033) |
+| 28 | `28-submission-workflow-local-vs-platform.md` | Submission workflow: sanity-check 5 критериев + drift учёт (F-039, F-040) |
 | — | `MEMORY-BUDGET.md` | Анти-краш: не читать >1MB JSON |
 
 ## Quick rules
