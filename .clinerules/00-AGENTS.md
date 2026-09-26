@@ -37,6 +37,7 @@
 | 27 | `27-wape-score-vs-wape.md` | WAPE ∈ [0,+∞) vs WAPE-score ∈ [0,1] = 1-WAPE (F-033) |
 | 28 | `28-submission-workflow-local-vs-platform.md` | Submission workflow: sanity-check 5 критериев + drift учёт (F-039, F-040) |
 | 29 | `29-zsh-shell-quirks.md` | zsh на Ubuntu — gotchas с `{}`, f-string в `-c "..."`, heredoc vs bash |
+| 30 | `30-no-replay-submissions.md` | Не предлагать варианты, которые уже залиты на платформу (F-061, D-027) |
 | — | `MEMORY-BUDGET.md` | Анти-краш: не читать >1MB JSON |
 
 ## Quick rules
@@ -69,6 +70,13 @@
     `python3 -c "..."`, heredoc — всё ломается по-разному. Подробности —
     `.clinerules/29-zsh-shell-quirks.md`. Использовать editor tool для правок
     файлов вместо shell sed/python heredoc когда возможно.
+16. **No replay submissions (F-061):** перед тем как предложить пользователю
+    "3 варианта X" — прочитать `docs/ledger/findings.jsonl` (last 14d),
+    `docs/HANDOFF.md` секции "Не делать" + "Если есть время", `predictions/*.json`
+    манифесты. Sweep вокруг найденного peak (например `pred≤N` для разных N) ≠ новые
+    варианты. Каждый предложенный вариант должен иметь `novelty` ∈
+    {validated, in_progress, partial, untested, queued}. Если 0 untested — СТОП
+    + сообщить "стратегия исчерпана". Подробности — `.clinerules/30-no-replay-submissions.md`.
 
 ## How Cline should work on this project
 

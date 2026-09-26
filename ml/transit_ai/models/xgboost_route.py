@@ -539,7 +539,9 @@ class XGBoostRoutePredictor:
             df["timestamp"] = pd.to_datetime(df["date"]) + pd.to_timedelta(
                 df["hour"], unit="h"
             )
-        flags = self.flags_ if self.flags_ is not None else FlagsRegistry.default().features
+        flags = (
+            self.flags_ if self.flags_ is not None else FlagsRegistry.default().features
+        )
         X, _ = _make_features(df, lag_lookup=lag_lookup, flags=flags)
         dmat = xgb.DMatrix(
             X.values.astype(np.float32), feature_names=self.feature_names_
@@ -628,7 +630,11 @@ class XGBoostRoutePredictor:
                 drop=True
             )
 
-            flags = self.flags_ if self.flags_ is not None else FlagsRegistry.default().features
+            flags = (
+                self.flags_
+                if self.flags_ is not None
+                else FlagsRegistry.default().features
+            )
             X, _ = _make_features(combined, target=None, flags=flags)
             win_X = X.tail(len(win_rows))
 
@@ -666,7 +672,9 @@ class XGBoostRoutePredictor:
             df["timestamp"] = pd.to_datetime(df["date"]) + pd.to_timedelta(
                 df["hour"], unit="h"
             )
-        flags = self.flags_ if self.flags_ is not None else FlagsRegistry.default().features
+        flags = (
+            self.flags_ if self.flags_ is not None else FlagsRegistry.default().features
+        )
         X, _ = _make_features(df, flags=flags)
         dmat = xgb.DMatrix(
             X.values.astype(np.float32), feature_names=self.feature_names_

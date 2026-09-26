@@ -10,6 +10,7 @@ Target: log1p(boardings) per (route, hour).
 
 Fallback: если history < seq_len, использовать mean по (route, hour) из train.
 """
+
 from __future__ import annotations
 
 import pickle
@@ -31,7 +32,8 @@ def _get_torch() -> Any:
     global _torch
     if _torch is None:
         import torch
-        import torch.nn as nn
+        from torch import nn
+
         _torch = {"torch": torch, "nn": nn}
     return _torch
 
@@ -48,10 +50,10 @@ class GRURoutePredictor:
     model_id: str = "gru_v1"
     kind: str = "gru_route"
 
-    seq_len: int = 168          # 7 дней по 24 часа
-    hidden: int = 64            # contest: 64, на 8GB VRAM
-    layers: int = 2             # contest: 2
-    epochs: int = 10            # contest: 15
+    seq_len: int = 168  # 7 дней по 24 часа
+    hidden: int = 64  # contest: 64, на 8GB VRAM
+    layers: int = 2  # contest: 2
+    epochs: int = 10  # contest: 15
     batch_size: int = 256
     lr: float = 3e-4
     seed: int = 42
@@ -104,14 +106,18 @@ class GRURoutePredictor:
             # Pad до seq_len если нужно (left-padding с последним значением)
             if original_len < self.seq_len:
                 pad = self.seq_len - original_len
-                boardings = np.concatenate([
-                    np.full(pad, boardings[-1], dtype=np.float32),
-                    boardings,
-                ])
-                hours = np.concatenate([
-                    np.full(pad, hours[-1], dtype=np.int64),
-                    hours,
-                ])
+                boardings = np.concatenate(
+                    [
+                        np.full(pad, boardings[-1], dtype=np.float32),
+                        boardings,
+                    ]
+                )
+                hours = np.concatenate(
+                    [
+                        np.full(pad, hours[-1], dtype=np.int64),
+                        hours,
+                    ]
+                )
             n = len(boardings)
             # Генерируем sequences: для каждого i от 0 до n - seq_len + 1
             for i in range(n - self.seq_len + 1):
@@ -135,8 +141,10 @@ class GRURoutePredictor:
         X = torch.tensor(np.stack(X_seqs))
         y = torch.tensor(np.array(y_targets, dtype=np.float32))
         n_samples = len(X)
-        print(f"GRU train: {n_samples:,} sequences x seq_len={self.seq_len}, "
-              f"routes={n_routes}, hidden={self.hidden}, layers={self.layers}")
+        print(
+            f"GRU train: {n_samples:,} sequences x seq_len={self.seq_len}, "
+            f"routes={n_routes}, hidden={self.hidden}, layers={self.layers}"
+        )
 
         # Model: route_embedding(16) + hour_embedding(8) -> 24 -> Linear(64) -> ReLU
         # -> GRU(2x64) -> attention pooling -> MLP -> 1
@@ -147,12 +155,16 @@ class GRURoutePredictor:
                 model_self.hour_emb = nn.Embedding(24, 8)
                 model_self.input_proj = nn.Linear(24, self.hidden)  # 16+8 = 24
                 model_self.gru = nn.GRU(
-                    self.hidden, self.hidden, num_layers=self.layers,
+                    self.hidden,
+                    self.hidden,
+                    num_layers=self.layers,
                     batch_first=True,
                 )
                 model_self.query = nn.Parameter(torch.randn(self.hidden) * 0.05)
                 model_self.head = nn.Sequential(
-                    nn.Linear(self.hidden, 32), nn.ReLU(), nn.Linear(32, 1),
+                    nn.Linear(self.hidden, 32),
+                    nn.ReLU(),
+                    nn.Linear(32, 1),
                 )
 
             def forward(model_self: Any, x: torch.Tensor) -> torch.Tensor:
@@ -168,7 +180,12 @@ class GRURoutePredictor:
                 hour_e = model_self.hour_emb(hours)  # [B, L, 8]
                 # Placeholder: route embedding передается через global pool
                 # Используем mean hour embedding как route proxy
-                route_e = model_self.route_emb.weight.mean(dim=0).unsqueeze(0).unsqueeze(0).expand(B, L, 16)
+                route_e = (
+                    model_self.route_emb.weight.mean(dim=0)
+                    .unsqueeze(0)
+                    .unsqueeze(0)
+                    .expand(B, L, 16)
+                )
                 inp = torch.cat([route_e, hour_e], dim=-1)  # [B, L, 24]
                 h = torch.relu(model_self.input_proj(inp))
                 out, _ = model_self.gru(h)  # [B, L, hidden]
@@ -181,9 +198,7 @@ class GRURoutePredictor:
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model_ = GRUModel().to(device)
-        opt = torch.optim.AdamW(
-            self.model_.parameters(), lr=self.lr, weight_decay=1e-4
-        )
+        opt = torch.optim.AdamW(self.model_.parameters(), lr=self.lr, weight_decay=1e-4)
         lossf = nn.MSELoss()
 
         for epoch in range(self.epochs):
@@ -204,9 +219,7 @@ class GRURoutePredictor:
 
         # Fallback lookup: mean(boardings) per (route, hour) from full history
         self.fallback_lookup_ = (
-            df.groupby(["route_id", "hour"])["boardings"]
-            .mean()
-            .to_dict()
+            df.groupby(["route_id", "hour"])["boardings"].mean().to_dict()
         )
         self.seq_len_ = self.seq_len
         self.fitted_ = True
@@ -257,8 +270,8 @@ class GRURoutePredictor:
                 boardings = group["boardings"].values.astype(np.float32)
                 hours = group["hour"].values.astype(np.int64)
                 seq = np.zeros((1, self.seq_len, 2), dtype=np.float32)
-                seq[0, :, 0] = hours[-self.seq_len:]
-                seq[0, :, 1] = np.log1p(boardings[-self.seq_len:])
+                seq[0, :, 0] = hours[-self.seq_len :]
+                seq[0, :, 1] = np.log1p(boardings[-self.seq_len :])
                 pred_log = self.model_(torch.tensor(seq).to(device)).cpu().numpy()[0]
                 pred = float(np.expm1(pred_log))
                 mask = df["route_id"].astype(int) == int(rid)
@@ -275,13 +288,15 @@ class GRURoutePredictor:
 
     def _fallback_predict(self, future_grid: pd.DataFrame) -> np.ndarray:
         """Fallback: mean per (route, hour) из train data."""
-        return np.array([
-            self.fallback_lookup_.get(
-                (int(row["route_id"]), int(row["hour"])),
-                0.0,
-            )
-            for _, row in future_grid.iterrows()
-        ])
+        return np.array(
+            [
+                self.fallback_lookup_.get(
+                    (int(row["route_id"]), int(row["hour"])),
+                    0.0,
+                )
+                for _, row in future_grid.iterrows()
+            ]
+        )
 
     def save(self, path: Path | str) -> None:
         """Сохранить model state + metadata через pickle.
@@ -306,13 +321,13 @@ class GRURoutePredictor:
             pickle.dump(state, f)
 
     @classmethod
-    def load(cls, path: Path | str) -> "GRURoutePredictor":
+    def load(cls, path: Path | str) -> GRURoutePredictor:
         """Загрузить модель из .pkl (state + metadata)."""
         torch = _get_torch()["torch"]
         nn = _get_torch()["nn"]
         p = Path(path)
         with p.open("rb") as f:
-            state = pickle.load(f)  # noqa: S301
+            state = pickle.load(f)
 
         # Создаём пустой экземпляр
         instance = cls(

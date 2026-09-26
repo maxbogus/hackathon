@@ -119,8 +119,7 @@ class FlagsRegistry:
         p = Path(path)
         if not p.exists():
             raise FileNotFoundError(
-                f"Flags YAML not found: {p}. "
-                f"Expected sections: features/models/modes."
+                f"Flags YAML not found: {p}. Expected sections: features/models/modes."
             )
         raw = yaml.safe_load(path.read_text())
         loaded = _load_yaml_flags(raw or {})
