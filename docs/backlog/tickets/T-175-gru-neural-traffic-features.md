@@ -13,7 +13,7 @@ rice:
 depends_on: [T-174]
 blocks: []
 tags: [ml, traffic, gru, neural, features, ablation, drift]
-status: in-progress
+status: done
 created: 2026-09-25
 updated: 2026-09-25
 assignee: maxim

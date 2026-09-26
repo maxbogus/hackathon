@@ -8,6 +8,7 @@
 Переиспользует _make_features и FEATURE_NAMES из xgboost_route.py,
 чтобы фичи (включая events T-172) были идентичны.
 """
+
 from __future__ import annotations
 
 import pickle
@@ -31,6 +32,7 @@ def _get_catboost() -> Any:
     global _catboost
     if _catboost is None:
         from catboost import CatBoostRegressor
+
         _catboost = CatBoostRegressor
     return _catboost
 

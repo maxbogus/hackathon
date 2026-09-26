@@ -9,6 +9,7 @@ feature groups и models без правки кода.
     flags = registry.features                # FeatureFlags dataclass
     if flags.use_poi_features: ...
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -20,13 +21,13 @@ import yaml
 from transit_ai.config.flags import (
     FeatureFlags,
     FlagsRegistry,
-    ModelFlags,
     ModeFlags,
+    ModelFlags,
     _load_yaml_flags,
 )
 
-
 # YAML loader
+
 
 def test_load_yaml_flags_returns_dict() -> None:
     yaml_data: dict[str, Any] = {
@@ -57,6 +58,7 @@ def test_load_yaml_flags_allows_unknown_keys() -> None:
 
 # FeatureFlags dataclass
 
+
 def test_feature_flags_all_default_true() -> None:
     flags = FeatureFlags()
     assert flags.use_calendar_rf is True
@@ -83,6 +85,7 @@ def test_feature_flags_immutable() -> None:
 
 # FlagsRegistry
 
+
 def test_flags_registry_default_returns_all_sections() -> None:
     registry = FlagsRegistry.default()
     assert isinstance(registry.features, FeatureFlags)
@@ -92,11 +95,15 @@ def test_flags_registry_default_returns_all_sections() -> None:
 
 def test_flags_registry_from_yaml(tmp_path: Path) -> None:
     yaml_path = tmp_path / "no_events.yaml"
-    yaml_path.write_text(yaml.dump({
-        "features": {"use_events": False, "use_poi_features": True},
-        "models": {"use_catboost": False},
-        "modes": {"blend_method": "rank_average"},
-    }))
+    yaml_path.write_text(
+        yaml.dump(
+            {
+                "features": {"use_events": False, "use_poi_features": True},
+                "models": {"use_catboost": False},
+                "modes": {"blend_method": "rank_average"},
+            }
+        )
+    )
     registry = FlagsRegistry.from_yaml(yaml_path)
     assert registry.features.use_events is False
     assert registry.features.use_poi_features is True
@@ -122,8 +129,10 @@ def test_flags_registry_from_yaml_partial_override(tmp_path: Path) -> None:
 
 # Defaults file
 
+
 def test_defaults_yaml_file_exists() -> None:
     from transit_ai.config.flags import _DEFAULTS_YAML_PATH
+
     assert _DEFAULTS_YAML_PATH.exists(), f"Missing: {_DEFAULTS_YAML_PATH}"
 
 

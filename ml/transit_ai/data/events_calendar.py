@@ -12,6 +12,7 @@ API:
 R4 hackathon-rules: no internet at runtime.
 R3 reproducible: JSON-каталог в data/external/.
 """
+
 from __future__ import annotations
 
 import json
@@ -98,7 +99,15 @@ def load_events() -> list[dict[str, Any]]:
     raw = json.loads(_EVENTS_JSON.read_text())
     events_raw = raw.get("_events", [])
 
-    required = {"id", "date", "category", "magnitude", "tau_days", "affected_routes", "notes"}
+    required = {
+        "id",
+        "date",
+        "category",
+        "magnitude",
+        "tau_days",
+        "affected_routes",
+        "notes",
+    }
     events: list[dict[str, Any]] = []
     for ev in events_raw:
         missing = required - set(ev.keys())
@@ -148,9 +157,7 @@ def get_event_features(d: date, route_id: int) -> dict[str, float]:
             continue
 
         # Проверяем affected_routes: пусто = глобально, иначе маршрут должен быть в списке
-        is_target = (
-            not ev["affected_routes"] or int(route_id) in ev["affected_routes"]
-        )
+        is_target = not ev["affected_routes"] or int(route_id) in ev["affected_routes"]
 
         if is_target:
             # Названная фича (для top-3 событий)

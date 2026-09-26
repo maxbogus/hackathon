@@ -8,6 +8,7 @@ Usage:
         [--model-id catboost_v1]
         [--iterations 300] [--depth 6] [--learning-rate 0.05]
 """
+
 from __future__ import annotations
 
 import argparse
@@ -81,7 +82,9 @@ def main() -> int:
     print(f"Holdout rows:  {len(holdout_df):,}")
 
     # 2. Train CatBoost
-    print(f"Training {args.iterations} iterations x depth={args.depth} lr={args.learning_rate} ...")
+    print(
+        f"Training {args.iterations} iterations x depth={args.depth} lr={args.learning_rate} ..."
+    )
     model = CatBoostRoutePredictor(
         model_id=args.model_id,
         iterations=args.iterations,

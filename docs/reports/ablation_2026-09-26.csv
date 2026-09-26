@@ -1,0 +1,7 @@
+variant,yaml,n_features,use_geo_features,use_poi_features,use_events,use_traffic,use_seasonal_calendar,use_weather,use_validators_lookup,wape_score_raw,wape_raw,mae,rmsle
+full,defaults.yaml,56,True,True,True,False,True,True,True,0.9051146028883242,0.09488539711167579,106.93770386483376,0.3394425873184934
+with_traffic,with_traffic.yaml,59,True,True,True,True,True,True,True,0.9045499335443757,0.09545006645562429,107.57409729230338,0.3445389312541002
+no_events,no_events.yaml,52,True,True,False,False,True,True,True,0.9027438312061631,0.09725616879383692,109.60961005688662,0.4213611320492197
+no_poi,no_poi.yaml,41,True,False,True,False,True,True,True,0.9050869439198822,0.09491305608011777,106.9688760648402,0.3350175055595853
+no_external,no_external.yaml,41,True,True,True,False,False,False,False,0.9053308364670885,0.0946691635329116,106.6940043798192,0.33343463817104996
+base_only,base_only.yaml,17,False,False,False,False,False,False,False,0.8973649739859557,0.10263502601404423,115.67168765844595,0.4514587737090296

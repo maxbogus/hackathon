@@ -4,6 +4,7 @@ Blender: scipy.stats.rankdata для каждой модели → усредн�
 Weighted-mean: простой блендинг с весами (для count data с пиками).
 Используется для ensemble XGBoost + CatBoost на submission period.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -131,6 +132,7 @@ def test_weighted_mean_length_mismatch() -> None:
     a = np.array([1.0, 2.0, 3.0])
     b = np.array([4.0, 5.0])
     import pytest
+
     with pytest.raises(ValueError):
         weighted_mean_blend([a, b])
 
@@ -140,6 +142,6 @@ def test_weighted_mean_weights_length_mismatch() -> None:
     a = np.array([1.0, 2.0, 3.0])
     b = np.array([4.0, 5.0, 6.0])
     import pytest
+
     with pytest.raises(ValueError):
         weighted_mean_blend([a, b], weights=[0.5])
-

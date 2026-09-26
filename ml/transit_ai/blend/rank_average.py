@@ -11,6 +11,7 @@ API:
 Использование:
     from transit_ai.blend.rank_average import rank_average_blend, weighted_mean_blend
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -49,7 +50,12 @@ def rank_average_blend(
     for i, p in enumerate(predictions):
         if len(p) != n:
             raise ValueError(
-                "predictions[" + str(i) + "] length " + str(len(p)) + " != predictions[0] length " + str(n)
+                "predictions["
+                + str(i)
+                + "] length "
+                + str(len(p))
+                + " != predictions[0] length "
+                + str(n)
             )
 
     ranks_stack = np.stack([rankdata(p, method="average") for p in predictions])
@@ -61,7 +67,11 @@ def rank_average_blend(
         return np.full(n, predictions[0].mean(), dtype=np.float64)
 
     norm_ranks = (mean_ranks - rank_min) / (rank_max - rank_min)
-    target_mean = scale_target_mean if scale_target_mean is not None else float(predictions[0].mean())
+    target_mean = (
+        scale_target_mean
+        if scale_target_mean is not None
+        else float(predictions[0].mean())
+    )
     scale = target_mean / max(norm_ranks.mean(), 1e-9)
     return (norm_ranks * scale).astype(np.float64)
 
@@ -93,7 +103,12 @@ def weighted_mean_blend(
     for i, p in enumerate(predictions):
         if len(p) != n:
             raise ValueError(
-                "predictions[" + str(i) + "] length " + str(len(p)) + " != predictions[0] length " + str(n)
+                "predictions["
+                + str(i)
+                + "] length "
+                + str(len(p))
+                + " != predictions[0] length "
+                + str(n)
             )
 
     if weights is None:

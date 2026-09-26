@@ -8,6 +8,7 @@ Usage:
         --models xgboost_v9_events catboost_v1
         --submission-id v10-blend
 """
+
 from __future__ import annotations
 
 import argparse
@@ -60,9 +61,11 @@ def _load_model(model_id: str) -> object:
     # CatBoostRoutePredictor — обычный pickle (dataclass).
     if model_id.startswith("xgboost"):
         from transit_ai.models.xgboost_route import XGBoostRoutePredictor
+
         return XGBoostRoutePredictor.load(str(pkl_path))
     if model_id.startswith("catboost"):
         from transit_ai.models.catboost_route import CatBoostRoutePredictor
+
         return CatBoostRoutePredictor.load(str(pkl_path))
     # Fallback — pickle
     with pkl_path.open("rb") as f:
@@ -82,7 +85,9 @@ def build_full_grid(start_date, end_date, routes=ROUTES):
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     p.add_argument("--models", nargs="+", required=True)
     p.add_argument("--start-date", default="2025-11-01")
     p.add_argument("--end-date", default="2025-12-31")
@@ -96,7 +101,9 @@ def main() -> int:
 
     src = RealSource()
     all_df = src.load_ridership(DateRange(DEFAULT_TRAIN_START, DEFAULT_HOLDOUT_END))
-    train_mask = all_df["timestamp"] < pd.Timestamp(DEFAULT_HOLDOUT_START).tz_localize(None)
+    train_mask = all_df["timestamp"] < pd.Timestamp(DEFAULT_HOLDOUT_START).tz_localize(
+        None
+    )
     train_df = all_df[train_mask].copy()
     holdout_df = all_df[~train_mask].copy()
 
@@ -112,7 +119,9 @@ def main() -> int:
         holdout_preds_per_model.append(preds)
         m = compute_metrics(holdout_df["boardings"].values, preds)
         holdout_wapes.append(m["wape"])
-        print(f"  {mid:>25} -> WAPE-score={m['wape_score']:.4f}  (WAPE={m['wape']:.4f})")
+        print(
+            f"  {mid:>25} -> WAPE-score={m['wape_score']:.4f}  (WAPE={m['wape']:.4f})"
+        )
 
     # Веса пропорциональны (1 - WAPE), нормализованы.
     # Лучшая модель (низкий WAPE) получает больший вес.
@@ -126,8 +135,10 @@ def main() -> int:
     print(f"Holdout WAPE-score (weighted blend): {metrics_blend['wape_score']:.4f}")
 
     # Per-route bias calibration (T-147)
-    train_preds_per_model = [m.predict_batch(train_df, lag_lookup=lag_lookup)
-                             for m in [_load_model(mid) for mid in args.models]]
+    train_preds_per_model = [
+        m.predict_batch(train_df, lag_lookup=lag_lookup)
+        for m in [_load_model(mid) for mid in args.models]
+    ]
     train_preds_blend = weighted_mean_blend(train_preds_per_model, weights=weights)
     route_biases = compute_route_bias(
         train_actual=train_df["boardings"],
@@ -137,8 +148,12 @@ def main() -> int:
     blend_holdout_calibrated = apply_route_bias(
         blend_holdout, holdout_df["route_id"].astype(int).values, route_biases
     )
-    metrics_calibrated = compute_metrics(holdout_df["boardings"].values, blend_holdout_calibrated)
-    print(f"Holdout WAPE-score (calibrated): {metrics_calibrated['wape_score']:.4f}  (delta {metrics_calibrated['wape_score'] - metrics_blend['wape_score']:+.4f})")
+    metrics_calibrated = compute_metrics(
+        holdout_df["boardings"].values, blend_holdout_calibrated
+    )
+    print(
+        f"Holdout WAPE-score (calibrated): {metrics_calibrated['wape_score']:.4f}  (delta {metrics_calibrated['wape_score'] - metrics_blend['wape_score']:+.4f})"
+    )
 
     # Submission grid
     start_dt = datetime.strptime(args.start_date, "%Y-%m-%d").replace(tzinfo=UTC)
@@ -155,7 +170,9 @@ def main() -> int:
         preds = model.predict_batch(pred_df, lag_lookup=lag_lookup)
         submission_preds.append(preds)
     blend_submission = weighted_mean_blend(submission_preds, weights=weights)
-    blend_submission = apply_route_bias(blend_submission, grid["route"].astype(int).values, route_biases)
+    blend_submission = apply_route_bias(
+        blend_submission, grid["route"].astype(int).values, route_biases
+    )
     blend_submission = np.maximum(blend_submission, 0.0)
     grid["prediction"] = np.round(blend_submission, 2)
 
@@ -164,7 +181,9 @@ def main() -> int:
     end_date_str = end_dt.strftime("%Y%m%d")
     run_ts_str = datetime.now(tz=UTC).strftime("%Y%m%dT%H%M%SZ")
     blend_id = "_".join(args.models)
-    csv_filename = f"submission_blend_{blend_id}_{start_date_str}_{end_date_str}_{run_ts_str}.csv"
+    csv_filename = (
+        f"submission_blend_{blend_id}_{start_date_str}_{end_date_str}_{run_ts_str}.csv"
+    )
     output = DEFAULT_OUTPUT_DIR / csv_filename
     output.parent.mkdir(parents=True, exist_ok=True)
     grid.to_csv(output, sep=";", index=False)
@@ -178,13 +197,20 @@ def main() -> int:
         csv_filename=output.name,
         model_id=submission_id,
         model_uri=f"ml/artifacts/blend/{'+'.join(args.models)}",
-        train_range=(DEFAULT_TRAIN_START.strftime("%Y-%m-%d"), DEFAULT_TRAIN_END.strftime("%Y-%m-%d")),
+        train_range=(
+            DEFAULT_TRAIN_START.strftime("%Y-%m-%d"),
+            DEFAULT_TRAIN_END.strftime("%Y-%m-%d"),
+        ),
         sub_range=(args.start_date, args.end_date),
         row_count=len(grid),
         expected_rows=expected_rows,
         total_predictions=float(grid["prediction"].sum()),
         coefficients={"weather": 1.0, "event": 1.0, "season": 1.0},
-        post_processing=["clip_negatives", "per_route_log_bias_calibration", "weighted_mean_blend"],
+        post_processing=[
+            "clip_negatives",
+            "per_route_log_bias_calibration",
+            "weighted_mean_blend",
+        ],
         holdout_wape_score=metrics_calibrated["wape_score"],
         submission_id=submission_id,
     )
@@ -195,10 +221,15 @@ def main() -> int:
     print(f"Alias: {alias} (convenience, NOT source-of-truth)")
 
     print_candidate(
-        csv_path=output, manifest_path=manifest_path, model_id=submission_id,
-        submission_id=submission_id, holdout_wape=metrics_calibrated["wape_score"],
-        submission_start=args.start_date, submission_end=args.end_date,
-        row_count=len(grid), total_predictions=float(grid["prediction"].sum()),
+        csv_path=output,
+        manifest_path=manifest_path,
+        model_id=submission_id,
+        submission_id=submission_id,
+        holdout_wape=metrics_calibrated["wape_score"],
+        submission_start=args.start_date,
+        submission_end=args.end_date,
+        row_count=len(grid),
+        total_predictions=float(grid["prediction"].sum()),
         expected_rows=expected_rows,
     )
     return 0

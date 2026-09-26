@@ -3,6 +3,7 @@
 CatBoost predictor с тем же интерфейсом, что и XGBoostRoutePredictor:
 fit/predict_batch/predict_recursive, переиспользует _make_features из xgboost_route.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -36,14 +37,16 @@ def _make_minimal_ridership(n_days: int = 5, n_routes: int = 3) -> pd.DataFrame:
         for h in range(24):
             for r in range(n_routes):
                 ts = start + timedelta(days=d, hours=h)
-                rows.append({
-                    "timestamp": ts,
-                    "route_id": r + 1,
-                    "date": ts.date(),
-                    "hour": h,
-                    # Простой паттерн: больше днём, route-dependent scale
-                    "boardings": float(50 + r * 20 + h * 2),
-                })
+                rows.append(
+                    {
+                        "timestamp": ts,
+                        "route_id": r + 1,
+                        "date": ts.date(),
+                        "hour": h,
+                        # Простой паттерн: больше днём, route-dependent scale
+                        "boardings": float(50 + r * 20 + h * 2),
+                    }
+                )
     return pd.DataFrame(rows)
 
 
@@ -95,12 +98,14 @@ def test_catboost_predict_with_lag_lookup() -> None:
     for d in future_dates:
         for h in range(24):
             for r in (1, 2):
-                rows.append({
-                    "timestamp": d + timedelta(hours=h),
-                    "route_id": r,
-                    "date": d.date(),
-                    "hour": h,
-                })
+                rows.append(
+                    {
+                        "timestamp": d + timedelta(hours=h),
+                        "route_id": r,
+                        "date": d.date(),
+                        "hour": h,
+                    }
+                )
     infer_df = pd.DataFrame(rows)
     preds = model.predict_batch(infer_df, lag_lookup=lag_lookup)
 
@@ -114,6 +119,7 @@ def test_catboost_predict_with_lag_lookup() -> None:
 def test_catboost_save_load(tmp_path_factory: pytest.TempPathFactory) -> None:
     """model.pkl сохраняется и загружается через joblib (как XGBoost)."""
     import joblib
+
     model = CatBoostRoutePredictor(model_id="cat_test_save", iterations=10)
     df = _make_minimal_ridership(n_days=3, n_routes=2)
     model.fit(df)

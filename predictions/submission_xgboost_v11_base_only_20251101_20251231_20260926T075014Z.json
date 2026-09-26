@@ -1,0 +1,35 @@
+{
+  "submission_id": "v11-base-only",
+  "csv_filename": "submission_xgboost_v11_base_only_20251101_20251231_20260926T075014Z.csv",
+  "generated_at": "2026-09-26T07:50:14.833866+00:00",
+  "git_commit": "c58661a",
+  "git_branch": "master",
+  "data_source": "RealSource",
+  "dataset_hash_sha256": "unknown",
+  "model_id": "xgboost_v11_base_only",
+  "model_uri": "ml/artifacts/xgboost_v11_base_only/model.pkl",
+  "train_date_range": [
+    "2025-01-01",
+    "2025-08-31"
+  ],
+  "submission_date_range": [
+    "2025-11-01",
+    "2025-12-31"
+  ],
+  "row_count": 14640,
+  "expected_rows": 14640,
+  "total_predictions_sum": 13262628.61,
+  "coefficients": {
+    "weather": 1.0,
+    "event": 1.0,
+    "season": 1.0
+  },
+  "post_processing": [
+    "clip_negatives",
+    "per_route_log_bias_calibration"
+  ],
+  "platform_submitted": false,
+  "platform_score": null,
+  "platform_score_submitted_at": null,
+  "holdout_wape_score": 0.8750789104456979
+}

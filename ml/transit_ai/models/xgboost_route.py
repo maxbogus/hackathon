@@ -525,6 +525,10 @@ class XGBoostRoutePredictor:
         df: должен содержать [route_id, date, hour] (timestamp вычислим).
         lag_lookup (T-152-fallback): dict[(route, weekday, hour)] -> mean boardings
         из train данных. Используется если df не содержит boardings (submission period).
+
+        T-174: использует self.flags_ (из последнего fit) — predict должен
+        иметь тот же набор фичей, что и fit, иначе XGBoost DMatrix упадёт
+        с "feature names length mismatch".
         """
         if not self.fitted_:
             raise RuntimeError("Model not fitted. Call fit() first.")
@@ -535,7 +539,8 @@ class XGBoostRoutePredictor:
             df["timestamp"] = pd.to_datetime(df["date"]) + pd.to_timedelta(
                 df["hour"], unit="h"
             )
-        X, _ = _make_features(df, lag_lookup=lag_lookup)
+        flags = self.flags_ if self.flags_ is not None else FlagsRegistry.default().features
+        X, _ = _make_features(df, lag_lookup=lag_lookup, flags=flags)
         dmat = xgb.DMatrix(
             X.values.astype(np.float32), feature_names=self.feature_names_
         )
@@ -623,7 +628,8 @@ class XGBoostRoutePredictor:
                 drop=True
             )
 
-            X, _ = _make_features(combined, target=None)
+            flags = self.flags_ if self.flags_ is not None else FlagsRegistry.default().features
+            X, _ = _make_features(combined, target=None, flags=flags)
             win_X = X.tail(len(win_rows))
 
             dmat = xgb.DMatrix(
@@ -660,7 +666,8 @@ class XGBoostRoutePredictor:
             df["timestamp"] = pd.to_datetime(df["date"]) + pd.to_timedelta(
                 df["hour"], unit="h"
             )
-        X, _ = _make_features(df)
+        flags = self.flags_ if self.flags_ is not None else FlagsRegistry.default().features
+        X, _ = _make_features(df, flags=flags)
         dmat = xgb.DMatrix(
             X.values.astype(np.float32), feature_names=self.feature_names_
         )

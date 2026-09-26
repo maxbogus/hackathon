@@ -1,0 +1,35 @@
+{
+  "submission_id": "v10-restore-10routes",
+  "csv_filename": "submission_xgboost_v8_poi_20251101_20251231_20260925T192527Z.csv",
+  "generated_at": "2026-09-25T19:25:27.499274+00:00",
+  "git_commit": "67c464f",
+  "git_branch": "master",
+  "data_source": "RealSource",
+  "dataset_hash_sha256": "unknown",
+  "model_id": "xgboost_v8_poi",
+  "model_uri": "ml/artifacts/xgboost_v8_poi/model.pkl",
+  "train_date_range": [
+    "2025-01-01",
+    "2025-08-31"
+  ],
+  "submission_date_range": [
+    "2025-11-01",
+    "2025-12-31"
+  ],
+  "row_count": 14640,
+  "expected_rows": 14640,
+  "total_predictions_sum": 13262628.61,
+  "coefficients": {
+    "weather": 1.0,
+    "event": 1.0,
+    "season": 1.0
+  },
+  "post_processing": [
+    "clip_negatives",
+    "per_route_log_bias_calibration"
+  ],
+  "platform_submitted": false,
+  "platform_score": null,
+  "platform_score_submitted_at": null,
+  "holdout_wape_score": 0.8750789104456979
+}

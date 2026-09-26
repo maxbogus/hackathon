@@ -13,7 +13,7 @@ rice:
 depends_on: [T-172, T-173]
 blocks: [T-175]
 tags: [ml, feature-flags, architecture, ablation, drift]
-status: in-progress
+status: done
 created: 2026-09-25
 updated: 2026-09-25
 assignee: maxim

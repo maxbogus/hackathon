@@ -7,10 +7,8 @@
     from transit_ai.data.traffic_osm import get_traffic_features
     feats = get_traffic_features(lat=55.7558, lon=37.6173)
 """
-from __future__ import annotations
 
-import math
-from pathlib import Path
+from __future__ import annotations
 
 import pytest
 
@@ -21,8 +19,8 @@ from transit_ai.data.traffic_osm import (
     load_traffic_catalog,
 )
 
-
 # Haversine
+
 
 def test_haversine_zero_distance() -> None:
     assert _haversine_km(55.0, 37.0, 55.0, 37.0) == pytest.approx(0.0, abs=1e-9)
@@ -41,6 +39,7 @@ def test_haversine_short_distance_moscow_center() -> None:
 
 
 # JSON catalog
+
 
 def test_load_traffic_catalog_returns_at_least_30() -> None:
     catalog = load_traffic_catalog()
@@ -74,6 +73,7 @@ def test_load_traffic_catalog_jam_level_range() -> None:
 
 
 # Feature engineering
+
 
 def test_traffic_feature_names_count() -> None:
     assert len(TRAFFIC_FEATURE_NAMES) == 3
@@ -109,7 +109,10 @@ def test_get_traffic_features_dist_main_road_smaller_in_center() -> None:
     """В центре dist_main_road меньше, чем за МКАД."""
     feats_center = get_traffic_features(lat=55.7558, lon=37.6173)
     feats_outskirts = get_traffic_features(lat=55.9500, lon=37.2000)
-    assert feats_center["traffic_dist_main_road_km"] < feats_outskirts["traffic_dist_main_road_km"]
+    assert (
+        feats_center["traffic_dist_main_road_km"]
+        < feats_outskirts["traffic_dist_main_road_km"]
+    )
 
 
 def test_get_traffic_features_jam_level_bounded() -> None:

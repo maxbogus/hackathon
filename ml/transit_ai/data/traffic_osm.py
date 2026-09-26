@@ -8,6 +8,7 @@
 
 R3/R4 hackathon-rules: hardcoded JSON, offline, reproducible.
 """
+
 from __future__ import annotations
 
 import json
@@ -36,6 +37,7 @@ TRAFFIC_FEATURE_NAMES: tuple[str, ...] = (
 
 # Haversine
 
+
 def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Расстояние между двумя точками в км (формула Haversine)."""
     R = 6371.0  # Радиус Земли в км
@@ -43,11 +45,15 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     phi2 = math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
     dlam = math.radians(lon2 - lon1)
-    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlam / 2) ** 2
+    a = (
+        math.sin(dphi / 2) ** 2
+        + math.cos(phi1) * math.cos(phi2) * math.sin(dlam / 2) ** 2
+    )
     return 2 * R * math.asin(math.sqrt(a))
 
 
 # JSON loader
+
 
 def load_traffic_catalog() -> list[dict[str, Any]]:
     """Загрузить каталог traffic точек из data/external/traffic_osm_moscow.json.
@@ -75,6 +81,7 @@ def load_traffic_catalog() -> list[dict[str, Any]]:
 
 
 # Feature computation
+
 
 def get_traffic_features(
     lat: float,

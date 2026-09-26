@@ -17,6 +17,7 @@ Usage:
     if registry.features.use_poi_features:
         ...
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, fields, replace
@@ -26,11 +27,11 @@ from typing import Any
 import yaml
 
 __all__ = [
+    "_DEFAULTS_YAML_PATH",
     "FeatureFlags",
     "FlagsRegistry",
     "ModeFlags",
     "ModelFlags",
-    "_DEFAULTS_YAML_PATH",
     "_load_yaml_flags",
 ]
 
@@ -41,21 +42,23 @@ _DEFAULTS_YAML_PATH = _CONFIG_DIR / "defaults.yaml"
 
 # Feature flags (groups of features)
 
+
 @dataclass(frozen=True)
 class FeatureFlags:
     """Флаги для feature groups. Frozen = immutable после создания."""
 
-    use_calendar_rf: bool = True         # T-148 holidays/weekend
-    use_seasonal_calendar: bool = True   # T-160 school/vacation
-    use_weather: bool = True             # T-161
-    use_validators_lookup: bool = True   # T-162
-    use_geo_features: bool = True        # T-156
-    use_poi_features: bool = True        # T-168 (146 POI per-route)
-    use_events: bool = True              # T-172 (8 infrastructure events)
-    use_traffic: bool = False            # T-124 (будет в T-175, off by default)
+    use_calendar_rf: bool = True  # T-148 holidays/weekend
+    use_seasonal_calendar: bool = True  # T-160 school/vacation
+    use_weather: bool = True  # T-161
+    use_validators_lookup: bool = True  # T-162
+    use_geo_features: bool = True  # T-156
+    use_poi_features: bool = True  # T-168 (146 POI per-route)
+    use_events: bool = True  # T-172 (8 infrastructure events)
+    use_traffic: bool = False  # T-124 (будет в T-175, off by default)
 
 
 # Model flags
+
 
 @dataclass(frozen=True)
 class ModelFlags:
@@ -63,21 +66,23 @@ class ModelFlags:
 
     use_xgboost: bool = True
     use_catboost: bool = True
-    use_gru: bool = False                # T-029 (будет в T-175)
+    use_gru: bool = False  # T-029 (будет в T-175)
 
 
 # Mode flags (не фичи и не модели, а режимы pipeline)
+
 
 @dataclass(frozen=True)
 class ModeFlags:
     """Флаги для режимов pipeline."""
 
-    blend_method: str = "weighted_mean"   # weighted_mean | rank_average
-    use_recursive: bool = False           # T-153 rolling-window forecast
-    use_per_route_bias: bool = True       # T-147 per-route log bias
+    blend_method: str = "weighted_mean"  # weighted_mean | rank_average
+    use_recursive: bool = False  # T-153 rolling-window forecast
+    use_per_route_bias: bool = True  # T-147 per-route log bias
 
 
 # Registry
+
 
 @dataclass(frozen=True)
 class FlagsRegistry:
@@ -88,7 +93,7 @@ class FlagsRegistry:
     modes: ModeFlags
 
     @classmethod
-    def default(cls) -> "FlagsRegistry":
+    def default(cls) -> FlagsRegistry:
         """Загрузить defaults.yaml (если существует) или all-True defaults."""
         if _DEFAULTS_YAML_PATH.exists():
             return cls.from_yaml(_DEFAULTS_YAML_PATH)
@@ -99,7 +104,7 @@ class FlagsRegistry:
         )
 
     @classmethod
-    def from_yaml(cls, path: Path) -> "FlagsRegistry":
+    def from_yaml(cls, path: Path | str) -> FlagsRegistry:
         """Загрузить флаги из YAML файла.
 
         Args:
@@ -111,9 +116,10 @@ class FlagsRegistry:
         Raises:
             FileNotFoundError: если файл не существует.
         """
-        if not path.exists():
+        p = Path(path)
+        if not p.exists():
             raise FileNotFoundError(
-                f"Flags YAML not found: {path}. "
+                f"Flags YAML not found: {p}. "
                 f"Expected sections: features/models/modes."
             )
         raw = yaml.safe_load(path.read_text())
@@ -126,6 +132,7 @@ class FlagsRegistry:
 
 
 # Helpers
+
 
 def _load_yaml_flags(yaml_data: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """Нормализовать YAML в dict с секциями features/models/modes.
