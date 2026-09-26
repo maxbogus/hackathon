@@ -27,6 +27,7 @@ import type {
 import type {
   ETAResponse,
   ExportPredictionsCsvApiV1PredictionsExportCsvGetParams,
+  ExportPredictionsXlsxApiV1PredictionsExportXlsxGetParams,
   FeatureToggleOut,
   FeatureToggleUpdate,
   FeaturesListResponse,
@@ -849,6 +850,104 @@ export function useExportPredictionsCsvApiV1PredictionsExportCsvGet<TData = Awai
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
 
   const queryOptions = getExportPredictionsCsvApiV1PredictionsExportCsvGetQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
+/**
+ * Возвращает XLSX (route, date, hour, prediction + coef колонки).
+
+Удобно для аналитиков, которые работают в Excel/LibreOffice.
+Default params = best submission (F-083, 0.83455).
+ * @summary Export predictions as XLSX (T-206: альтернатива CSV для аналитиков)
+ */
+export const exportPredictionsXlsxApiV1PredictionsExportXlsxGet = (
+    params?: ExportPredictionsXlsxApiV1PredictionsExportXlsxGetParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<unknown>(
+      {url: `/api/v1/predictions/export.xlsx`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getExportPredictionsXlsxApiV1PredictionsExportXlsxGetQueryKey = (params?: ExportPredictionsXlsxApiV1PredictionsExportXlsxGetParams,) => {
+    return [
+    `/api/v1/predictions/export.xlsx`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getExportPredictionsXlsxApiV1PredictionsExportXlsxGetQueryOptions = <TData = Awaited<ReturnType<typeof exportPredictionsXlsxApiV1PredictionsExportXlsxGet>>, TError = HTTPValidationError>(params?: ExportPredictionsXlsxApiV1PredictionsExportXlsxGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportPredictionsXlsxApiV1PredictionsExportXlsxGet>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportPredictionsXlsxApiV1PredictionsExportXlsxGetQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportPredictionsXlsxApiV1PredictionsExportXlsxGet>>> = ({ signal }) => exportPredictionsXlsxApiV1PredictionsExportXlsxGet(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportPredictionsXlsxApiV1PredictionsExportXlsxGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
+}
+
+export type ExportPredictionsXlsxApiV1PredictionsExportXlsxGetQueryResult = NonNullable<Awaited<ReturnType<typeof exportPredictionsXlsxApiV1PredictionsExportXlsxGet>>>
+export type ExportPredictionsXlsxApiV1PredictionsExportXlsxGetQueryError = HTTPValidationError
+
+
+export function useExportPredictionsXlsxApiV1PredictionsExportXlsxGet<TData = Awaited<ReturnType<typeof exportPredictionsXlsxApiV1PredictionsExportXlsxGet>>, TError = HTTPValidationError>(
+ params: undefined |  ExportPredictionsXlsxApiV1PredictionsExportXlsxGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportPredictionsXlsxApiV1PredictionsExportXlsxGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportPredictionsXlsxApiV1PredictionsExportXlsxGet>>,
+          TError,
+          Awaited<ReturnType<typeof exportPredictionsXlsxApiV1PredictionsExportXlsxGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+export function useExportPredictionsXlsxApiV1PredictionsExportXlsxGet<TData = Awaited<ReturnType<typeof exportPredictionsXlsxApiV1PredictionsExportXlsxGet>>, TError = HTTPValidationError>(
+ params?: ExportPredictionsXlsxApiV1PredictionsExportXlsxGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportPredictionsXlsxApiV1PredictionsExportXlsxGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportPredictionsXlsxApiV1PredictionsExportXlsxGet>>,
+          TError,
+          Awaited<ReturnType<typeof exportPredictionsXlsxApiV1PredictionsExportXlsxGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+export function useExportPredictionsXlsxApiV1PredictionsExportXlsxGet<TData = Awaited<ReturnType<typeof exportPredictionsXlsxApiV1PredictionsExportXlsxGet>>, TError = HTTPValidationError>(
+ params?: ExportPredictionsXlsxApiV1PredictionsExportXlsxGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportPredictionsXlsxApiV1PredictionsExportXlsxGet>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+/**
+ * @summary Export predictions as XLSX (T-206: альтернатива CSV для аналитиков)
+ */
+
+export function useExportPredictionsXlsxApiV1PredictionsExportXlsxGet<TData = Awaited<ReturnType<typeof exportPredictionsXlsxApiV1PredictionsExportXlsxGet>>, TError = HTTPValidationError>(
+ params?: ExportPredictionsXlsxApiV1PredictionsExportXlsxGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportPredictionsXlsxApiV1PredictionsExportXlsxGet>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+
+  const queryOptions = getExportPredictionsXlsxApiV1PredictionsExportXlsxGetQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 

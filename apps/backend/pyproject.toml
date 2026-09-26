@@ -30,6 +30,9 @@ dependencies = [
     # ML artefact loader
     "jsonschema>=4.23.0",
     "pyyaml>=6.0.0",
+    "openpyxl>=3.1.0",  # T-206: XLSX export
+    "transit-ai-ml",  # ML models (XGBoost, BaselineMean, ...) через uv workspace
+    "aiosqlite>=0.20.0",  # для тестов in-memory SQLite
 ]
 
 [project.optional-dependencies]
@@ -48,6 +51,9 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
+
+[tool.uv.sources]
+transit-ai-ml = { workspace = true }
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["ANN", "PLR2004", "S101", "DTZ001", "DTZ005", "F841", "PLR0913"]

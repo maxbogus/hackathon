@@ -546,6 +546,138 @@
         }
       }
     },
+    "/api/v1/predictions/export.xlsx": {
+      "get": {
+        "tags": [
+          "predictions-db"
+        ],
+        "summary": "Export predictions as XLSX (T-206: альтернатива CSV для аналитиков)",
+        "description": "Возвращает XLSX (route, date, hour, prediction + coef колонки).\n\nУдобно для аналитиков, которые работают в Excel/LibreOffice.\nDefault params = best submission (F-083, 0.83455).",
+        "operationId": "export_predictions_xlsx_api_v1_predictions_export_xlsx_get",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "default": "2025-11-01T00:00:00Z",
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "default": "2025-12-31T23:00:00Z",
+              "title": "To"
+            }
+          },
+          {
+            "name": "model_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Model Id"
+            }
+          },
+          {
+            "name": "feature_set",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Feature Set"
+            }
+          },
+          {
+            "name": "zeros_applied",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Zeros Applied"
+            }
+          },
+          {
+            "name": "coef_weather",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 1.0,
+              "title": "Coef Weather"
+            }
+          },
+          {
+            "name": "coef_event",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 1.0,
+              "title": "Coef Event"
+            }
+          },
+          {
+            "name": "coef_season",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 1.0,
+              "title": "Coef Season"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/historical/{route_id}": {
       "get": {
         "tags": [

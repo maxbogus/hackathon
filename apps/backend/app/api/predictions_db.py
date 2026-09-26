@@ -197,3 +197,93 @@ async def export_predictions_csv(
             "X-CSV-MD5": md5,
         },
     )
+
+
+@router.get(
+    "/predictions/export.xlsx",
+    summary="Export predictions as XLSX (T-206: альтернатива CSV для аналитиков)",
+)
+async def export_predictions_xlsx(
+    from_date: datetime = Query(default=datetime(2025, 11, 1, tzinfo=UTC), alias="from"),
+    to_date: datetime = Query(default=datetime(2025, 12, 31, 23, tzinfo=UTC), alias="to"),
+    model_id: str | None = Query(default=None),
+    feature_set: str | None = Query(default=None),
+    zeros_applied: bool | None = Query(default=None),
+    coef_weather: float = Query(default=1.0),
+    coef_event: float = Query(default=1.0),
+    coef_season: float = Query(default=1.0),
+    session: AsyncSession = Depends(get_db),
+) -> Response:
+    """Возвращает XLSX (route, date, hour, prediction + coef колонки).
+
+    Удобно для аналитиков, которые работают в Excel/LibreOffice.
+    Default params = best submission (F-083, 0.83455).
+    """
+    import io
+
+    from openpyxl import Workbook
+
+    if feature_set is None:
+        feature_set = await _default_feature_set(session)
+    if zeros_applied is None:
+        zeros_applied = await _default_zeros_state(session)
+
+    stmt = select(Prediction).where(
+        Prediction.period_start >= from_date,
+        Prediction.period_start <= to_date,
+        Prediction.coef_weather == coef_weather,
+        Prediction.coef_event == coef_event,
+        Prediction.coef_season == coef_season,
+    )
+    if model_id is not None:
+        stmt = stmt.where(Prediction.model_id == model_id)
+    stmt = stmt.where(Prediction.feature_set == feature_set)
+    stmt = stmt.where(Prediction.zeros_applied == zeros_applied)
+    stmt = stmt.order_by(Prediction.route_id, Prediction.period_start)
+
+    rows = (await session.execute(stmt)).scalars().all()
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "predictions"
+    # Header
+    ws.append([
+        "route", "date", "hour", "prediction",
+        "model_id", "feature_set", "zeros_applied",
+        "coef_weather", "coef_event", "coef_season",
+    ])
+    for r in rows:
+        ws.append([
+            r.route_id,
+            r.period_start.date().isoformat(),
+            r.period_start.hour,
+            float(r.value),
+            r.model_id,
+            r.feature_set,
+            bool(r.zeros_applied),
+            float(r.coef_weather),
+            float(r.coef_event),
+            float(r.coef_season),
+        ])
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    content = buf.read()
+
+    fs_label = (model_id or feature_set or "default").replace("/", "_")
+    filename = (
+        f"submission_{fs_label}_{from_date.strftime('%Y%m%d')}"
+        f"_{to_date.strftime('%Y%m%d')}.xlsx"
+    )
+    return Response(
+        content=content,
+        media_type=(
+            "application/vnd.openxmlformats-officedocument."
+            "spreadsheetml.sheet"
+        ),
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Row-Count": str(len(rows)),
+        },
+    )

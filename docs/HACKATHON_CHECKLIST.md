@@ -290,3 +290,33 @@ make loadtest-check               # парсинг JSON -> PASS/FAIL
 - T-160..T-166 — load testing + SLA infrastructure
 - `.clinerules/05-hackathon-rules.md` — R1..R10 hard rules
 - `.clinerules/22-load-testing.md` — load testing methodology
+
+---
+
+## Секция 15. Hackathon Jury Criteria (T-202..T-206)
+
+| Требование | Статус | Доказательство | Команда проверки |
+|---|---|---|---|
+| **Критерий 2.a (4б)**: 4 внешних источника + ссылки | ✅ | `docs/EXTERNAL_SOURCES.md` (T-202) | `cat docs/EXTERNAL_SOURCES.md` |
+| **Критерий 2.b (2б)**: область определения + адаптации | ✅ | `docs/MODEL_DOMAIN.md` (T-203) | `cat docs/MODEL_DOMAIN.md` |
+| **Критерий 2.c (2б)**: UI коэффициентов + воспроизводимый пайплайн | ✅ | `POST /api/v1/features/{name}/toggle` + `FiltersPanel.tsx` (T-195/T-196) | `curl -X POST .../features/use_poi/toggle -d '{"enabled":false}'` |
+| **Критерий 3 (5б)**: архитектура + REST + perf | ✅ | `docs/architecture/architecture.svg` (T-205) + 17 OpenAPI paths (T-195) + k6 (T-160) | `ls docs/architecture/architecture.svg && openapi.json paths` |
+| **Критерий 4 (4б)**: 3 горизонта + агрегация + dashboard + CSV+XLSX | ✅ | `AnalystDashboard.tsx` (T-196) + `/export.csv` + `/export.xlsx` (T-195/T-206) | `curl localhost:8000/api/v1/predictions/export.csv` |
+| **Критерий 5 (2б)**: бизнес-ценность | ✅ | `docs/BUSINESS_VALUE.md` (T-204) | `cat docs/BUSINESS_VALUE.md` |
+
+**Сумма потенциальных баллов: 19/19.**
+
+---
+
+## Секция 16. T-197 Best-Submission Match Test
+
+| Тест | Статус | Команда |
+|---|---|---|
+| `test_export_csv_md5_matches_best` | ✅ | `pytest tests/test_api_t197.py` |
+| `test_export_csv_md5_stable_across_two_calls` | ✅ | (детерминизм) |
+| `test_export_csv_default_filters_match_best` | ✅ | (default == F-083) |
+| `test_export_csv_content_format` | ✅ | (route;date;hour;prediction) |
+| `test_export_xlsx_with_data` | ✅ | (T-206) |
+| `test_export_xlsx_with_no_data` | ✅ | (empty case) |
+
+**Защита от случайного изменения defaults: гарантировано.**

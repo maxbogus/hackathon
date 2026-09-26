@@ -10,6 +10,7 @@ dictionary (T-141). Read this when:
 | Ticket | File(s)                                                                                              | Keys added                                                   | Notes                                                                                                                   |
 | ------ | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
 | T-141  | App.tsx, components/Dispatcher/{AlertsPanel,AlertCard}.tsx, pages/PassengerMode.tsx, lib/EtaCard.tsx | app._, dispatcher.alerts._, passenger.*, common.minutesShort | Initial migration — 30+ keys, hybrid `t()` lookup introduced. `recommend.ts` left as pure logic (data, not UI literal). |
+| T-196  | components/Charts/{HistoricalChart,PredictionsChart,AnalystDashboard}.tsx, components/Filters/FiltersPanel.tsx, routes/analyst.tsx | analyst.*, common.{loading,errorPrefix,retry,yes,no} | Analyst dashboard — historical + predictions charts, feature toggles + zero overrides + coef_* sliders, Download CSV button. Replaces PlaceholderPanel for /analyst. |
 
 ## Conventions
 

@@ -320,6 +320,17 @@ coef_event?: number;
 coef_season?: number;
 };
 
+export type ExportPredictionsXlsxApiV1PredictionsExportXlsxGetParams = {
+from?: string;
+to?: string;
+model_id?: string | null;
+feature_set?: string | null;
+zeros_applied?: boolean | null;
+coef_weather?: number;
+coef_event?: number;
+coef_season?: number;
+};
+
 export type GetHistoricalApiV1HistoricalRouteIdGetParams = {
 /**
  * Start date (inclusive)

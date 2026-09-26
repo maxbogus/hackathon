@@ -1,26 +1,31 @@
 /**
- * Orval mutator — обёртка над fetch, чтобы все сгенерированные хуки
- * использовали единый HTTP-клиент (с Vite proxy, CORS, error handling).
+ * customInstance — orval mutator, единая HTTP-обёртка.
  *
- * Конвенция: T-127 нужен только endpoint /api/v1/predictions/eta, поэтому
- * mutator пробрасывает `signal` для AbortController (TanStack Query
- * использует его для отмены запросов).
+ * Возвращает {data, status, headers} для доступа к response headers (T-196
+ * нужно для X-Row-Count, X-CSV-MD5 из /predictions/export.csv).
  *
  * Этот файл — ручной код (НЕ generated). Если OpenAPI добавляет новый
  * endpoint — перегенерируйте через `make fe-gen`.
  */
 
+const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
+
 export interface CustomRequestInit extends Omit<RequestInit, 'body'> {
   url: string;
-  /** Query-string params — orval передаёт их отдельным полем, не через URL. */
   params?: Record<string, string | number | boolean | undefined>;
   body?: unknown;
+  responseType?: 'json' | 'text';
 }
 
-export const customInstance = async <T>(config: CustomRequestInit): Promise<T> => {
-  const { url, method = 'GET', params, body, headers, ...rest } = config;
+export interface CustomResponse<T> {
+  data: T;
+  status: number;
+  headers: Record<string, string>;
+}
 
-  // Append query string if params provided.
+export const customInstance = async <T>(config: CustomRequestInit): Promise<CustomResponse<T>> => {
+  const { url, method = 'GET', params, body, headers, responseType, ...rest } = config;
+
   let fullUrl = url;
   if (params) {
     const qs = new URLSearchParams();
@@ -35,9 +40,10 @@ export const customInstance = async <T>(config: CustomRequestInit): Promise<T> =
     }
   }
 
-  const response = await fetch(fullUrl, {
+  const response = await fetch(`${BASE_URL}${fullUrl}`, {
     method,
     headers: {
+      Accept: responseType === 'text' ? 'text/csv' : 'application/json',
       'Content-Type': 'application/json',
       ...headers,
     },
@@ -45,16 +51,25 @@ export const customInstance = async <T>(config: CustomRequestInit): Promise<T> =
     ...rest,
   });
 
+  const responseHeaders: Record<string, string> = {};
+  response.headers.forEach((value, key) => {
+    responseHeaders[key] = value;
+  });
+
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} ${response.statusText} (${fullUrl})`);
   }
 
-  // 204 No Content → пустой ответ
-  if (response.status === 204) {
-    return undefined as T;
+  let data: T;
+  if (responseType === 'text') {
+    data = (await response.text()) as unknown as T;
+  } else if (response.status === 204) {
+    data = undefined as T;
+  } else {
+    data = (await response.json()) as T;
   }
 
-  return (await response.json()) as T;
+  return { data, status: response.status, headers: responseHeaders };
 };
 
 export default customInstance;
