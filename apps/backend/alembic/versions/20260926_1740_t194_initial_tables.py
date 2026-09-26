@@ -8,6 +8,7 @@ T-194: создаёт таблицы actuals / predictions / feature_toggles /
 zero_overrides / prediction_runs. Seed defaults. TimescaleDB hypertable
 для actuals (clinerule 18 DBML).
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -49,9 +50,16 @@ def upgrade() -> None:
         sa.Column("model_id", sa.String(64), nullable=False, index=True),
         sa.Column("model_kind", sa.String(32), nullable=False),
         sa.Column("model_version", sa.String(32), nullable=False),
-        sa.Column("feature_set", sa.String(64), nullable=False, server_default="baseline"),
+        sa.Column(
+            "feature_set", sa.String(64), nullable=False, server_default="baseline"
+        ),
         sa.Column("feature_flags", sa.JSON(), nullable=False, server_default="{}"),
-        sa.Column("zeros_applied", sa.Boolean(), nullable=False, server_default=sa.text("false")),
+        sa.Column(
+            "zeros_applied",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.text("false"),
+        ),
         sa.Column("zero_config", sa.JSON(), nullable=False, server_default="{}"),
         sa.Column("coef_weather", sa.Float(), nullable=False, server_default="1.0"),
         sa.Column("coef_event", sa.Float(), nullable=False, server_default="1.0"),
@@ -65,8 +73,12 @@ def upgrade() -> None:
             server_default=sa.text("CURRENT_TIMESTAMP"),
         ),
     )
-    op.create_index("ix_predictions_route_period", "predictions", ["route_id", "period_start"])
-    op.create_index("ix_predictions_model_feature", "predictions", ["model_id", "feature_set"])
+    op.create_index(
+        "ix_predictions_route_period", "predictions", ["route_id", "period_start"]
+    )
+    op.create_index(
+        "ix_predictions_model_feature", "predictions", ["model_id", "feature_set"]
+    )
     op.create_index("ix_predictions_submission", "predictions", ["submission_id"])
 
     # === feature_toggles ===
@@ -75,8 +87,12 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
         sa.Column("name", sa.String(64), unique=True, nullable=False),
         sa.Column("description", sa.Text(), nullable=False, server_default=""),
-        sa.Column("enabled", sa.Boolean(), nullable=False, server_default=sa.text("true")),
-        sa.Column("is_default", sa.Boolean(), nullable=False, server_default=sa.text("true")),
+        sa.Column(
+            "enabled", sa.Boolean(), nullable=False, server_default=sa.text("true")
+        ),
+        sa.Column(
+            "is_default", sa.Boolean(), nullable=False, server_default=sa.text("true")
+        ),
         sa.Column(
             "updated_at",
             sa.DateTime(timezone=True),
@@ -104,7 +120,9 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
         sa.Column("name", sa.String(64), unique=True, nullable=False),
         sa.Column("description", sa.Text(), nullable=False, server_default=""),
-        sa.Column("enabled", sa.Boolean(), nullable=False, server_default=sa.text("false")),
+        sa.Column(
+            "enabled", sa.Boolean(), nullable=False, server_default=sa.text("false")
+        ),
         sa.Column("params", sa.JSON(), nullable=False, server_default="{}"),
         sa.Column(
             "updated_at",

@@ -73,7 +73,7 @@ def discover_models() -> list[str]:
 def collect_metadata() -> tuple[list, dict[str, str]]:
     """Collect Table objects from Base.metadata + privacy hints from docstrings."""
     try:
-        from app.core.db import Base  # type: ignore[import-not-found]
+        from app.models import Base  # type: ignore[import-not-found]
     except ImportError:
         return [], {}
 
@@ -158,7 +158,7 @@ def render_tables_md(tables: list, hints: dict[str, str]) -> str:
         return "\n".join(lines) + "\n"
 
     try:
-        from app.core.db import Base  # type: ignore[import-not-found]
+        from app.models import Base  # type: ignore[import-not-found]
         registry = getattr(Base, "registry", None)
         class_registry = getattr(registry, "_class_registry", {}) if registry else {}
     except ImportError:

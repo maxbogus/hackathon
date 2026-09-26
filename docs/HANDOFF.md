@@ -67,6 +67,7 @@ Post-processing:
 
 - **T-193** ✅: Celery pipeline (apps/harvester + apps/ml_pipeline). 7+3 tests зелёные, ruff 0 errors. `make pipeline-fetch` качает weather(365)/traffic(41)/poi(146)/events(8).
 - **T-194** ✅: PostgreSQL schema + alembic migrations. 5 ORM моделей (Actual, Prediction, FeatureToggle, ZeroOverride, PredictionRun). 8 unit tests. Migration round-trip upgrade→downgrade→upgrade работает. TimescaleDB hypertable для actuals (best-effort, postgres-only). Seeds: 6 feature_toggles + 4 zero_overrides (F-051/F-060 best).
+- **T-195** ✅: REST API endpoints из БД. 14 unit tests. /historical/{route_id}, /historical, /features, /features/{name}/toggle, /zeros/{name}/toggle, /predictions/db/{route_id}, /predictions/export.csv. Default filters из feature_toggles + zero_overrides (best submission). CSV с MD5 + X-Row-Count headers. OpenAPI регенерирован (16 paths), Orval TS типы синхронизированы.
 - **F-051/F-052**: zero route 5 → +0.08844 (8.84pp, biggest single win)
 - **F-054**: B (8 пар p_zero>=30%) → +0.00017 ✅
 - **F-054**: C (blend raw+cal) → -0.236 ❌ raw predictions штрафуются

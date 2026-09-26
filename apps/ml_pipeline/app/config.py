@@ -26,9 +26,7 @@ class Settings(BaseSettings):
     celery_result_backend: str = "redis://localhost:6379/2"
 
     # DB (sync URL для SQLAlchemy sync engine в Celery tasks)
-    database_url: str = (
-        "postgresql+psycopg2://transit:transit@localhost:5432/transit_ai"
-    )
+    database_url: str = "postgresql+psycopg2://transit:transit@localhost:5432/transit_ai"
 
     # Paths
     repo_root: Path = REPO_ROOT

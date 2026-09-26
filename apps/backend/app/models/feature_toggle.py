@@ -29,7 +29,8 @@ class FeatureToggle(Base):
     is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     """Дефолтное состояние (используется для reset)."""
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False,
+        DateTime(timezone=True),
+        nullable=False,
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
     )

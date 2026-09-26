@@ -29,7 +29,8 @@ class ZeroOverride(Base):
     params: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     """{pred_cap: 55, hours: [0,1,2,3,4], ...}"""
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False,
+        DateTime(timezone=True),
+        nullable=False,
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
     )

@@ -6,6 +6,16 @@
  * OpenAPI spec version: 0.1.0
  */
 /**
+ * Одна точка данных: route × datetime → value.
+ */
+export interface ActualPoint {
+  period_start: string;
+  period_end: string;
+  /** Historical boardings count */
+  value: number;
+}
+
+/**
  * One tram approaching a stop.
 
 Mirrors the TypeScript `ETAPrediction` interface in
@@ -53,15 +63,52 @@ export interface ETAResponse {
   trams?: ETAPrediction[];
 }
 
+/**
+ * Один feature toggle.
+ */
+export interface FeatureToggleOut {
+  name: string;
+  description: string;
+  enabled: boolean;
+  is_default: boolean;
+}
+
+/**
+ * Запрос на переключение фичи.
+ */
+export interface FeatureToggleUpdate {
+  enabled: boolean;
+}
+
+/**
+ * Ответ GET /features.
+ */
+export interface FeaturesListResponse {
+  feature_toggles: FeatureToggleOut[];
+  zero_overrides: ZeroOverrideOut[];
+}
+
 export interface HTTPValidationError {
   detail?: ValidationError[];
 }
 
 /**
+ * Ответ /historical/{route_id}.
+ */
+export interface HistoricalResponse {
+  route_id: number;
+  from_date: string;
+  to_date: string;
+  /** hour | day */
+  granularity: string;
+  points: ActualPoint[];
+}
+
+/**
  * Bucketed risk level. info in [75,90), warning in [90,110), critical >=110.
  */
-export type OverloadAlertSeverity =
-  (typeof OverloadAlertSeverity)[keyof typeof OverloadAlertSeverity];
+export type OverloadAlertSeverity = typeof OverloadAlertSeverity[keyof typeof OverloadAlertSeverity];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const OverloadAlertSeverity = {
@@ -112,6 +159,47 @@ export interface OverloadAlertsResponse {
   alerts?: OverloadAlert[];
 }
 
+export type PredictionPointDBLower = number | null;
+
+export type PredictionPointDBUpper = number | null;
+
+/**
+ * Одна точка прогноза из БД.
+ */
+export interface PredictionPointDB {
+  period_start: string;
+  period_end: string;
+  value: number;
+  lower?: PredictionPointDBLower;
+  upper?: PredictionPointDBUpper;
+  horizon: string;
+  granularity: string;
+  feature_set: string;
+  zeros_applied: boolean;
+  coef_weather: number;
+  coef_event: number;
+  coef_season: number;
+}
+
+export type PredictionsDBResponseModelId = string | null;
+
+export type PredictionsDBResponseFeatureSet = string | null;
+
+export type PredictionsDBResponseZerosApplied = boolean | null;
+
+/**
+ * Ответ /predictions/db/{route_id}.
+ */
+export interface PredictionsDBResponse {
+  route_id: number;
+  from_date: string;
+  to_date: string;
+  model_id?: PredictionsDBResponseModelId;
+  feature_set?: PredictionsDBResponseFeatureSet;
+  zeros_applied?: PredictionsDBResponseZerosApplied;
+  points: PredictionPointDB[];
+}
+
 export type ValidationErrorLocItem = string | number;
 
 export type ValidationErrorCtx = { [key: string]: unknown };
@@ -124,50 +212,149 @@ export interface ValidationError {
   ctx?: ValidationErrorCtx;
 }
 
-export type HealthzApiV1HealthzGet200 = { [key: string]: string };
+export type ZeroOverrideOutParams = { [key: string]: unknown };
 
-export type VersionApiV1VersionGet200 = { [key: string]: string | null };
+/**
+ * Один zero override.
+ */
+export interface ZeroOverrideOut {
+  name: string;
+  description: string;
+  enabled: boolean;
+  params: ZeroOverrideOutParams;
+}
+
+export type ZeroOverrideUpdateParamsAnyOf = { [key: string]: unknown };
+
+export type ZeroOverrideUpdateParams = ZeroOverrideUpdateParamsAnyOf | null;
+
+/**
+ * Запрос на переключение zero strategy.
+ */
+export interface ZeroOverrideUpdate {
+  enabled: boolean;
+  params?: ZeroOverrideUpdateParams;
+}
+
+export type HealthzApiV1HealthzGet200 = {[key: string]: string};
+
+export type VersionApiV1VersionGet200 = {[key: string]: string | null};
 
 export type ReadyzApiV1ReadyzGet200 = { [key: string]: unknown };
 
 export type GetPredictionsForStopApiV1PredictionsStopStopIdGetParams = {
-  period_start: string;
-  period_end: string;
+period_start: string;
+period_end: string;
 };
 
 export type GetPredictionsForStopApiV1PredictionsStopStopIdGet200 = { [key: string]: unknown };
 
 export type GetEtaPredictionsApiV1PredictionsEtaGetParams = {
-  /**
-   * Tram stop id (1..N).
-   * @minimum 1
-   */
-  stop_id: number;
-  /**
-   * Number of upcoming trams to return. Clamped to [1, 5].
-   * @minimum 1
-   */
-  n?: number;
+/**
+ * Tram stop id (1..N).
+ * @minimum 1
+ */
+stop_id: number;
+/**
+ * Number of upcoming trams to return. Clamped to [1, 5].
+ * @minimum 1
+ */
+n?: number;
 };
 
 export type GetActiveModelApiV1ModelsActiveGet200 = { [key: string]: unknown };
 
+export type GetPredictionsDbApiV1PredictionsDbRouteIdGetParams = {
+from: string;
+to: string;
+model_id?: string | null;
+feature_set?: string | null;
+zeros_applied?: boolean | null;
+horizon?: GetPredictionsDbApiV1PredictionsDbRouteIdGetHorizon;
+granularity?: GetPredictionsDbApiV1PredictionsDbRouteIdGetGranularity;
+/**
+ * @minimum 0
+ * @maximum 3
+ */
+coef_weather?: number;
+/**
+ * @minimum 0
+ * @maximum 3
+ */
+coef_event?: number;
+/**
+ * @minimum 0
+ * @maximum 3
+ */
+coef_season?: number;
+};
+
+export type GetPredictionsDbApiV1PredictionsDbRouteIdGetHorizon = typeof GetPredictionsDbApiV1PredictionsDbRouteIdGetHorizon[keyof typeof GetPredictionsDbApiV1PredictionsDbRouteIdGetHorizon];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const GetPredictionsDbApiV1PredictionsDbRouteIdGetHorizon = {
+  day: 'day',
+  month: 'month',
+  year: 'year',
+} as const;
+
+export type GetPredictionsDbApiV1PredictionsDbRouteIdGetGranularity = typeof GetPredictionsDbApiV1PredictionsDbRouteIdGetGranularity[keyof typeof GetPredictionsDbApiV1PredictionsDbRouteIdGetGranularity];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const GetPredictionsDbApiV1PredictionsDbRouteIdGetGranularity = {
+  hour: 'hour',
+  day: 'day',
+  month: 'month',
+} as const;
+
+export type ExportPredictionsCsvApiV1PredictionsExportCsvGetParams = {
+from_date?: string;
+to_date?: string;
+model_id?: string | null;
+feature_set?: string | null;
+zeros_applied?: boolean | null;
+coef_weather?: number;
+coef_event?: number;
+coef_season?: number;
+};
+
+export type GetHistoricalApiV1HistoricalRouteIdGetParams = {
+/**
+ * Start date (inclusive)
+ */
+from: string;
+/**
+ * End date (inclusive)
+ */
+to: string;
+/**
+ * Aggregation granularity: hour | day
+ * @pattern ^(hour|day)$
+ */
+granularity?: string;
+};
+
+export type ListRoutesWithHistoryApiV1HistoricalGet200 = { [key: string]: unknown };
+
 export type ListModelsApiV1ModelsGetParams = {
-  /**
-   * If true, return only the currently active model.
-   */
-  active_only?: boolean;
+/**
+ * If true, return only the currently active model.
+ */
+active_only?: boolean;
 };
 
 export type ListModelsApiV1ModelsGet200 = { [key: string]: unknown };
 
 export type GetOverloadAlertsApiV1InsightsAlertsGetParams = {
-  /**
-   * Look-ahead horizon in minutes. Defaults to 30 (current peak commute). Hard cap 120 (4 hours) for dispatcher UI sanity.
-   * @minimum 1
-   * @maximum 120
-   */
-  window_min?: number;
+/**
+ * Look-ahead horizon in minutes. Defaults to 30 (current peak commute). Hard cap 120 (4 hours) for dispatcher UI sanity.
+ * @minimum 1
+ * @maximum 120
+ */
+window_min?: number;
 };
 
-export type RootGet200 = { [key: string]: string };
+export type RootGet200 = {[key: string]: string};
+

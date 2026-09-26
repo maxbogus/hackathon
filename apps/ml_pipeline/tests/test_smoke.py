@@ -17,7 +17,8 @@ def test_celery_app_has_tasks() -> None:
 def test_run_uv_script_returns_tuple() -> None:
     """Smoke: uv call to a real script."""
     rc, out, err = _run_uv_script(
-        "scripts/make_submission.py", "--help",
+        "scripts/make_submission.py",
+        "--help",
     )
     # --help exits 0; allow nonzero for parser errors but never raise
     assert isinstance(rc, int)

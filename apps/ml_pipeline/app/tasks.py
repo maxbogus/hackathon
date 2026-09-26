@@ -25,8 +25,13 @@ def _now_iso() -> str:
 def _run_uv_script(script: str, *args: str) -> tuple[int, str, str]:
     """Run uv-managed ML script. Returns (returncode, stdout, stderr)."""
     cmd = [
-        "uv", "--directory", str(settings.repo_root / "ml"),
-        "run", "python", script, *args,
+        "uv",
+        "--directory",
+        str(settings.repo_root / "ml"),
+        "run",
+        "python",
+        script,
+        *args,
     ]
     env = os.environ.copy()
     env.setdefault("PYTHONPATH", str(settings.repo_root))
@@ -87,12 +92,18 @@ def predict_window_task(
       - zeros: применить zero-strategy (route 5 + night hours)
     """
     args = [
-        "--model-id", model_id,
-        "--start-date", start_date.replace("-", ""),
-        "--end-date", end_date.replace("-", ""),
-        "--coef-weather", str(coef_weather),
-        "--coef-event", str(coef_event),
-        "--coef-season", str(coef_season),
+        "--model-id",
+        model_id,
+        "--start-date",
+        start_date.replace("-", ""),
+        "--end-date",
+        end_date.replace("-", ""),
+        "--coef-weather",
+        str(coef_weather),
+        "--coef-event",
+        str(coef_event),
+        "--coef-season",
+        str(coef_season),
     ]
     if zeros:
         args.append("--apply-zeros")
@@ -167,4 +178,3 @@ def _persist_predictions_to_db(parquet_path: Path, model_id: str) -> dict:
         "parquet_path": str(parquet_path),
         "model_id": model_id,
     }
-

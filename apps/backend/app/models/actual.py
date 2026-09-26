@@ -24,13 +24,15 @@ class Actual(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     route_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
-    period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    period_start: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    period_end: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
     value: Mapped[float] = mapped_column(nullable=False)  # boardings
 
-    __table_args__ = (
-        Index("ix_actuals_route_period", "route_id", "period_start"),
-    )
+    __table_args__ = (Index("ix_actuals_route_period", "route_id", "period_start"),)
 
     def __repr__(self) -> str:
         return (

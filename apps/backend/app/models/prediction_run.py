@@ -27,7 +27,9 @@ class PredictionRun(Base):
     """ml_pipeline.train_xgboost | ml_pipeline.predict_window | ml_pipeline.full_pipeline"""
     status: Mapped[str] = mapped_column(String(32), nullable=False)
     """started | success | failure | revoked"""
-    submission_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    submission_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
     model_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     feature_set: Mapped[str | None] = mapped_column(String(64), nullable=True)
     params: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
@@ -40,7 +42,9 @@ class PredictionRun(Base):
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )
-    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     def __repr__(self) -> str:
         return (

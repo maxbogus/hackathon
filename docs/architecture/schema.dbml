@@ -7,7 +7,70 @@ Project transit_ai {
   Note: 'Transit-AI — пассажиропоток трамваев Москвы. Backend: apps/backend, ML: ml/.'
 }
 
-// No models registered yet. Phase 1 in progress.
-// First model: apps/backend/app/models/stop.py (T-038+)
-//
-// После добавления первой модели запусти: make arch-dbml
+Table actuals {
+  id int [pk, not null]
+  route_id int [not null]
+  period_start datetime [not null]
+  period_end datetime [not null]
+  value float [not null]
+}
+
+Table feature_toggles {
+  id int [pk, not null]
+  name varchar [not null, unique]
+  description text [not null]
+  enabled boolean [not null]
+  is_default boolean [not null]
+  updated_at datetime [not null]
+}
+
+Table predictions {
+  id int [pk, not null]
+  route_id int [not null]
+  period_start datetime [not null]
+  period_end datetime [not null]
+  horizon varchar [not null]
+  granularity varchar [not null]
+  value float [not null]
+  lower float
+  upper float
+  model_id varchar [not null]
+  model_kind varchar [not null]
+  model_version varchar [not null]
+  feature_set varchar [not null]
+  feature_flags json [not null]
+  zeros_applied boolean [not null]
+  zero_config json [not null]
+  coef_weather float [not null]
+  coef_event float [not null]
+  coef_season float [not null]
+  submission_id varchar
+  git_commit varchar
+  created_at datetime [not null]
+}
+
+Table prediction_runs {
+  id int [pk, not null]
+  celery_task_id varchar [not null, unique]
+  task_name varchar [not null]
+  status varchar [not null]
+  submission_id varchar
+  model_id varchar
+  feature_set varchar
+  params json [not null]
+  result json
+  holdout_wape_score float
+  manifest_path varchar
+  csv_path varchar
+  started_at datetime [not null]
+  finished_at datetime
+}
+
+Table zero_overrides {
+  id int [pk, not null]
+  name varchar [not null, unique]
+  description text [not null]
+  enabled boolean [not null]
+  params json [not null]
+  updated_at datetime [not null]
+}

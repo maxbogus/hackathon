@@ -61,7 +61,10 @@ def fetch_weather_json(
         src = settings.external_dir / "weather_2025.csv"
         if not src.exists():
             return {
-                "source": "weather", "rows": 0, "output_path": "", "ts": _now_iso(),
+                "source": "weather",
+                "rows": 0,
+                "output_path": "",
+                "ts": _now_iso(),
                 "warning": f"missing {src}",
             }
         rows: list[dict] = []
@@ -131,9 +134,9 @@ def fetch_traffic_json(self) -> dict:
         }
 
     query = (
-        '[out:json][timeout:60];'
+        "[out:json][timeout:60];"
         '(way["highway"~"primary|secondary|tertiary"](55.5,37.3,55.9,37.9););'
-        'out tags;'
+        "out tags;"
     )
     with httpx.Client(timeout=settings.http_timeout_sec) as client:
         resp = client.post(settings.overpass_url, data={"data": query})
@@ -171,7 +174,10 @@ def fetch_poi_json(self) -> dict:
             "ts": _now_iso(),
         }
     return {
-        "source": "poi_osm", "rows": 0, "output_path": "", "ts": _now_iso(),
+        "source": "poi_osm",
+        "rows": 0,
+        "output_path": "",
+        "ts": _now_iso(),
         "warning": f"unexpected shape in {src}",
     }
 

@@ -150,8 +150,12 @@ def test_prediction_route_period_index() -> None:
 
 def test_all_models_have_repr() -> None:
     """Каждая модель имеет __repr__ для debugging."""
-    a = Actual(route_id=1, period_start=datetime(2025, 1, 1, tzinfo=UTC),
-               period_end=datetime(2025, 1, 1, 1, tzinfo=UTC), value=10.0)
+    a = Actual(
+        route_id=1,
+        period_start=datetime(2025, 1, 1, tzinfo=UTC),
+        period_end=datetime(2025, 1, 1, 1, tzinfo=UTC),
+        value=10.0,
+    )
     assert "Actual" in repr(a)
 
     z = ZeroOverride(name="test", description="d", enabled=True, params={})

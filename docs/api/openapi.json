@@ -237,6 +237,419 @@
         }
       }
     },
+    "/api/v1/predictions/db/{route_id}": {
+      "get": {
+        "tags": [
+          "predictions-db"
+        ],
+        "summary": "Predictions for route (from DB with feature_set / zeros filters)",
+        "description": "Возвращает прогнозы из БД с фильтрацией.\n\nЕсли filters=None — использует дефолты из feature_toggles + zero_overrides.",
+        "operationId": "get_predictions_db_api_v1_predictions_db__route_id__get",
+        "parameters": [
+          {
+            "name": "route_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Route Id"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "title": "To"
+            }
+          },
+          {
+            "name": "model_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Model Id"
+            }
+          },
+          {
+            "name": "feature_set",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Feature Set"
+            }
+          },
+          {
+            "name": "zeros_applied",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Zeros Applied"
+            }
+          },
+          {
+            "name": "horizon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "day",
+                "month",
+                "year"
+              ],
+              "type": "string",
+              "default": "day",
+              "title": "Horizon"
+            }
+          },
+          {
+            "name": "granularity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "hour",
+                "day",
+                "month"
+              ],
+              "type": "string",
+              "default": "hour",
+              "title": "Granularity"
+            }
+          },
+          {
+            "name": "coef_weather",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 3,
+              "minimum": 0,
+              "default": 1.0,
+              "title": "Coef Weather"
+            }
+          },
+          {
+            "name": "coef_event",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 3,
+              "minimum": 0,
+              "default": 1.0,
+              "title": "Coef Event"
+            }
+          },
+          {
+            "name": "coef_season",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 3,
+              "minimum": 0,
+              "default": 1.0,
+              "title": "Coef Season"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictionsDBResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/export.csv": {
+      "get": {
+        "tags": [
+          "predictions-db"
+        ],
+        "summary": "Export predictions as CSV (default params = best submission)",
+        "description": "Возвращает CSV (route;date;hour;prediction).\n\nDefault params: zeros_applied=True, feature_set=with_all — соответствует\nbest submission (F-083: 0.83455 platform score).\n\nФормат совместим с submission pipeline (clinerule 23):\n  - separator `;`\n  - колонки: route, date (YYYY-MM-DD), hour (0-23), prediction\n  - header НЕ включён (для совместимости с ml platform scoring)",
+        "operationId": "export_predictions_csv_api_v1_predictions_export_csv_get",
+        "parameters": [
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "default": "2025-11-01T00:00:00Z",
+              "title": "From Date"
+            }
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "default": "2025-12-31T23:00:00Z",
+              "title": "To Date"
+            }
+          },
+          {
+            "name": "model_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Model Id"
+            }
+          },
+          {
+            "name": "feature_set",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Feature Set"
+            }
+          },
+          {
+            "name": "zeros_applied",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Zeros Applied"
+            }
+          },
+          {
+            "name": "coef_weather",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 1.0,
+              "title": "Coef Weather"
+            }
+          },
+          {
+            "name": "coef_event",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 1.0,
+              "title": "Coef Event"
+            }
+          },
+          {
+            "name": "coef_season",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 1.0,
+              "title": "Coef Season"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/historical/{route_id}": {
+      "get": {
+        "tags": [
+          "historical"
+        ],
+        "summary": "Historical boardings (actuals) for a route",
+        "description": "Возвращает исторические boardings из БД.\n\nEmpty list — нормально, если actuals пуста (dev-режим).",
+        "operationId": "get_historical_api_v1_historical__route_id__get",
+        "parameters": [
+          {
+            "name": "route_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Route Id"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Start date (inclusive)",
+              "title": "From"
+            },
+            "description": "Start date (inclusive)"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "End date (inclusive)",
+              "title": "To"
+            },
+            "description": "End date (inclusive)"
+          },
+          {
+            "name": "granularity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(hour|day)$",
+              "description": "Aggregation granularity: hour | day",
+              "default": "day",
+              "title": "Granularity"
+            },
+            "description": "Aggregation granularity: hour | day"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoricalResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/historical": {
+      "get": {
+        "tags": [
+          "historical"
+        ],
+        "summary": "List available routes with historical data",
+        "description": "Возвращает список route_id, для которых есть хотя бы 1 actual.",
+        "operationId": "list_routes_with_history_api_v1_historical_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response List Routes With History Api V1 Historical Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/models": {
       "get": {
         "tags": [
@@ -333,6 +746,132 @@
         }
       }
     },
+    "/api/v1/features": {
+      "get": {
+        "tags": [
+          "features"
+        ],
+        "summary": "List all feature toggles and zero overrides",
+        "description": "Возвращает текущее состояние ВСЕХ toggles + overrides из БД.",
+        "operationId": "list_features_api_v1_features_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeaturesListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/features/{name}/toggle": {
+      "post": {
+        "tags": [
+          "features"
+        ],
+        "summary": "Toggle a feature on/off",
+        "operationId": "toggle_feature_api_v1_features__name__toggle_post",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeatureToggleUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeatureToggleOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/zeros/{name}/toggle": {
+      "post": {
+        "tags": [
+          "features"
+        ],
+        "summary": "Toggle a zero override on/off",
+        "operationId": "toggle_zero_api_v1_zeros__name__toggle_post",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ZeroOverrideUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ZeroOverrideOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "tags": [
@@ -361,6 +900,33 @@
   },
   "components": {
     "schemas": {
+      "ActualPoint": {
+        "properties": {
+          "period_start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Period Start"
+          },
+          "period_end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Period End"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value",
+            "description": "Historical boardings count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period_start",
+          "period_end",
+          "value"
+        ],
+        "title": "ActualPoint",
+        "description": "Одна точка данных: route × datetime → value."
+      },
       "ETAPrediction": {
         "properties": {
           "route_id": {
@@ -450,6 +1016,74 @@
         "title": "ETAResponse",
         "description": "Response body of GET /api/v1/predictions/eta."
       },
+      "FeatureToggleOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "is_default": {
+            "type": "boolean",
+            "title": "Is Default"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "enabled",
+          "is_default"
+        ],
+        "title": "FeatureToggleOut",
+        "description": "Один feature toggle."
+      },
+      "FeatureToggleUpdate": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "title": "FeatureToggleUpdate",
+        "description": "Запрос на переключение фичи."
+      },
+      "FeaturesListResponse": {
+        "properties": {
+          "feature_toggles": {
+            "items": {
+              "$ref": "#/components/schemas/FeatureToggleOut"
+            },
+            "type": "array",
+            "title": "Feature Toggles"
+          },
+          "zero_overrides": {
+            "items": {
+              "$ref": "#/components/schemas/ZeroOverrideOut"
+            },
+            "type": "array",
+            "title": "Zero Overrides"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feature_toggles",
+          "zero_overrides"
+        ],
+        "title": "FeaturesListResponse",
+        "description": "Ответ GET /features."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -462,6 +1096,46 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "HistoricalResponse": {
+        "properties": {
+          "route_id": {
+            "type": "integer",
+            "title": "Route Id"
+          },
+          "from_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "From Date"
+          },
+          "to_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "To Date"
+          },
+          "granularity": {
+            "type": "string",
+            "title": "Granularity",
+            "description": "hour | day"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/ActualPoint"
+            },
+            "type": "array",
+            "title": "Points"
+          }
+        },
+        "type": "object",
+        "required": [
+          "route_id",
+          "from_date",
+          "to_date",
+          "granularity",
+          "points"
+        ],
+        "title": "HistoricalResponse",
+        "description": "Ответ /historical/{route_id}."
       },
       "OverloadAlert": {
         "properties": {
@@ -551,6 +1225,156 @@
         "title": "OverloadAlertsResponse",
         "description": "Response body for `GET /api/v1/insights/alerts`."
       },
+      "PredictionPointDB": {
+        "properties": {
+          "period_start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Period Start"
+          },
+          "period_end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Period End"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "lower": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lower"
+          },
+          "upper": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upper"
+          },
+          "horizon": {
+            "type": "string",
+            "title": "Horizon"
+          },
+          "granularity": {
+            "type": "string",
+            "title": "Granularity"
+          },
+          "feature_set": {
+            "type": "string",
+            "title": "Feature Set"
+          },
+          "zeros_applied": {
+            "type": "boolean",
+            "title": "Zeros Applied"
+          },
+          "coef_weather": {
+            "type": "number",
+            "title": "Coef Weather"
+          },
+          "coef_event": {
+            "type": "number",
+            "title": "Coef Event"
+          },
+          "coef_season": {
+            "type": "number",
+            "title": "Coef Season"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period_start",
+          "period_end",
+          "value",
+          "horizon",
+          "granularity",
+          "feature_set",
+          "zeros_applied",
+          "coef_weather",
+          "coef_event",
+          "coef_season"
+        ],
+        "title": "PredictionPointDB",
+        "description": "Одна точка прогноза из БД."
+      },
+      "PredictionsDBResponse": {
+        "properties": {
+          "route_id": {
+            "type": "integer",
+            "title": "Route Id"
+          },
+          "from_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "From Date"
+          },
+          "to_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "To Date"
+          },
+          "model_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Id"
+          },
+          "feature_set": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feature Set"
+          },
+          "zeros_applied": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zeros Applied"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/PredictionPointDB"
+            },
+            "type": "array",
+            "title": "Points"
+          }
+        },
+        "type": "object",
+        "required": [
+          "route_id",
+          "from_date",
+          "to_date",
+          "points"
+        ],
+        "title": "PredictionsDBResponse",
+        "description": "Ответ /predictions/db/{route_id}."
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -590,6 +1414,62 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "ZeroOverrideOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "params": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Params"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "enabled",
+          "params"
+        ],
+        "title": "ZeroOverrideOut",
+        "description": "Один zero override."
+      },
+      "ZeroOverrideUpdate": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Params"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "title": "ZeroOverrideUpdate",
+        "description": "Запрос на переключение zero strategy."
       }
     }
   }

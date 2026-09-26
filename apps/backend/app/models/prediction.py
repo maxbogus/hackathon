@@ -32,10 +32,18 @@ class Prediction(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     route_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
-    period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    horizon: Mapped[str] = mapped_column(String(16), nullable=False)  # day | month | year
-    granularity: Mapped[str] = mapped_column(String(16), nullable=False)  # hour | day | month
+    period_start: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    period_end: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    horizon: Mapped[str] = mapped_column(
+        String(16), nullable=False
+    )  # day | month | year
+    granularity: Mapped[str] = mapped_column(
+        String(16), nullable=False
+    )  # hour | day | month
 
     value: Mapped[float] = mapped_column(Float, nullable=False)
     lower: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -43,11 +51,15 @@ class Prediction(Base):
 
     # Метаданные модели
     model_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
-    model_kind: Mapped[str] = mapped_column(String(32), nullable=False)  # baseline|xgboost|gru|hybrid
+    model_kind: Mapped[str] = mapped_column(
+        String(32), nullable=False
+    )  # baseline|xgboost|gru|hybrid
     model_version: Mapped[str] = mapped_column(String(32), nullable=False)  # vN.M.K
 
     # Конфигурация применённая при инференсе
-    feature_set: Mapped[str] = mapped_column(String(64), nullable=False, default="baseline")
+    feature_set: Mapped[str] = mapped_column(
+        String(64), nullable=False, default="baseline"
+    )
     """baseline | with_poi | with_traffic | with_weather | all — для фильтрации фронтом."""
     feature_flags: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     """per-feature включены/выключены: {use_poi: True, use_traffic: False, ...}"""
@@ -62,7 +74,9 @@ class Prediction(Base):
     coef_season: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
 
     # Submission lineage
-    submission_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    submission_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
     git_commit: Mapped[str | None] = mapped_column(String(40), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
