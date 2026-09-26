@@ -265,7 +265,7 @@ assistant-reasoning: ## Test reasoning (DeepSeek R1 via OpenRouter)  [WIP]
 	@echo "WIP: pending test_reasoning.py. Skipped."
 
 mcp-run: ## Start MCP server (stdio JSON-RPC)
-	cd apps/mcp && $(UV) run python server.py
+	cd apps/mcp && $(UV) run python -m app.server
 
 # ---------------------------------------------------------------------------
 # LOCAL DEV

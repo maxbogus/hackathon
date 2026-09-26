@@ -75,6 +75,9 @@ Post-processing:
 - **T-204** ✅: docs/BUSINESS_VALUE.md — применение (распределение ПС, снижение переполнения, расписание, эксплуатация, аналитика) + ограничения (drift, F-051/F-060/F-080).
 - **T-205** ✅: docs/architecture/architecture.svg (75KB Mermaid → SVG) с harvester + ml_pipeline + backend + frontend + assistant + MCP.
 - **T-206** ✅: GET /api/v1/predictions/export.xlsx (openpyxl). 17 OpenAPI paths.
+- **T-199** ✅: apps/sandbox/ — restricted Python executor (AST whitelist, запрет subprocess/socket, timeout). 12 tests pass. Dockerfile с read-only root + tmpfs.
+- **T-200** ✅: apps/mcp/ — MCP 2.0 stdio JSON-RPC server с 5 tools (get_predictions_for_route, get_historical_for_route, get_top_routes_by_traffic, get_validation_report, run_python_sandbox). 9 tests pass. Паттерн адаптирован из lawcopilot/mcp_browser, но свой код.
+- **T-201** ✅: apps/assistant/app/llm/ — LLM endpoint (Anthropic/OpenAI/LiteLLM adapters, REGISTRY dict, ModelEntry dataclass). 13 tests pass. Паттерн из lawcopilot/app/llm/registry, но свой код под Transit-AI.
 - **F-051/F-052**: zero route 5 → +0.08844 (8.84pp, biggest single win)
 - **F-054**: B (8 пар p_zero>=30%) → +0.00017 ✅
 - **F-054**: C (blend raw+cal) → -0.236 ❌ raw predictions штрафуются

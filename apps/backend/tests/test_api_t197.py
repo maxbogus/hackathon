@@ -54,6 +54,7 @@ def app_with_seeded_db():
 
     async def seed():
         from datetime import UTC, datetime
+
         async with factory() as s:
             for name, enabled in [
                 ("use_poi", True),
@@ -63,40 +64,56 @@ def app_with_seeded_db():
                 ("use_seasonal", True),
                 ("use_lag", True),
             ]:
-                s.add(FeatureToggle(
-                    name=name, description=name, enabled=enabled, is_default=enabled,
-                ))
+                s.add(
+                    FeatureToggle(
+                        name=name,
+                        description=name,
+                        enabled=enabled,
+                        is_default=enabled,
+                    )
+                )
             for name, enabled, params in [
                 ("zero_route_5", True, {"route_id": 5}),
-                ("zero_night_pred_cap", True,
-                 {"pred_cap": 55, "hours": [0, 1, 2, 3, 4]}),
+                (
+                    "zero_night_pred_cap",
+                    True,
+                    {"pred_cap": 55, "hours": [0, 1, 2, 3, 4]},
+                ),
                 ("zero_weekend", False, {}),
                 ("zero_holidays", False, {}),
             ]:
-                s.add(ZeroOverride(
-                    name=name, description=name, enabled=enabled, params=params,
-                ))
+                s.add(
+                    ZeroOverride(
+                        name=name,
+                        description=name,
+                        enabled=enabled,
+                        params=params,
+                    )
+                )
             for r in (7, 11):
                 for h in (8, 9):
-                    s.add(Prediction(
-                        route_id=r,
-                        period_start=datetime(2025, 11, 1, h, tzinfo=UTC),
-                        period_end=datetime(2025, 11, 1, h + 1, tzinfo=UTC),
-                        horizon="day",
-                        granularity="hour",
-                        value=42.5 + h,
-                        lower=30.0, upper=55.0,
-                        model_id=BEST_MODEL_ID,
-                        model_kind="xgboost",
-                        model_version="v1.0.0",
-                        feature_set=BEST_FEATURE_SET,
-                        feature_flags={"use_poi": True},
-                        zeros_applied=BEST_ZEROS_APPLIED,
-                        zero_config={"pred_cap": 55},
-                        coef_weather=BEST_COEF_WEATHER,
-                        coef_event=BEST_COEF_EVENT,
-                        coef_season=BEST_COEF_SEASON,
-                    ))
+                    s.add(
+                        Prediction(
+                            route_id=r,
+                            period_start=datetime(2025, 11, 1, h, tzinfo=UTC),
+                            period_end=datetime(2025, 11, 1, h + 1, tzinfo=UTC),
+                            horizon="day",
+                            granularity="hour",
+                            value=42.5 + h,
+                            lower=30.0,
+                            upper=55.0,
+                            model_id=BEST_MODEL_ID,
+                            model_kind="xgboost",
+                            model_version="v1.0.0",
+                            feature_set=BEST_FEATURE_SET,
+                            feature_flags={"use_poi": True},
+                            zeros_applied=BEST_ZEROS_APPLIED,
+                            zero_config={"pred_cap": 55},
+                            coef_weather=BEST_COEF_WEATHER,
+                            coef_event=BEST_COEF_EVENT,
+                            coef_season=BEST_COEF_SEASON,
+                        )
+                    )
             await s.commit()
 
     asyncio.run(seed())
@@ -176,8 +193,11 @@ def test_export_csv_with_different_coef_returns_empty(client) -> None:
     """coef_weather=1.5 — нет predictions → empty CSV (X-Row-Count=0)."""
     r = client.get(
         "/api/v1/predictions/export.csv",
-        params={"from": "2025-11-01T00:00:00", "to": "2025-11-02T00:00:00",
-                "coef_weather": 1.5},
+        params={
+            "from": "2025-11-01T00:00:00",
+            "to": "2025-11-02T00:00:00",
+            "coef_weather": 1.5,
+        },
     )
     assert r.headers["X-Row-Count"] == "0"
 
@@ -198,6 +218,7 @@ def test_export_xlsx_with_data(client) -> None:
 def test_export_xlsx_with_no_data(client) -> None:
     """XLSX empty case (period до seeded данных)."""
     from datetime import UTC, datetime
+
     r = client.get(
         "/api/v1/predictions/export.xlsx",
         params={

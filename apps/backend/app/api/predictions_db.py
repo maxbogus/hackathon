@@ -204,8 +204,12 @@ async def export_predictions_csv(
     summary="Export predictions as XLSX (T-206: альтернатива CSV для аналитиков)",
 )
 async def export_predictions_xlsx(
-    from_date: datetime = Query(default=datetime(2025, 11, 1, tzinfo=UTC), alias="from"),
-    to_date: datetime = Query(default=datetime(2025, 12, 31, 23, tzinfo=UTC), alias="to"),
+    from_date: datetime = Query(
+        default=datetime(2025, 11, 1, tzinfo=UTC), alias="from"
+    ),
+    to_date: datetime = Query(
+        default=datetime(2025, 12, 31, 23, tzinfo=UTC), alias="to"
+    ),
     model_id: str | None = Query(default=None),
     feature_set: str | None = Query(default=None),
     zeros_applied: bool | None = Query(default=None),
@@ -247,24 +251,35 @@ async def export_predictions_xlsx(
     ws = wb.active
     ws.title = "predictions"
     # Header
-    ws.append([
-        "route", "date", "hour", "prediction",
-        "model_id", "feature_set", "zeros_applied",
-        "coef_weather", "coef_event", "coef_season",
-    ])
+    ws.append(
+        [
+            "route",
+            "date",
+            "hour",
+            "prediction",
+            "model_id",
+            "feature_set",
+            "zeros_applied",
+            "coef_weather",
+            "coef_event",
+            "coef_season",
+        ]
+    )
     for r in rows:
-        ws.append([
-            r.route_id,
-            r.period_start.date().isoformat(),
-            r.period_start.hour,
-            float(r.value),
-            r.model_id,
-            r.feature_set,
-            bool(r.zeros_applied),
-            float(r.coef_weather),
-            float(r.coef_event),
-            float(r.coef_season),
-        ])
+        ws.append(
+            [
+                r.route_id,
+                r.period_start.date().isoformat(),
+                r.period_start.hour,
+                float(r.value),
+                r.model_id,
+                r.feature_set,
+                bool(r.zeros_applied),
+                float(r.coef_weather),
+                float(r.coef_event),
+                float(r.coef_season),
+            ]
+        )
 
     buf = io.BytesIO()
     wb.save(buf)
@@ -279,8 +294,7 @@ async def export_predictions_xlsx(
     return Response(
         content=content,
         media_type=(
-            "application/vnd.openxmlformats-officedocument."
-            "spreadsheetml.sheet"
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         ),
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',

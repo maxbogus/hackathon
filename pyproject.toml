@@ -35,6 +35,7 @@ members = [
     "apps/mcp",
     "apps/harvester",
     "apps/ml_pipeline",
+    "apps/sandbox",
     "ml",
 ]
 
