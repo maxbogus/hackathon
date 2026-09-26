@@ -91,5 +91,37 @@ export const TEXTS = {
   common: {
     /* Shared, neutral Russian phrases (no domain-specific terminology). */
     minutesShort: 'мин',
+    loading: 'Загрузка…',
+    errorPrefix: 'Ошибка:',
+    retry: 'Повторить',
+    yes: 'Да',
+    no: 'Нет',
+  },
+
+  analyst: {
+    /* T-196: Analyst dashboard — historical + predictions + feature toggles */
+    title: '📊 Аналитик — данные и прогнозы',
+    routeLabel: 'Маршрут',
+    fromLabel: 'Период с',
+    toLabel: 'Период по',
+    granularityDay: 'По дням',
+    granularityHour: 'По часам',
+    historicalChartTitle: 'Исторические данные (boardings)',
+    predictionsChartTitle: 'Прогноз (с учётом коэффициентов)',
+    noData: 'Нет данных за выбранный период',
+    downloadCsv: '⬇️ Скачать CSV',
+    csvDownloaded: (rows: number) => `✅ Скачано ${rows} строк`,
+    csvError: 'Не удалось сгенерировать CSV',
+    filtersTitle: '⚙️ Параметры прогноза',
+    featuresTitle: 'Фичи модели',
+    zerosTitle: 'Обнуление',
+    coefWeather: 'Погода',
+    coefEvent: 'События',
+    coefSeason: 'Сезон',
+    defaultBadge: 'по умолчанию',
+    summaryTitle: 'Сводка',
+    summaryPredicted: (n: number) => `Прогнозов: ${n}`,
+    summaryActual: (n: number) => `Фактов: ${n}`,
+    summaryPeriod: (from: string, to: string) => `${from} → ${to}`,
   },
 } as const;

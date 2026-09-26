@@ -29,7 +29,9 @@ router = APIRouter(prefix="/api/v1", tags=["historical"])
 )
 async def get_historical(
     route_id: int,
-    from_date: datetime = Query(..., alias="from", description="Start date (inclusive)"),
+    from_date: datetime = Query(
+        ..., alias="from", description="Start date (inclusive)"
+    ),
     to_date: datetime = Query(..., alias="to", description="End date (inclusive)"),
     granularity: str = Query(
         default="day",
@@ -65,7 +67,9 @@ async def get_historical(
         points = [
             ActualPoint(
                 period_start=datetime.fromisoformat(d).replace(tzinfo=UTC),
-                period_end=(datetime.fromisoformat(d) + timedelta(days=1)).replace(tzinfo=UTC),
+                period_end=(datetime.fromisoformat(d) + timedelta(days=1)).replace(
+                    tzinfo=UTC
+                ),
                 value=v,
             )
             for d, v in sorted(buckets.items())

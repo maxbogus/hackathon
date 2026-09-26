@@ -69,10 +69,19 @@ SEED_FEATURES = [
 
 SEED_ZEROS = [
     ("zero_route_5", "Zero out route 5 (F-051)", True, {"route_id": 5}),
-    ("zero_night_pred_cap", "Zero night hours (F-060)", True,
-     {"pred_cap": 55, "hours": [0, 1, 2, 3, 4]}),
+    (
+        "zero_night_pred_cap",
+        "Zero night hours (F-060)",
+        True,
+        {"pred_cap": 55, "hours": [0, 1, 2, 3, 4]},
+    ),
     ("zero_weekend", "Zero weekends (T-180, untested)", False, {"weekday_in": [5, 6]}),
-    ("zero_holidays", "Zero holidays (T-180, untested)", False, {"holiday_multiplier": 0.0}),
+    (
+        "zero_holidays",
+        "Zero holidays (T-180, untested)",
+        False,
+        {"holiday_multiplier": 0.0},
+    ),
 ]
 
 
@@ -86,15 +95,23 @@ def seeded_client(app_with_db):
     async def seed():
         async with factory() as s:
             for name, desc, enabled, is_default in SEED_FEATURES:
-                s.add(FeatureToggle(
-                    name=name, description=desc,
-                    enabled=enabled, is_default=is_default,
-                ))
+                s.add(
+                    FeatureToggle(
+                        name=name,
+                        description=desc,
+                        enabled=enabled,
+                        is_default=is_default,
+                    )
+                )
             for name, desc, enabled, params in SEED_ZEROS:
-                s.add(ZeroOverride(
-                    name=name, description=desc,
-                    enabled=enabled, params=params,
-                ))
+                s.add(
+                    ZeroOverride(
+                        name=name,
+                        description=desc,
+                        enabled=enabled,
+                        params=params,
+                    )
+                )
             await s.commit()
 
     asyncio.run(seed())
@@ -170,8 +187,11 @@ def test_historical_400_on_bad_range(client) -> None:
 def test_historical_invalid_granularity(client) -> None:
     r = client.get(
         "/api/v1/historical/7",
-        params={"from": "2025-01-01T00:00:00", "to": "2025-01-02T00:00:00",
-                "granularity": "minute"},
+        params={
+            "from": "2025-01-01T00:00:00",
+            "to": "2025-01-02T00:00:00",
+            "granularity": "minute",
+        },
     )
     assert r.status_code == 422
 
@@ -236,26 +256,28 @@ def test_export_csv_with_data(seeded_client, app_with_db) -> None:
             # 2 routes × 2 hours = 4 predictions
             for r in (7, 11):
                 for h in (8, 9):
-                    s.add(Prediction(
-                        route_id=r,
-                        period_start=datetime(2025, 11, 1, h, tzinfo=UTC),
-                        period_end=datetime(2025, 11, 1, h + 1, tzinfo=UTC),
-                        horizon="day",
-                        granularity="hour",
-                        value=42.5 + h,
-                        lower=30.0,
-                        upper=55.0,
-                        model_id="xgboost_v_default",
-                        model_kind="xgboost",
-                        model_version="v1.0.0",
-                        feature_set="with_all",  # matches seeded state
-                        feature_flags={"use_poi": True},
-                        zeros_applied=True,  # matches seeded state
-                        zero_config={"pred_cap": 55},
-                        coef_weather=1.0,
-                        coef_event=1.0,
-                        coef_season=1.0,
-                    ))
+                    s.add(
+                        Prediction(
+                            route_id=r,
+                            period_start=datetime(2025, 11, 1, h, tzinfo=UTC),
+                            period_end=datetime(2025, 11, 1, h + 1, tzinfo=UTC),
+                            horizon="day",
+                            granularity="hour",
+                            value=42.5 + h,
+                            lower=30.0,
+                            upper=55.0,
+                            model_id="xgboost_v_default",
+                            model_kind="xgboost",
+                            model_version="v1.0.0",
+                            feature_set="with_all",  # matches seeded state
+                            feature_flags={"use_poi": True},
+                            zeros_applied=True,  # matches seeded state
+                            zero_config={"pred_cap": 55},
+                            coef_weather=1.0,
+                            coef_event=1.0,
+                            coef_season=1.0,
+                        )
+                    )
             await s.commit()
 
     asyncio.run(seed())
@@ -287,22 +309,26 @@ def test_export_csv_filter_zeros_off(seeded_client, app_with_db) -> None:
     async def seed():
         async with factory() as s:
             for zeros, fs in [(True, "with_all"), (False, "baseline")]:
-                s.add(Prediction(
-                    route_id=7,
-                    period_start=datetime(2025, 11, 1, 8, tzinfo=UTC),
-                    period_end=datetime(2025, 11, 1, 9, tzinfo=UTC),
-                    horizon="day",
-                    granularity="hour",
-                    value=50.0 if zeros else 60.0,
-                    model_id="m",
-                    model_kind="xgboost",
-                    model_version="v1",
-                    feature_set=fs,
-                    feature_flags={},
-                    zeros_applied=zeros,
-                    zero_config={},
-                    coef_weather=1.0, coef_event=1.0, coef_season=1.0,
-                ))
+                s.add(
+                    Prediction(
+                        route_id=7,
+                        period_start=datetime(2025, 11, 1, 8, tzinfo=UTC),
+                        period_end=datetime(2025, 11, 1, 9, tzinfo=UTC),
+                        horizon="day",
+                        granularity="hour",
+                        value=50.0 if zeros else 60.0,
+                        model_id="m",
+                        model_kind="xgboost",
+                        model_version="v1",
+                        feature_set=fs,
+                        feature_flags={},
+                        zeros_applied=zeros,
+                        zero_config={},
+                        coef_weather=1.0,
+                        coef_event=1.0,
+                        coef_season=1.0,
+                    )
+                )
             await s.commit()
 
     asyncio.run(seed())
@@ -310,8 +336,12 @@ def test_export_csv_filter_zeros_off(seeded_client, app_with_db) -> None:
     # С zeros_applied=False → 1 prediction
     r = seeded_client.get(
         "/api/v1/predictions/export.csv",
-        params={"from": "2025-11-01T00:00:00", "to": "2025-11-02T00:00:00",
-                "zeros_applied": "false", "feature_set": "baseline"},
+        params={
+            "from": "2025-11-01T00:00:00",
+            "to": "2025-11-02T00:00:00",
+            "zeros_applied": "false",
+            "feature_set": "baseline",
+        },
     )
     assert r.headers["X-Row-Count"] == "1"
     assert "60.00" in r.text

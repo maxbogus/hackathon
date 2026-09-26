@@ -15,14 +15,15 @@ When models dir is empty, writes a "scaffold" DBML explaining how to add first m
 
 Source: candidate-tracker/scripts/generate_dbml.py (адаптация под Transit-AI).
 """
+
 from __future__ import annotations
 
 import argparse
 import difflib
 import importlib
+from pathlib import Path
 import pkgutil
 import sys
-from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 BACKEND = ROOT / "apps" / "backend"
@@ -110,13 +111,15 @@ def render_dbml(tables: list, hints: dict[str, str]) -> str:
         "",
     ]
     if not tables:
-        lines.extend([
-            "// No models registered yet. Phase 1 in progress.",
-            "// First model: apps/backend/app/models/stop.py (T-038+)",
-            "//",
-            "// После добавления первой модели запусти: make arch-dbml",
-            "",
-        ])
+        lines.extend(
+            [
+                "// No models registered yet. Phase 1 in progress.",
+                "// First model: apps/backend/app/models/stop.py (T-038+)",
+                "//",
+                "// После добавления первой модели запусти: make arch-dbml",
+                "",
+            ]
+        )
         return "\n".join(lines)
 
     for table in tables:
@@ -159,6 +162,7 @@ def render_tables_md(tables: list, hints: dict[str, str]) -> str:
 
     try:
         from app.models import Base  # type: ignore[import-not-found]
+
         registry = getattr(Base, "registry", None)
         class_registry = getattr(registry, "_class_registry", {}) if registry else {}
     except ImportError:
@@ -210,7 +214,9 @@ def check_drift(old_dbml: str, new_dbml: str, old_tables: str, new_tables: str) 
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     p.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     p.add_argument("--tables-doc", type=Path, default=DEFAULT_TABLES_DOC)
     p.add_argument("--check", action="store_true", help="CI gate: exit 1 if drift")

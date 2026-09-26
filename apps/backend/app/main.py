@@ -76,10 +76,10 @@ def create_app() -> FastAPI:
     app.include_router(health_router)
     app.include_router(predictions_router)
     app.include_router(predictions_db_router)  # T-195: from DB + export.csv
-    app.include_router(historical_router)       # T-195: /historical/{route_id}
+    app.include_router(historical_router)  # T-195: /historical/{route_id}
     app.include_router(models_router)
     app.include_router(alerts_router)
-    app.include_router(features_router)         # T-195: /features, /zeros/toggle
+    app.include_router(features_router)  # T-195: /features, /zeros/toggle
 
     @app.get("/", tags=["meta"])
     def root() -> dict[str, str]:
