@@ -88,7 +88,11 @@ ml/predictions/*
 !ml/predictions/.gitkeep
 predictions/*.parquet
 predictions/*.csv
+predictions/*.json
 !predictions/.gitkeep
+
+# Harvester runtime output (T-193) — normalized копии external источников
+data/external/*_normalized.json
 
 # === Кэши ML ===
 ml/.cache/
