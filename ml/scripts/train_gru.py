@@ -19,7 +19,7 @@ from pathlib import Path
 
 from transit_ai.data.base import DateRange
 from transit_ai.data.real import RealSource
-from transit_ai.models.gru_route import GRURoutePredictor
+from transit_ai.models.route_neural import RouteNeuralConfig, RouteNeuralPredictor
 from transit_ai.reports.metrics import compute_metrics
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -53,15 +53,22 @@ def main() -> int:
     p.add_argument("--model-id", default="gru_v1")
     p.add_argument("--seq-len", type=int, default=168)
     p.add_argument("--hidden", type=int, default=64)
-    p.add_argument("--layers", type=int, default=2, help="Number of GRU layers (default=2)")
+    p.add_argument("--layers", type=int, default=2, help="Number of encoder layers (default=2)")
     p.add_argument("--epochs", type=int, default=10)
+    p.add_argument(
+        "--kind",
+        choices=["gru", "lstm", "mamba"],
+        default="gru",
+        help="T-177-NEURAL-CONFIG: encoder kind (default=gru)",
+    )
+    p.add_argument("--lr", type=float, default=3e-4, help="Learning rate (default=3e-4)")
     args = p.parse_args()
 
     train_start = datetime.fromisoformat(args.start_date).replace(tzinfo=UTC)
     end_dt = datetime.fromisoformat(args.end_date).replace(tzinfo=UTC)
 
     print("=" * 60)
-    print(f"GRU train (T-175) -- model: {args.model_id}")
+    print(f"Neural train (T-177) -- model: {args.model_id}, kind: {args.kind}")
     print("=" * 60)
     print(f"Train:    {args.start_date} -> {args.end_date}")
     print(f"seq_len:  {args.seq_len}, hidden: {args.hidden}, epochs: {args.epochs}")
@@ -81,13 +88,15 @@ def main() -> int:
     print(f"Train:    {len(train_df):,} rows")
     print(f"Holdout:  {len(holdout_df):,} rows")
 
-    model = GRURoutePredictor(
-        model_id=args.model_id,
-        seq_len=args.seq_len,
+    config = RouteNeuralConfig(
+        kind=args.kind,
         hidden=args.hidden,
         layers=args.layers,
+        seq_len=args.seq_len,
         epochs=args.epochs,
+        lr=args.lr,
     )
+    model = RouteNeuralPredictor(config=config, model_id=args.model_id)
     # Train on train+holdout (как XGBoost - для lag sequences)
     print(f"\nTraining {args.epochs} epochs x hidden={args.hidden}...")
     model.fit(df)

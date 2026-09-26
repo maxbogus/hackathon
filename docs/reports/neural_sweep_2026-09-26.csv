@@ -1,0 +1,4 @@
+kind,hidden,layers,lr,seq_len,epochs,wape_score,best_epoch,date,saved
+gru,64,1,0.0003,168,15,0.1276,15,2026-09-26 17:10,1
+lstm,64,1,0.0003,168,15,0.1099,15,2026-09-26 17:11,1
+lstm,128,2,0.0003,336,20,TIMEOUT,0,2026-09-26 18:48,0
