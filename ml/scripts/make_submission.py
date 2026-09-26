@@ -132,6 +132,48 @@ def main() -> int:
         default=7,
         help="T-153: размер окна для recursive forecast (default 7)",
     )
+    p.add_argument(
+        "--no-bias-calibration",
+        action="store_true",
+        help="T-178: skip per-route bias calibration (raw predictions only)",
+    )
+    p.add_argument(
+        "--zero-hours",
+        type=int,
+        nargs="+",
+        default=None,
+        help="T-179: zero predictions for these hours (e.g. --zero-hours 0 1 2 3 4 5)",
+    )
+    p.add_argument(
+        "--zero-weekends",
+        action="store_true",
+        help="T-180: zero predictions on Sat/Sun",
+    )
+    p.add_argument(
+        "--zero-holidays",
+        action="store_true",
+        help="T-180: zero predictions on public holidays (2025-11..12)",
+    )
+    p.add_argument(
+        "--zero-route",
+        type=int,
+        action="append",
+        default=None,
+        help="F-051/T-180: zero predictions for specific route(s). Repeatable: --zero-route 5",
+    )
+    p.add_argument(
+        "--pred-cap",
+        type=int,
+        default=None,
+        help="F-056..F-060: zero predictions where pred <= N (in target hours). E.g. --pred-cap 55 --cap-hours 0 1 2 3 4",
+    )
+    p.add_argument(
+        "--cap-hours",
+        type=int,
+        nargs="+",
+        default=None,
+        help="F-060: hours where --pred-cap applies. Default: 0 1 2 3 4 (h0-4). Used with --pred-cap.",
+    )
     args = p.parse_args()
 
     start_dt = datetime.strptime(args.start_date, "%Y-%m-%d").replace(tzinfo=UTC)
@@ -199,19 +241,26 @@ def main() -> int:
     )
 
     # 2b. Compute per-route bias on TRAIN (in-sample) → apply to test (T-147)
+    # T-178: --no-bias-calibration skips this step (raw predictions only)
     # In-sample bias — оптимистичная оценка (модель видела эти данные),
     # но показывает верхнюю границу эффекта calibration.
-    train_pred_in_sample = model.predict_batch(train_df)
-    route_biases = compute_route_bias(
-        train_actual=train_df["boardings"],
-        train_pred=pd.Series(train_pred_in_sample),
-        route_ids=train_df["route_id"],
-    )
-    print(f"Per-route biases (log-space): {route_biases}")
-    test_pred_calibrated = apply_route_bias(
-        test_pred, test_df["route_id"].astype(int).values, route_biases
-    )
-    metrics_after = compute_metrics(test_df["boardings"].values, test_pred_calibrated)
+    if args.no_bias_calibration:
+        print("T-178: SKIP per-route bias calibration (raw predictions)")
+        route_biases = {}
+        test_pred_calibrated = test_pred
+        metrics_after = metrics_before
+    else:
+        train_pred_in_sample = model.predict_batch(train_df)
+        route_biases = compute_route_bias(
+            train_actual=train_df["boardings"],
+            train_pred=pd.Series(train_pred_in_sample),
+            route_ids=train_df["route_id"],
+        )
+        print(f"Per-route biases (log-space): {route_biases}")
+        test_pred_calibrated = apply_route_bias(
+            test_pred, test_df["route_id"].astype(int).values, route_biases
+        )
+        metrics_after = compute_metrics(test_df["boardings"].values, test_pred_calibrated)
     print(
         f"Holdout WAPE-score (сен–окт, calibrated): {metrics_after['wape_score']:.4f} "
         f"(Δ {metrics_after['wape_score'] - metrics_before['wape_score']:+.4f})"
@@ -251,7 +300,53 @@ def main() -> int:
         preds = model.predict_batch(pred_df)
 
     # Apply per-route bias correction (T-147)
-    preds = apply_route_bias(preds, grid["route"].astype(int).values, route_biases)
+    # T-178: skip if --no-bias-calibration
+    if not args.no_bias_calibration:
+        preds = apply_route_bias(preds, grid["route"].astype(int).values, route_biases)
+
+    # T-179: zero specific hours (e.g. --zero-hours 0 1 2 3 4 5)
+    if args.zero_hours:
+        hours_mask = grid["hour"].isin(args.zero_hours)
+        n_zeroed = hours_mask.sum()
+        if n_zeroed > 0:
+            preds[hours_mask] = 0.0
+            print(f"T-179: zeroed {n_zeroed:,} rows for hours={args.zero_hours}")
+
+    # F-051/T-180: zero specific route(s) (e.g. --zero-route 5 for missing-data route)
+    if args.zero_route:
+        for rid in args.zero_route:
+            route_mask = grid["route"].astype(int) == rid
+            n_route = route_mask.sum()
+            if n_route > 0:
+                preds[route_mask] = 0.0
+                print(f"F-051: zeroed {n_route:,} rows for route_id={rid}")
+
+    # F-056..F-060: cap predictions in specific hours (pred <= N → 0)
+    if args.pred_cap is not None:
+        cap_hours = args.cap_hours if args.cap_hours else [0, 1, 2, 3, 4]
+        cap_mask = grid["hour"].isin(cap_hours) & (preds <= args.pred_cap)
+        n_cap = cap_mask.sum()
+        if n_cap > 0:
+            preds[cap_mask] = 0.0
+            print(f"F-060: zeroed {n_cap:,} rows where pred<={args.pred_cap} in hours={cap_hours}")
+
+    # T-180: zero weekends (Sat=5, Sun=6) and/or holidays
+    grid_dates = pd.to_datetime(grid["date"])
+    weekday = grid_dates.dt.weekday  # 0=Mon, 6=Sun
+    if args.zero_weekends:
+        weekend_mask = weekday.isin([5, 6])
+        n_wknd = weekend_mask.sum()
+        if n_wknd > 0:
+            preds[weekend_mask] = 0.0
+            print(f"T-180: zeroed {n_wknd:,} weekend rows (Sat+Sun)")
+    if args.zero_holidays:
+        # Public holidays in Russia, Nov-Dec 2025 (4 ноября — День народного единства)
+        HOLIDAYS_2025_11_12 = {"2025-11-04"}  # День народного единства
+        holiday_mask = grid_dates.dt.strftime("%Y-%m-%d").isin(HOLIDAYS_2025_11_12)
+        n_hol = holiday_mask.sum()
+        if n_hol > 0:
+            preds[holiday_mask] = 0.0
+            print(f"T-180: zeroed {n_hol:,} holiday rows ({sorted(HOLIDAYS_2025_11_12)})")
 
     # Apply coefficients
     coef_product = args.coef_weather * args.coef_event * args.coef_season
@@ -299,8 +394,21 @@ def main() -> int:
     post_processing = ["clip_negatives"]
     if coef_product != 1.0:
         post_processing.append("coef_multiplier")
-    if route_biases:
+    if route_biases and not args.no_bias_calibration:
         post_processing.append("per_route_log_bias_calibration")
+    if args.no_bias_calibration:
+        post_processing.append("no_bias_calibration_T-178")
+    if args.zero_hours:
+        post_processing.append(f"zero_hours_{args.zero_hours}_T-179")
+    if args.zero_weekends:
+        post_processing.append("zero_weekends_T-180")
+    if args.zero_holidays:
+        post_processing.append("zero_holidays_T-180")
+    if args.zero_route:
+        post_processing.append(f"zero_route_{args.zero_route}_F-051")
+    if args.pred_cap is not None:
+        cap_hours = args.cap_hours if args.cap_hours else [0, 1, 2, 3, 4]
+        post_processing.append(f"pred_cap_{args.pred_cap}_hours_{cap_hours}_F-060")
 
     model_uri = f"ml/artifacts/{args.model_id}/model.pkl"
     manifest_path = write_manifest(

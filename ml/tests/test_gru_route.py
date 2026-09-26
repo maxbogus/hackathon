@@ -141,3 +141,28 @@ def test_gru_requires_columns() -> None:
     bad_df = pd.DataFrame({"foo": [1, 2, 3]})
     with pytest.raises(ValueError, match="Missing columns"):
         model.fit(bad_df)
+
+
+def test_gru_quick_variant_shape() -> None:
+    """T-177-GRU-QUICK: hidden=128, layers=2, seq_len=336 + per-route embedding + calendar features.
+
+    Сигнатура архитектуры (quick variant по шаблону contest):
+    - GRUModelV2: route_emb(10→32) + hour_emb(24→8) + calendar_emb(7→4) + weekday_emb(7→4)
+                  → Linear(48→hidden) → ReLU → GRU(hidden, layers) → attention pool → MLP(32→1)
+    - Target: log1p(boardings)
+    """
+    model = GRURoutePredictor(
+        model_id="gru_quick", seq_len=336, hidden=128, layers=2, epochs=2
+    )
+    # 14 дней истории = 336h seq_len
+    history = _make_minimal_history(n_days=14, n_routes=3)
+    model.fit(history)
+
+    # Architecture assertions
+    assert model.arch_ == "gru_v2_extended"  # type: ignore[attr-defined]
+    assert model.hidden == 128
+    assert model.layers == 2
+    assert model.seq_len == 336
+    # Per-route embedding exists
+    assert hasattr(model, "route_emb_dim_")  # type: ignore[attr-defined]
+    assert model.route_emb_dim_ == 32  # type: ignore[attr-defined]

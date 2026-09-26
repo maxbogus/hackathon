@@ -53,6 +53,7 @@ def main() -> int:
     p.add_argument("--model-id", default="gru_v1")
     p.add_argument("--seq-len", type=int, default=168)
     p.add_argument("--hidden", type=int, default=64)
+    p.add_argument("--layers", type=int, default=2, help="Number of GRU layers (default=2)")
     p.add_argument("--epochs", type=int, default=10)
     args = p.parse_args()
 
@@ -84,6 +85,7 @@ def main() -> int:
         model_id=args.model_id,
         seq_len=args.seq_len,
         hidden=args.hidden,
+        layers=args.layers,
         epochs=args.epochs,
     )
     # Train on train+holdout (как XGBoost - для lag sequences)

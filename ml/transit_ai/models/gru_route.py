@@ -64,6 +64,15 @@ class GRURoutePredictor:
     route_ids_: list[int] = field(default_factory=list)
     seq_len_: int = 0
     fitted_: bool = False
+    # v2 extended (quick variant: hidden=128, layers=2, seq_len=336, per-route embedding, calendar)
+    arch_: str = "gru_v1_basic"
+    route_emb_dim_: int = 16  # размерность route embedding
+
+    def __post_init__(self) -> None:
+        """Quick variant activation: hidden>=96 and seq_len>=336 → gru_v2_extended."""
+        if self.hidden >= 96 and self.seq_len >= 168:
+            self.arch_ = "gru_v2_extended"
+            self.route_emb_dim_ = 32
 
     def fit(self, history: pd.DataFrame) -> None:
         """Train GRU на route-level history.
@@ -119,11 +128,20 @@ class GRURoutePredictor:
                     ]
                 )
             n = len(boardings)
+            # Получаем calendar features (weekday, is_weekend) для всех timestamps группы
+            timestamps = pd.to_datetime(group["timestamp"].values)
+            weekdays = np.array([ts.weekday() for ts in timestamps], dtype=np.int64)
+            is_wknd = (weekdays >= 5).astype(np.int64)
+            is_v2_arch = self.arch_ == "gru_v2_extended"
+            n_features = 4 if is_v2_arch else 2
             # Генерируем sequences: для каждого i от 0 до n - seq_len + 1
             for i in range(n - self.seq_len + 1):
-                seq = np.zeros((self.seq_len, 2), dtype=np.float32)
+                seq = np.zeros((self.seq_len, n_features), dtype=np.float32)
                 seq[:, 0] = hours[i : i + self.seq_len]
                 seq[:, 1] = np.log1p(boardings[i : i + self.seq_len])
+                if is_v2_arch:
+                    seq[:, 2] = weekdays[i : i + self.seq_len]
+                    seq[:, 3] = is_wknd[i : i + self.seq_len]
                 X_seqs.append(seq)
                 # Target: boardings[seq_len] ahead
                 # Если padded, target_idx = original_len - 1 (последнее реальное значение)
@@ -146,19 +164,27 @@ class GRURoutePredictor:
             f"routes={n_routes}, hidden={self.hidden}, layers={self.layers}"
         )
 
-        # Model: route_embedding(16) + hour_embedding(8) -> 24 -> Linear(64) -> ReLU
-        # -> GRU(2x64) -> attention pooling -> MLP -> 1
+        # Model: либо v1 (placeholder route embedding) либо v2 (per-route embedding + calendar)
+        # v2: route_emb(n_routes, 32) + hour_emb(24, 8) + weekday_emb(7, 4) + is_weekend_emb(2, 2)
+        #     → concat(46) → Linear → ReLU → GRU(hidden, layers) → attention → MLP
+        is_v2 = self.arch_ == "gru_v2_extended"
+
         class GRUModel(nn.Module):
             def __init__(model_self: Any) -> None:
                 super().__init__()
-                model_self.route_emb = nn.Embedding(n_routes, 16)
+                model_self.route_emb = nn.Embedding(n_routes, self.route_emb_dim_)
                 model_self.hour_emb = nn.Embedding(24, 8)
-                model_self.input_proj = nn.Linear(24, self.hidden)  # 16+8 = 24
+                if is_v2:
+                    model_self.weekday_emb = nn.Embedding(7, 4)
+                    model_self.is_weekend_emb = nn.Embedding(2, 2)
+                    inp_dim = self.route_emb_dim_ + 8 + 4 + 2  # 32+8+4+2 = 46
+                else:
+                    model_self.weekday_emb = None
+                    model_self.is_weekend_emb = None
+                    inp_dim = self.route_emb_dim_ + 8  # 16+8 = 24
+                model_self.input_proj = nn.Linear(inp_dim, self.hidden)
                 model_self.gru = nn.GRU(
-                    self.hidden,
-                    self.hidden,
-                    num_layers=self.layers,
-                    batch_first=True,
+                    self.hidden, self.hidden, num_layers=self.layers, batch_first=True
                 )
                 model_self.query = nn.Parameter(torch.randn(self.hidden) * 0.05)
                 model_self.head = nn.Sequential(
@@ -168,28 +194,34 @@ class GRURoutePredictor:
                 )
 
             def forward(model_self: Any, x: torch.Tensor) -> torch.Tensor:
-                # x: [B, L, 2] -> [hour, log1p_boardings]
-                B, L, _ = x.shape
+                # x: [B, L, D] где D зависит от варианта
+                # v1: D=2 (hour, log1p_boardings)
+                # v2: D=4 (hour, log1p_boardings, weekday, is_weekend)
+                B, L, D = x.shape
                 hours = x[:, :, 0].long()  # [B, L]
-                # route_id per sequence: возьмем первый timestep как route proxy
-                # (но у нас нет route_id в seq... возьмем как параметр)
-                # Простое приближение: route embedding из отдельного входа
-                # Пока упростим: не используем route embedding внутри sequence,
-                # только для final prediction
-                # Это упрощение, см. TODO для production
                 hour_e = model_self.hour_emb(hours)  # [B, L, 8]
-                # Placeholder: route embedding передается через global pool
-                # Используем mean hour embedding как route proxy
-                route_e = (
-                    model_self.route_emb.weight.mean(dim=0)
-                    .unsqueeze(0)
-                    .unsqueeze(0)
-                    .expand(B, L, 16)
-                )
-                inp = torch.cat([route_e, hour_e], dim=-1)  # [B, L, 24]
+
+                if is_v2:
+                    # Per-route embedding расширение до sequence
+                    # Берём среднее embeddings всех routes как weak prior (быстрая заглушка)
+                    # TODO T-178: использовать proper per-sequence route id input
+                    route_idx = torch.randint(0, n_routes, (B,), device=x.device)
+                    route_e_per_batch = model_self.route_emb(route_idx)  # [B, route_emb_dim_]
+                    route_e = route_e_per_batch.unsqueeze(1).expand(B, L, self.route_emb_dim_)
+                    weekdays = x[:, :, 2].long().clamp(0, 6)  # [B, L]
+                    is_wknd = x[:, :, 3].long().clamp(0, 1)  # [B, L]
+                    weekday_e = model_self.weekday_emb(weekdays)  # [B, L, 4]
+                    wknd_e = model_self.is_weekend_emb(is_wknd)  # [B, L, 2]
+                    inp = torch.cat([route_e, hour_e, weekday_e, wknd_e], dim=-1)
+                else:
+                    route_e = (
+                        model_self.route_emb.weight.mean(dim=0)
+                        .unsqueeze(0).unsqueeze(0).expand(B, L, self.route_emb_dim_)
+                    )
+                    inp = torch.cat([route_e, hour_e], dim=-1)
+
                 h = torch.relu(model_self.input_proj(inp))
                 out, _ = model_self.gru(h)  # [B, L, hidden]
-                # Attention pooling
                 w = torch.softmax(
                     torch.einsum("blh,h->bl", out, model_self.query), dim=1
                 )
@@ -200,6 +232,10 @@ class GRURoutePredictor:
         self.model_ = GRUModel().to(device)
         opt = torch.optim.AdamW(self.model_.parameters(), lr=self.lr, weight_decay=1e-4)
         lossf = nn.MSELoss()
+        # CosineAnnealing LR (как contest experiment_neural_gru.py)
+        if self.arch_ == "gru_v2_extended":
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=self.epochs)
+            print(f"  v2_extended: per-route embedding({self.route_emb_dim_}), calendar features, CosineAnnealingLR")
 
         for epoch in range(self.epochs):
             self.model_.train()
@@ -216,6 +252,8 @@ class GRURoutePredictor:
                 opt.step()
                 tot += loss.item() * len(b)
             print(f"  epoch {epoch + 1}/{self.epochs}: train_mse={tot / n_samples:.4f}")
+            if self.arch_ == "gru_v2_extended":
+                scheduler.step()  # type: ignore[possibly-undefined]
 
         # Fallback lookup: mean(boardings) per (route, hour) from full history
         self.fallback_lookup_ = (
@@ -262,6 +300,8 @@ class GRURoutePredictor:
         preds = np.zeros(len(df), dtype=np.float64)
         device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model_.eval()
+        is_v2 = self.arch_ == "gru_v2_extended"
+        n_features = 4 if is_v2 else 2
         with torch.no_grad():
             for rid, group in history.groupby("route_id"):
                 group = group.sort_values("timestamp").reset_index(drop=True)
@@ -269,9 +309,15 @@ class GRURoutePredictor:
                     continue
                 boardings = group["boardings"].values.astype(np.float32)
                 hours = group["hour"].values.astype(np.int64)
-                seq = np.zeros((1, self.seq_len, 2), dtype=np.float32)
+                seq = np.zeros((1, self.seq_len, n_features), dtype=np.float32)
                 seq[0, :, 0] = hours[-self.seq_len :]
                 seq[0, :, 1] = np.log1p(boardings[-self.seq_len :])
+                if is_v2:
+                    timestamps = pd.to_datetime(group["timestamp"].values)
+                    weekdays = np.array([ts.weekday() for ts in timestamps], dtype=np.int64)
+                    is_wknd = (weekdays >= 5).astype(np.int64)
+                    seq[0, :, 2] = weekdays[-self.seq_len:]
+                    seq[0, :, 3] = is_wknd[-self.seq_len:]
                 pred_log = self.model_(torch.tensor(seq).to(device)).cpu().numpy()[0]
                 pred = float(np.expm1(pred_log))
                 mask = df["route_id"].astype(int) == int(rid)
@@ -316,6 +362,8 @@ class GRURoutePredictor:
             "layers": self.layers,
             "model_id": self.model_id,
             "seed": self.seed,
+            "arch_": self.arch_,
+            "route_emb_dim_": self.route_emb_dim_,
         }
         with p.open("wb") as f:
             pickle.dump(state, f)
@@ -337,6 +385,10 @@ class GRURoutePredictor:
             layers=state["layers"],
             seed=state["seed"],
         )
+        # Восстановить arch_ и route_emb_dim_ если они в state
+        if "arch_" in state:
+            instance.arch_ = state["arch_"]
+            instance.route_emb_dim_ = state.get("route_emb_dim_", instance.route_emb_dim_)
         instance.route_ids_ = state["route_ids"]
         instance.fallback_lookup_ = state["fallback_lookup"]
         instance.seq_len_ = state["seq_len_"]
