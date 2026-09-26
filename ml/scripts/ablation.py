@@ -8,15 +8,14 @@ Usage:
     uv run --directory ml python scripts/ablation.py
         --output docs/reports/ablation_2026-09-26.csv
 """
+
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 from transit_ai.config.flags import FlagsRegistry
@@ -70,6 +69,7 @@ def run_variant(
 
     # Build lag_lookup for inference
     from transit_ai.models.xgboost_route import build_lag_lookup
+
     lag_lookup = build_lag_lookup(train_df)
 
     preds = model.predict_batch(holdout_df, lag_lookup=lag_lookup)
@@ -99,12 +99,15 @@ def main() -> int:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     p.add_argument(
-        "--output", default="docs/reports/ablation_2026-09-26.csv",
-        help="Path to output CSV"
+        "--output",
+        default="docs/reports/ablation_2026-09-26.csv",
+        help="Path to output CSV",
     )
     p.add_argument(
-        "--variants", nargs="+", default=None,
-        help="Subset of variant names (default: all)"
+        "--variants",
+        nargs="+",
+        default=None,
+        help="Subset of variant names (default: all)",
     )
     args = p.parse_args()
 
@@ -126,18 +129,24 @@ def main() -> int:
             continue
         try:
             r = run_variant(
-                name, yaml_path,
-                DEFAULT_TRAIN_START, DEFAULT_TRAIN_END,
-                DEFAULT_HOLDOUT_START, DEFAULT_HOLDOUT_END,
+                name,
+                yaml_path,
+                DEFAULT_TRAIN_START,
+                DEFAULT_TRAIN_END,
+                DEFAULT_HOLDOUT_START,
+                DEFAULT_HOLDOUT_END,
             )
             results.append(r)
         except Exception as e:
             print(f"  ERROR {name}: {e}")
-            results.append({
-                "variant": name, "yaml": yaml_rel,
-                "error": str(e),
-                "wape_score_raw": -1.0,
-            })
+            results.append(
+                {
+                    "variant": name,
+                    "yaml": yaml_rel,
+                    "error": str(e),
+                    "wape_score_raw": -1.0,
+                }
+            )
 
     # Save CSV
     df_results = pd.DataFrame(results)

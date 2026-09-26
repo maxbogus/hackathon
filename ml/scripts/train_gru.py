@@ -7,6 +7,7 @@ Usage:
         [--model-id gru_v1]
         [--seq-len 168] [--hidden 64] [--epochs 10]
 """
+
 from __future__ import annotations
 
 import argparse
@@ -70,7 +71,10 @@ def main() -> int:
 
     # Train + holdout split
     import pandas as pd
-    holdout_mask = df["timestamp"] >= pd.Timestamp(DEFAULT_HOLDOUT_START).tz_localize(None)
+
+    holdout_mask = df["timestamp"] >= pd.Timestamp(DEFAULT_HOLDOUT_START).tz_localize(
+        None
+    )
     train_df = df[~holdout_mask].copy()
     holdout_df = df[holdout_mask].copy()
     print(f"Train:    {len(train_df):,} rows")

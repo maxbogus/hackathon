@@ -6,6 +6,7 @@
 - MLP head -> log1p(boardings)
 - Sequence length = 168h (7 days)
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -16,8 +17,8 @@ import pytest
 
 from transit_ai.models.gru_route import GRURoutePredictor
 
-
 # Fixtures
+
 
 def _make_minimal_history(n_days: int = 14, n_routes: int = 3) -> pd.DataFrame:
     """Минимальный ridership для тестов fit/predict."""
@@ -27,17 +28,20 @@ def _make_minimal_history(n_days: int = 14, n_routes: int = 3) -> pd.DataFrame:
         for h in range(24):
             for r in range(n_routes):
                 ts = start + timedelta(days=d, hours=h)
-                rows.append({
-                    "timestamp": ts,
-                    "route_id": r + 1,
-                    "date": ts.date(),
-                    "hour": h,
-                    "boardings": float(50 + r * 20 + h * 2),
-                })
+                rows.append(
+                    {
+                        "timestamp": ts,
+                        "route_id": r + 1,
+                        "date": ts.date(),
+                        "hour": h,
+                        "boardings": float(50 + r * 20 + h * 2),
+                    }
+                )
     return pd.DataFrame(rows)
 
 
 # Tests
+
 
 def test_gru_fit_predict_shape() -> None:
     """fit на малых данных -> predict на future grid возвращает правильный shape."""
@@ -50,7 +54,9 @@ def test_gru_fit_predict_shape() -> None:
     for d in future:
         for h in range(24):
             for r in (1, 2):
-                rows.append({"timestamp": d + timedelta(hours=h), "route_id": r, "hour": h})
+                rows.append(
+                    {"timestamp": d + timedelta(hours=h), "route_id": r, "hour": h}
+                )
     future_grid = pd.DataFrame(rows)
     preds = model.predict_batch(future_grid)
 
@@ -75,11 +81,15 @@ def test_gru_predict_with_short_history_uses_mean_fallback() -> None:
     history = _make_minimal_history(n_days=2, n_routes=2)
     model.fit(history)
 
-    future = pd.DataFrame([{
-        "timestamp": datetime(2025, 6, 4, tzinfo=UTC),
-        "route_id": 1,
-        "hour": 12,
-    }])
+    future = pd.DataFrame(
+        [
+            {
+                "timestamp": datetime(2025, 6, 4, tzinfo=UTC),
+                "route_id": 1,
+                "hour": 12,
+            }
+        ]
+    )
     preds = model.predict_batch(future)
     assert len(preds) == 1
     assert preds[0] >= 0
@@ -103,11 +113,15 @@ def test_gru_save_load_roundtrip(tmp_path) -> None:
     assert loaded.route_ids_ == model.route_ids_
     assert loaded.fallback_lookup_ == model.fallback_lookup_
 
-    future = pd.DataFrame([{
-        "timestamp": datetime(2025, 6, 4, tzinfo=UTC),
-        "route_id": 1,
-        "hour": 12,
-    }])
+    future = pd.DataFrame(
+        [
+            {
+                "timestamp": datetime(2025, 6, 4, tzinfo=UTC),
+                "route_id": 1,
+                "hour": 12,
+            }
+        ]
+    )
     # Оба используют fallback (model_=None в loaded, или short history в оригинале)
     p_orig = model._fallback_predict(future)
     p_loaded = loaded.predict_batch(future)
