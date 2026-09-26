@@ -243,3 +243,112 @@ def test_verify_manifest_fails_on_wrong_csv_filename(tmp_path: Path) -> None:
     )
     rc = verify_manifest(manifest_path=manifest_path, csv_path=csv_a)
     assert rc != 0
+
+
+# ----- verify_manifest() negative/corner cases (R4 coverage) ----------------
+
+
+def test_verify_manifest_fails_on_missing_csv(tmp_path: Path) -> None:
+    """R4 negative: verify падает если csv_path не существует."""
+    from transit_ai.submission.manifest import verify_manifest, write_manifest
+
+    csv_filename = "submission_x_v1_20251101_20251231_20260925T184500Z.csv"
+    # Создаём manifest, но НЕ создаём CSV
+    manifest_path = write_manifest(
+        out_dir=tmp_path,
+        csv_filename=csv_filename,
+        model_id="x_v1",
+        model_uri="ml/artifacts/x_v1/model.pkl",
+        train_range=("2025-01-01", "2025-08-31"),
+        sub_range=("2025-11-01", "2025-12-31"),
+        row_count=14640,
+        expected_rows=14640,
+        total_predictions=1.0,
+        coefficients={},
+        post_processing=[],
+    )
+    csv_path = tmp_path / csv_filename  # НЕ создаём
+    rc = verify_manifest(manifest_path=manifest_path, csv_path=csv_path)
+    assert rc != 0, "missing CSV must fail verification"
+
+
+def test_verify_manifest_fails_on_malformed_json(tmp_path: Path) -> None:
+    """R4 negative: verify падает если manifest.json — невалидный JSON."""
+    from transit_ai.submission.manifest import verify_manifest
+
+    csv_filename = "submission_x_v1.csv"
+    csv = _write_dummy_csv(tmp_path, csv_filename)
+    manifest_path = tmp_path / csv_filename.replace(".csv", ".json")
+    manifest_path.write_text("{not valid json, missing quote")
+
+    rc = verify_manifest(manifest_path=manifest_path, csv_path=csv)
+    assert rc != 0, "malformed JSON must fail verification"
+
+
+def test_verify_manifest_fails_on_expected_rows_mismatch(tmp_path: Path) -> None:
+    """R4 negative: verify падает если expected_rows != row_count (drift detect)."""
+    from transit_ai.submission.manifest import verify_manifest, write_manifest
+
+    csv_filename = "submission_x_v1_20251101_20251231_20260925T184500Z.csv"
+    csv = _write_dummy_csv(tmp_path, csv_filename, rows=14640)
+    # manifest говорит row_count=14640, но expected_rows=14000 → drift
+    manifest_path = write_manifest(
+        out_dir=tmp_path,
+        csv_filename=csv_filename,
+        model_id="x_v1",
+        model_uri="ml/artifacts/x_v1/model.pkl",
+        train_range=("2025-01-01", "2025-08-31"),
+        sub_range=("2025-11-01", "2025-12-31"),
+        row_count=14640,
+        expected_rows=14000,  # drift
+        total_predictions=1.0,
+        coefficients={},
+        post_processing=[],
+    )
+    rc = verify_manifest(manifest_path=manifest_path, csv_path=csv)
+    assert rc != 0, "expected_rows != row_count must fail verification"
+
+
+def test_dataset_hash_returns_hex_for_empty_list(tmp_path: Path) -> None:
+    """Corner case: dataset_hash на пустом списке возвращает валидный hex (не падает)."""
+    from transit_ai.submission.manifest import dataset_hash
+
+    result = dataset_hash([])
+    assert isinstance(result, str)
+    assert len(result) == 16  # hex sha256 truncated to 16 chars
+    # Пустой sha256 начинается с consistent pattern
+    assert all(c in "0123456789abcdef" for c in result)
+
+
+def test_dataset_hash_changes_with_different_files(tmp_path: Path) -> None:
+    """Corner case: dataset_hash разный для разных файлов (sanity)."""
+    from transit_ai.submission.manifest import dataset_hash
+
+    f1 = tmp_path / "a.csv"
+    f1.write_text("a,b\n1,2\n")
+    f2 = tmp_path / "b.csv"
+    f2.write_text("a,b\n3,4\n")
+
+    h1 = dataset_hash([f1])
+    h2 = dataset_hash([f2])
+    h_combo = dataset_hash([f1, f2])
+    assert h1 != h2
+    assert h_combo not in (h1, h2)
+
+
+def test_git_commit_returns_string(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Corner case: git_commit возвращает string даже без .git repo."""
+    from transit_ai.submission.manifest import git_commit
+
+    result = git_commit()
+    assert isinstance(result, str)
+    assert len(result) > 0
+
+
+def test_git_branch_returns_string(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Corner case: git_branch возвращает string даже без .git repo."""
+    from transit_ai.submission.manifest import git_branch
+
+    result = git_branch()
+    assert isinstance(result, str)
+    assert len(result) > 0
