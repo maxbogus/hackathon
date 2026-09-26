@@ -171,7 +171,13 @@ describe('TEXTS — locked snapshot', () => {
   it('matches the frozen shape of the dictionary', () => {
     // Snapshot surfaces every accidental addition to the dictionary.
     // Update it deliberately -- never silently.
-    expect(Object.keys(TEXTS).sort()).toEqual(['app', 'common', 'dispatcher', 'passenger']);
+    expect(Object.keys(TEXTS).sort()).toEqual([
+      'analyst',
+      'app',
+      'common',
+      'dispatcher',
+      'passenger',
+    ]);
   });
 
   it('exposes all severity labels as strings', () => {
