@@ -36,7 +36,9 @@ REPO_ROOT := $(shell pwd)
         assistant-test assistant-reasoning mcp-run \
         ledger-add ledger-list ledger-check ledger-export \
         note-from-finding promote handoff handoff-update \
-        backlog-ready backlog-list ticket docs         pyscn pyscn-compare pyscn-baseline         arch-dbml arch-dbml-check         benchmark-baseline benchmark-all benchmark-compare         run-benchmark         loadtest-smoke loadtest-baseline loadtest-stress loadtest-spike loadtest-soak loadtest-all loadtest-check up-loadtest check-training-time
+        backlog-ready backlog-list ticket docs         pyscn pyscn-compare pyscn-baseline         arch-dbml arch-dbml-check         benchmark-baseline benchmark-all benchmark-compare         run-benchmark         loadtest-smoke loadtest-baseline loadtest-stress loadtest-spike loadtest-soak loadtest-all loadtest-check up-loadtest check-training-time \
+        pipeline-up pipeline-down pipeline-logs pipeline-fetch pipeline-train pipeline-predict pipeline-full pipeline-test \
+        db-upgrade db-downgrade db-revision db-current db-history
 
 # ---------------------------------------------------------------------------
 # HELP
@@ -410,3 +412,59 @@ check-training-time: ## R6 gate: суммарное время обучения 
 	$(UV) run python scripts/check_training_time.py
 
 check-all: lint typecheck test api-check ledger-check frontend-text-check arch-dbml-check pyscn-compare ## Run all checks (CI gate)
+
+# ────────────────────────────────────────────────────────────────────────────
+# CELERY PIPELINE (T-193)
+# ────────────────────────────────────────────────────────────────────────────
+# Три сервиса: harvester (качает JSON), ml-pipeline (train+predict).
+# Поднимаются через профиль `pipeline`, чтобы не запускать в dev по умолчанию.
+
+pipeline-up: ## Start Celery workers (harvester + ml-pipeline, profile: pipeline)
+	$(DC) --profile pipeline up -d
+	@printf "\n\033[32m✓ Pipeline workers up.\n  - harvester: harvester.fetch_* tasks\n  - ml-pipeline: ml_pipeline.train_xgboost / predict_window / full_pipeline\n  Broker: redis://localhost:6379/1\033[0m\n"
+
+pipeline-down: ## Stop pipeline workers
+	$(DC) --profile pipeline down
+
+pipeline-logs: ## Tail pipeline logs (both workers)
+	$(DC) --profile pipeline logs -f harvester ml-pipeline
+
+# === Trigger tasks (Eager mode: запускает через .apply() вместо брокера) ===
+
+pipeline-fetch: ## Run all harvester tasks eagerly (no broker)  [WIP: T-193]
+	$(UV) --directory apps/harvester run python -c "from app.tasks import fetch_all; import json; print(json.dumps(fetch_all.apply().get(), indent=2, ensure_ascii=False))"
+
+pipeline-train: ## Trigger ml_pipeline.train_xgboost via broker
+	$(UV) run python -c "from apps.ml_pipeline.app.celery_app import celery_app; r = celery_app.send_task('ml_pipeline.train_xgboost'); print('Task:', r.id); print('Result:', r.get(timeout=600))"
+
+pipeline-predict: ## Trigger ml_pipeline.predict_window with default params
+	$(UV) run python -c "from apps.ml_pipeline.app.celery_app import celery_app; r = celery_app.send_task('ml_pipeline.predict_window', kwargs={'model_id':'xgboost_v_default'}); print('Task:', r.id); print('Result:', r.get(timeout=600))"
+
+pipeline-full: ## Trigger full_pipeline (train → predict)
+	$(UV) run python -c "from apps.ml_pipeline.app.celery_app import celery_app; r = celery_app.send_task('ml_pipeline.full_pipeline'); print('Task:', r.id); print('Result:', r.get(timeout=1800))"
+
+pipeline-test: ## Run unit tests for harvester + ml_pipeline
+	$(UV) --directory apps/harvester run pytest tests/ -v --no-cov
+	$(UV) --directory apps/ml_pipeline run pytest tests/ -v --no-cov
+
+# ────────────────────────────────────────────────────────────────────────────
+# DATABASE MIGRATIONS (T-194)
+# ────────────────────────────────────────────────────────────────────────────
+# alembic для PostgreSQL (TimescaleDB). Используется в docker stack и локально.
+
+db-upgrade: ## Apply all alembic migrations (need postgres running)
+	cd apps/backend && TRANSIT_AI_DATABASE_URL=$${TRANSIT_AI_DATABASE_URL:-postgresql+asyncpg://transit:transit_dev_only@localhost:5432/transit_dev} \
+		$(UV) run alembic upgrade head
+
+db-downgrade: ## Rollback last alembic migration
+	cd apps/backend && TRANSIT_AI_DATABASE_URL=$${TRANSIT_AI_DATABASE_URL:-postgresql+asyncpg://transit:transit_dev_only@localhost:5432/transit_dev} \
+		$(UV) run alembic downgrade -1
+
+db-revision: ## Generate new alembic migration (use MSG="...")
+	cd apps/backend && $(UV) run alembic revision --autogenerate -m "$(MSG)"
+
+db-current: ## Show current alembic revision
+	cd apps/backend && $(UV) run alembic current
+
+db-history: ## Show alembic migration history
+	cd apps/backend && $(UV) run alembic history --verbose

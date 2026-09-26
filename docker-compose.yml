@@ -142,6 +142,63 @@ services:
       K6_WEB_DASHBOARD_OPEN: "false"  # в headless Docker не пытаться открыть браузер
     # command задаётся в Makefile (разный для каждого профиля нагрузки)
 
+  # === Harvester (T-193) — Celery worker: качает JSON во внешние источники ===
+  # local mode по умолчанию (R4 hackathon-rules).
+  harvester:
+    build:
+      context: .
+      dockerfile: apps/harvester/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      HARVESTER_MODE: ${HARVESTER_MODE:-local}
+      HARVESTER_CELERY_BROKER_URL: redis://redis:6379/1
+      HARVESTER_CELERY_RESULT_BACKEND: redis://redis:6379/2
+      HARVESTER_DATA_DIR: /app/data
+      HARVESTER_EXTERNAL_DIR: /app/data/external
+    volumes:
+      - ./data:/app/data:rw
+    networks:
+      - transit-net
+    mem_limit: 256m
+    mem_reservation: 128m
+    cpus: "0.5"
+    profiles: ["pipeline"]   # вкл. через --profile pipeline
+
+  # === ML Pipeline (T-193) — Celery worker: train + predict ===
+  # Поднимается вместе с harvester через profile `pipeline`.
+  ml-pipeline:
+    build:
+      context: .
+      dockerfile: apps/ml_pipeline/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      ML_PIPELINE_CELERY_BROKER_URL: redis://redis:6379/1
+      ML_PIPELINE_CELERY_RESULT_BACKEND: redis://redis:6379/2
+      ML_PIPELINE_DATABASE_URL: postgresql+psycopg2://transit:${POSTGRES_PASSWORD:-transit_dev_only}@postgres:5432/transit_dev
+      ML_PIPELINE_ML_ARTIFACTS_DIR: /app/ml/artifacts
+      ML_PIPELINE_PREDICTIONS_DIR: /app/predictions
+      ML_PIPELINE_DATA_DIR: /app/data
+      PYTHONPATH: /app
+    volumes:
+      - ./ml:/app/ml:rw
+      - ./predictions:/app/predictions:rw
+      - ./data:/app/data:ro
+    networks:
+      - transit-net
+    # R6 hackathon-rules: train ≤ 60 мин. CPU pinned чтобы не наводить на backend.
+    mem_limit: 1g
+    mem_reservation: 512m
+    cpus: "1.0"
+    profiles: ["pipeline"]
+
 volumes:
   postgres_data:
   redis_data:
