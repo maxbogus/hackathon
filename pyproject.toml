@@ -140,13 +140,15 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = [
-    "tests",
     "apps/backend/tests",
     "apps/assistant/tests",
     "apps/mcp/tests",
     "apps/harvester/tests",
     "apps/ml_pipeline/tests",
     "ml/tests",
+    # Root tests/ (clinerules, load SLA, dockerfile) — отдельный target
+    # (см. Makefile: test-root) из-за pytest 'tests' shadow-конфликта
+    # между apps/*/tests/ и корневой tests/.
 ]
 addopts = [
     "-ra",

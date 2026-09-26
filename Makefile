@@ -23,13 +23,13 @@ SHELL := /usr/bin/env bash
 # Resolve tooling
 UV      ?= uv
 YARN    ?= yarn
-PYTHON  ?= python3
+PYTHON  ?= $(REPO_ROOT)/.venv/bin/python
 DC      ?= docker compose
 MACHINE ?= rtx5060    # rtx5060 | rtx4070_12gb
 REPO_ROOT := $(shell pwd)
 
 .PHONY: help install hooks-install up down \
-        lint format typecheck test test-unit test-int check-all \
+        lint format typecheck test test-unit test-int test-pipeline test-root check-all \
         seed inventory inspect-real train-baseline train-xgboost train-gru train-hybrid train-all \
         predict calibrate evaluate submission sweep mc-scenario \
         api-gen api-check fe-gen \
@@ -55,9 +55,9 @@ help: ## Show this help
 # INSTALL
 # ---------------------------------------------------------------------------
 
-install: ## Install all deps (uv sync + yarn install)
-	@printf "\033[36m→ uv sync (Python workspaces)\033[0m\n"
-	$(UV) sync --extra dev
+install: ## Install all deps (uv sync --all-packages + yarn install)
+	@printf "\033[36m→ uv sync --all-packages (apps/* + ml + dev extras)\033[0m\n"
+	$(UV) sync --all-packages --extra dev
 	@printf "\033[36m→ yarn install (Node workspaces)\033[0m\n"
 	corepack enable 2>/dev/null || true
 	cd apps/frontend && $(YARN) install
@@ -193,10 +193,36 @@ format: ## ruff format + eslint --fix
 typecheck: ## mypy strict + tsc --noEmit
 	$(UV) run mypy apps/backend/app apps/assistant/app apps/mcp/ 2>&1 | tail -30 || true
 	cd apps/frontend && $(YARN) typecheck
+test: ## pytest (per-app + ml) + vitest (run)
+	@printf "\033[36m→ backend pytest\033[0m\n"
+	cd $(REPO_ROOT)/apps/backend && $(PYTHON) -m pytest tests/ -q --no-cov
+	@printf "\033[36m→ ml pytest\033[0m\n"
+	cd $(REPO_ROOT) && $(UV) run pytest ml/tests -q --no-cov
+	@printf "\033[36m→ assistant pytest\033[0m\n"
+	cd $(REPO_ROOT)/apps/assistant && $(PYTHON) -m pytest tests/ -q --no-cov
+	@printf "\033[36m→ mcp pytest\033[0m\n"
+	cd $(REPO_ROOT)/apps/mcp && $(PYTHON) -m pytest tests/ -q --no-cov
+	@printf "\033[36m→ vitest (frontend)\033[0m\n"
+	cd $(REPO_ROOT)/apps/frontend && $(YARN) test:run
 
-test: ## pytest (unit) + vitest (run)
-	$(UV) run pytest apps/backend/tests ml/tests apps/assistant/tests apps/mcp/tests -m unit -q --no-cov
-	cd apps/frontend && $(YARN) test:run
+
+# Root tests/ (clinerules, loadtest SLA, dockerfile hardening) — отдельно,
+# иначе shadow-конфликт `tests` пакета между apps/*/tests/ и корневой tests/.
+test-root: ## pytest for root tests/ (clinerules, loadtest, dockerfile)
+	cd $(REPO_ROOT) && $(UV) run pytest tests/ -q --no-cov
+
+# ---------------------------------------------------------------------------
+# PIPELINE/CELERY tests — отдельный target, иначе collection error (apps/X/tests
+# shadow'ит pytest internal `tests` package; эти тесты требуют запуск из apps/X/).
+# ---------------------------------------------------------------------------
+
+test-pipeline: ## pytest for pipeline (harvester/sandbox/ml_pipeline) [WIP: T-193/T-194]
+	@printf "\033[36m→ harvester pytest (celery)[0m\n"
+	cd $(REPO_ROOT)/apps/harvester && $(UV) run --package transit-ai-harvester python -m pytest tests/ -q --no-cov
+	@printf "\033[36m→ sandbox pytest[0m\n"
+	cd $(REPO_ROOT)/apps/sandbox && $(PYTHON) -m pytest tests/ -q --no-cov
+	@printf "\033[36m→ ml_pipeline pytest (celery)[0m\n"
+	cd $(REPO_ROOT)/apps/ml_pipeline && $(UV) run --package transit-ai-ml-pipeline python -m pytest tests/ -q --no-cov
 
 test-unit: test ## Alias for test
 
