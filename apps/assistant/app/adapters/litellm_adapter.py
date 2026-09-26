@@ -15,9 +15,7 @@ class LiteLLMAdapter(BaseLLMAdapter):
         try:
             import litellm
         except ImportError as e:
-            raise ImportError(
-                "litellm не установлен. Установи: uv add litellm"
-            ) from e
+            raise ImportError("litellm не установлен. Установи: uv add litellm") from e
         self.litellm = litellm
         self.litellm.api_base = base_url
         self.litellm.api_key = api_key

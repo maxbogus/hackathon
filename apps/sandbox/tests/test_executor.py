@@ -48,10 +48,7 @@ def test_forbidden_builtin_exec() -> None:
 
 def test_allowed_stdlib_math() -> None:
     """math.sqrt(16) = 4 — разрешено."""
-    result = Sandbox().execute(
-        "import math\n"
-        "result = math.sqrt(16)"
-    )
+    result = Sandbox().execute("import math\nresult = math.sqrt(16)")
     assert result.success is True
     assert result.return_value == 4.0
 

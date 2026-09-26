@@ -19,19 +19,44 @@ from dataclasses import dataclass, field
 from typing import Any
 
 # === Запрещённые модули (R4: no internet, no subprocess) ===
-FORBIDDEN_MODULES: frozenset[str] = frozenset({
-    "subprocess", "shutil", "socket", "urllib", "urllib2", "urllib3",
-    "http", "httplib", "ftplib", "smtplib", "telnetlib",
-    "asyncio", "multiprocessing", "ctypes", "cffi",
-    "os.system", "os.exec", "os.spawn", "os.fork",
-})
+FORBIDDEN_MODULES: frozenset[str] = frozenset(
+    {
+        "subprocess",
+        "shutil",
+        "socket",
+        "urllib",
+        "urllib2",
+        "urllib3",
+        "http",
+        "httplib",
+        "ftplib",
+        "smtplib",
+        "telnetlib",
+        "asyncio",
+        "multiprocessing",
+        "ctypes",
+        "cffi",
+        "os.system",
+        "os.exec",
+        "os.spawn",
+        "os.fork",
+    }
+)
 
 # === Запрещённые builtins ===
 # `__import__` оставлен для поддержки import X в коде (AST уже валидирует модули).
-FORBIDDEN_BUILTINS: frozenset[str] = frozenset({
-    "exec", "eval", "compile", "open",
-    "input", "breakpoint", "globals", "locals",
-})
+FORBIDDEN_BUILTINS: frozenset[str] = frozenset(
+    {
+        "exec",
+        "eval",
+        "compile",
+        "open",
+        "input",
+        "breakpoint",
+        "globals",
+        "locals",
+    }
+)
 
 
 @dataclass
@@ -51,7 +76,9 @@ class Sandbox:
 
     timeout_sec: float = 30.0
     forbidden_modules: frozenset[str] = field(default_factory=lambda: FORBIDDEN_MODULES)
-    forbidden_builtins: frozenset[str] = field(default_factory=lambda: FORBIDDEN_BUILTINS)
+    forbidden_builtins: frozenset[str] = field(
+        default_factory=lambda: FORBIDDEN_BUILTINS
+    )
 
     def validate_ast(self, code: str) -> str | None:
         """Проверяет AST на отсутствие опасных конструкций.
@@ -90,15 +117,22 @@ class Sandbox:
         error = self.validate_ast(code)
         if error:
             return SandboxResult(
-                success=False, stdout="", error=error,
+                success=False,
+                stdout="",
+                error=error,
                 duration_ms=(time.time() - start) * 1000,
             )
 
         # 2. Restricted builtins
-        safe_builtins = {
-            k: v for k, v in __builtins__.items()  # type: ignore[var-annotated]
-            if k not in self.forbidden_builtins
-        } if isinstance(__builtins__, dict) else {}
+        safe_builtins = (
+            {
+                k: v
+                for k, v in __builtins__.items()  # type: ignore[var-annotated]
+                if k not in self.forbidden_builtins
+            }
+            if isinstance(__builtins__, dict)
+            else {}
+        )
 
         if globals_ is None:
             globals_ = {"__builtins__": safe_builtins}

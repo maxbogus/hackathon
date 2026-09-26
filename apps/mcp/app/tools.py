@@ -138,6 +138,7 @@ TOOLS: dict[str, dict] = {
 # Tool implementations
 # ===========================================================================
 
+
 async def get_predictions_for_route(
     route_id: int,
     from_date: str,
@@ -184,12 +185,14 @@ async def get_top_routes_by_traffic(
         points = data.get("points", [])
         total = sum(p.get("value", 0) for p in points)
         avg = total / len(points) if points else 0
-        results.append({
-            "route_id": route_id,
-            "total_boardings": round(total, 1),
-            "avg_per_day": round(avg, 1),
-            "days_with_data": len(points),
-        })
+        results.append(
+            {
+                "route_id": route_id,
+                "total_boardings": round(total, 1),
+                "avg_per_day": round(avg, 1),
+                "days_with_data": len(points),
+            }
+        )
 
     results.sort(key=lambda x: x["total_boardings"], reverse=True)
     return {"top_n": results[:n], "total_routes": len(results)}
@@ -198,11 +201,13 @@ async def get_top_routes_by_traffic(
 async def get_validation_report() -> dict[str, Any]:
     """Заглушка: возвращает meta о validation report."""
     from pathlib import Path
+
     report_path = Path("data/validation_reports/inventory.json")
     if not report_path.exists():
         return {"status": "no_report", "message": "Run `make inventory` to generate"}
     try:
         import json
+
         data = json.loads(report_path.read_text())
         return {"status": "ok", "report": data}
     except Exception as e:
@@ -223,6 +228,7 @@ async def run_python_sandbox(code: str, timeout_sec: float = 30.0) -> dict[str, 
         import contextlib
         import io
         import time
+
         try:
             tree = ast.parse(code)
         except SyntaxError as e:
@@ -231,11 +237,19 @@ async def run_python_sandbox(code: str, timeout_sec: float = 30.0) -> dict[str, 
             if isinstance(node, ast.Import):
                 for a in node.names:
                     if a.name.split(".")[0] in {"subprocess", "socket", "urllib"}:
-                        return {"success": False, "error": f"Forbidden import: {a.name}", "stdout": "", "duration_ms": 0}
+                        return {
+                            "success": False,
+                            "error": f"Forbidden import: {a.name}",
+                            "stdout": "",
+                            "duration_ms": 0,
+                        }
         buf = io.StringIO()
         start = time.time()
-        safe_builtins = {k: v for k, v in __builtins__.items() if k not in {"exec", "eval", "open"}} \
-            if isinstance(__builtins__, dict) else {}
+        safe_builtins = (
+            {k: v for k, v in __builtins__.items() if k not in {"exec", "eval", "open"}}
+            if isinstance(__builtins__, dict)
+            else {}
+        )
         try:
             with contextlib.redirect_stdout(buf):
                 exec(code, {"__builtins__": safe_builtins})

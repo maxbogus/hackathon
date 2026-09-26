@@ -27,6 +27,7 @@ def _make_mock_response(json_data: dict, status_code: int = 200):
         response.raise_for_status = MagicMock(return_value=None)
     else:
         import httpx
+
         response.raise_for_status = MagicMock(
             side_effect=httpx.HTTPStatusError(
                 f"HTTP {status_code}", request=MagicMock(), response=response
@@ -38,6 +39,7 @@ def _make_mock_response(json_data: dict, status_code: int = 200):
 
 
 # === Direct sandbox tests (no backend) ===
+
 
 @pytest.mark.asyncio
 async def test_run_python_sandbox_success() -> None:
@@ -64,6 +66,7 @@ async def test_run_python_sandbox_forbidden() -> None:
 
 
 # === Tools with mocked backend ===
+
 
 @pytest.mark.asyncio
 async def test_get_predictions_for_route_with_mock() -> None:
@@ -121,6 +124,7 @@ async def test_dispatch_tool_bad_arguments() -> None:
 
 
 # === Tool registry ===
+
 
 def test_all_tools_have_required_fields() -> None:
     """Каждый tool должен иметь name, description, input_schema."""

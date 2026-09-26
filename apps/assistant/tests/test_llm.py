@@ -20,6 +20,7 @@ import pytest
 
 # === Registry tests ===
 
+
 def test_registry_has_mvp_models() -> None:
     """В реестре есть MVP модели (минимум 5)."""
     assert len(REGISTRY) >= 5
@@ -63,10 +64,12 @@ def test_resolve_profile_unknown_raises() -> None:
 
 # === get_adapter tests ===
 
+
 def test_get_adapter_anthropic_creates_anthropic() -> None:
     """get_adapter("anthropic/...") создаёт AnthropicAdapter."""
     adapter = get_adapter("anthropic/claude-sonnet-4-5")
     from app.adapters.anthropic_adapter import AnthropicAdapter
+
     assert isinstance(adapter, AnthropicAdapter)
     assert "claude" in adapter.model_id
 
@@ -76,9 +79,11 @@ def test_get_adapter_openai_creates_openai(monkeypatch) -> None:
     monkeypatch.setenv("TRANSIT_AI_LLM_OPENAI_API_KEY", "sk-test-fake-key")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-fake-key")
     from app.config import get_settings
+
     get_settings.cache_clear()
     adapter = get_adapter("openai/gpt-4o-mini")
     from app.adapters.openai_adapter import OpenAIAdapter
+
     assert isinstance(adapter, OpenAIAdapter)
 
 
@@ -86,6 +91,7 @@ def test_get_adapter_litellm_creates_litellm() -> None:
     """get_adapter("litellm/...") создаёт LiteLLMAdapter."""
     adapter = get_adapter("litellm/deepseek-chat")
     from app.adapters.litellm_adapter import LiteLLMAdapter
+
     assert isinstance(adapter, LiteLLMAdapter)
 
 
@@ -97,12 +103,12 @@ def test_get_adapter_default_uses_settings() -> None:
 
 # === Adapter base interface tests ===
 
+
 def test_anthropic_adapter_implements_interface() -> None:
     """AnthropicAdapter реализует generate() и stream()."""
     from app.adapters.anthropic_adapter import AnthropicAdapter
-    adapter = AnthropicAdapter(
-        model_id="claude-sonnet-4-5", api_key=None, base_url=None
-    )
+
+    adapter = AnthropicAdapter(model_id="claude-sonnet-4-5", api_key=None, base_url=None)
     assert hasattr(adapter, "generate")
     assert hasattr(adapter, "stream")
     assert callable(adapter.generate)

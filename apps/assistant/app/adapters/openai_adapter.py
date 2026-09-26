@@ -15,9 +15,7 @@ class OpenAIAdapter(BaseLLMAdapter):
         try:
             from openai import AsyncOpenAI
         except ImportError as e:
-            raise ImportError(
-                "openai SDK не установлен. Установи: uv add openai"
-            ) from e
+            raise ImportError("openai SDK не установлен. Установи: uv add openai") from e
         self.client = AsyncOpenAI(
             api_key=api_key,
             base_url=base_url,

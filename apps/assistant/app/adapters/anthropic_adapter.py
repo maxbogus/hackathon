@@ -16,9 +16,7 @@ class AnthropicAdapter(BaseLLMAdapter):
         try:
             from anthropic import AsyncAnthropic
         except ImportError as e:
-            raise ImportError(
-                "anthropic SDK не установлен. Установи: uv add anthropic"
-            ) from e
+            raise ImportError("anthropic SDK не установлен. Установи: uv add anthropic") from e
         self.client = AsyncAnthropic(
             api_key=api_key,
             base_url=base_url,
@@ -32,9 +30,7 @@ class AnthropicAdapter(BaseLLMAdapter):
             system=request.system_prompt or "",
             messages=[{"role": "user", "content": request.prompt}],
         )
-        content = "".join(
-            block.text for block in msg.content if hasattr(block, "text")
-        )
+        content = "".join(block.text for block in msg.content if hasattr(block, "text"))
         return LLMResponse(
             content=content,
             model=msg.model,

@@ -70,7 +70,5 @@ def list_models() -> list[str]:
 def resolve_profile(model_id: str) -> ModelEntry:
     """Получить ModelEntry или KeyError."""
     if model_id not in REGISTRY:
-        raise KeyError(
-            f"Unknown model: {model_id}. Available: {list_models()}"
-        )
+        raise KeyError(f"Unknown model: {model_id}. Available: {list_models()}")
     return REGISTRY[model_id]
