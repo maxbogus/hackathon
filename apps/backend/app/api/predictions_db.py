@@ -139,9 +139,9 @@ async def export_predictions_csv(
     model_id: str | None = Query(default=None),
     feature_set: str | None = Query(default=None),
     zeros_applied: bool | None = Query(default=None),
-    coef_weather: float = Query(default=1.0),
-    coef_event: float = Query(default=1.0),
-    coef_season: float = Query(default=1.0),
+    coef_weather: float = Query(default=1.0, ge=0, le=3),
+    coef_event: float = Query(default=1.0, ge=0, le=3),
+    coef_season: float = Query(default=1.0, ge=0, le=3),
     session: AsyncSession = Depends(get_db),
 ) -> Response:
     """Возвращает CSV (route;date;hour;prediction).
@@ -153,7 +153,13 @@ async def export_predictions_csv(
       - separator `;`
       - колонки: route, date (YYYY-MM-DD), hour (0-23), prediction
       - header НЕ включён (для совместимости с ml platform scoring)
+
+    Валидация (clinerule 23):
+      - coef_weather/event/season ∈ [0, 3] (FastAPI Query ge/le → 422)
+      - from_date < to_date (HTTPException 400)
     """
+    if from_date >= to_date:
+        raise HTTPException(status_code=400, detail="from_date must be < to_date")
     if feature_set is None:
         feature_set = await _default_feature_set(session)
     if zeros_applied is None:

@@ -8,8 +8,23 @@ from pydantic import ValidationError
 from app.config import REPO_ROOT, Settings
 
 
-def test_settings_loads_with_defaults() -> None:
-    """Default settings (no env vars) point to local dev URLs."""
+def test_settings_loads_with_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Default settings (no env vars) point to local dev URLs.
+
+    Явно очищаем TRANSIT_AI_* env vars, чтобы тест был независим от shell окружения
+    разработчика (без этого тест падает на dev-машине с TRANSIT_AI_DATABASE_URL=sqlite).
+    """
+    for var in (
+        "TRANSIT_AI_APP_ENV",
+        "TRANSIT_AI_DEBUG",
+        "TRANSIT_AI_DATABASE_URL",
+        "TRANSIT_AI_REDIS_URL",
+        "TRANSIT_AI_REDIS_CACHE_TTL_SECONDS",
+        "TRANSIT_AI_CORS_ORIGINS",
+        "TRANSIT_AI_ARTIFACTS_DIR",
+    ):
+        monkeypatch.delenv(var, raising=False)
+
     s = Settings(_env_file=None)  # ignore .env to test pure defaults
     assert s.app_env == "dev"
     assert s.app_version == "0.1.0"
