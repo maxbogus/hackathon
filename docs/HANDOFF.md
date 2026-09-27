@@ -1,7 +1,51 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-27T13:30:00Z
-# Обновлено: Cline (агент) — T-225 done: rename «Пассажир» → «Диспетчер» в nav, /dispatcher убран из nav как orphan-роут (F-098, D-037).
+> Последнее обновление: 2026-09-27T13:50:00Z
+# Обновлено: Cline (агент) — T-222 done: PredictionsTable (TanStack Table v8 + react-virtual), T-223 отменён (F-099).
+
+## Мини-сессия 2026-09-27T13:35:00Z — T-222 PredictionsTable.tsx (D-038, F-099, T-223 отменён)
+
+**Контекст:** Пользователь попросил "добавить вкладку и вывести в ней предсказания в таблице на весь период при помощи tanstack table, желательно с фильтрами и кешем, по умолчанию щадящий выбор, с лоадингом". План после уточнений: **T-223 отменён** ("выбрось"), **T-222 — ТОЛЬКО таблица** без интеграции в PassengerMode (reusable компонент).
+
+**Что сделано (RED→GREEN→REFACTOR):**
+- `apps/frontend/src/components/Passenger/PredictionsTable.tsx` (383 строки) — pure UI:
+  - TanStack Table v8: getCoreRowModel + getSortedRowModel + getFilteredRowModel, globalFilterFn=includesString.
+  - Виртуализация @tanstack/react-virtual 3.10.0: 400px контейнер, row-height 32px, overscan 10.
+  - 4 колонки (route / date / hour / value) с i18n `passenger.predictionsTable.*` (17 новых ключей).
+  - Multi-select route filter: default `{1, 7, 17, 25}` (D-038, лучший WAPE-score), кнопка "Показать все".
+  - Short-circuit states: loading → t('common.loading'), error → `<Alert severity="warning">`, empty → t('passenger.predictionsTable.emptyMessage').
+  - Footer: "строк: N · маршрутов: M" (через tf()).
+- `apps/frontend/src/lib/predictionsTable.ts` — TanStack Query helper:
+  - frozen `predictionsCsvQueryKey = ['predictions-csv']` для стабильной кэш-идентичности.
+  - `predictionsCsvQueryFn(ctx)` делегирует в `routeCsv.fetchPredictionsCsv`, пробрасывая `signal` для cancellation.
+  - `PREDICTIONS_CSV_STALE_TIME_MS = 5*60_000` (CSV меняется только при новом submission).
+- `apps/frontend/src/components/Passenger/index.ts` — barrel export (PredictionsTable + RouteLoadCard + LoadLegend).
+- `apps/frontend/src/lib/i18n/ru-RU.ts` — блок `passenger.predictionsTable.*` (17 ключей).
+- `apps/frontend/src/lib/i18n/MIGRATION.md` — строка T-222.
+
+**Метрики:**
+- vitest: 20/20 PASSED (helper 6 + component 14).
+- typecheck: 0 errors в моих файлах (2 pre-existing в `routeCsv.ts`, T-221).
+- lint: 0 issues в моих файлах (6+2 pre-existing в `downloadCsv.ts`/`HorizonToggle.tsx`).
+- `make frontend-text-check`: мои файлы чистые (2 pre-existing в `RouteLoadCard.tsx`, T-218).
+- Commits: `0fbf61d` (фича) + `e3a1bc0` (acceptance checklist).
+
+**Артефакты:**
+- 4 новых файла: `PredictionsTable.tsx`, `PredictionsTable.test.tsx`, `predictionsTable.ts`, `predictionsTable.test.ts`, `components/Passenger/index.ts`.
+- 1 модифицирован: `ru-RU.ts` (17 ключей в новом namespace).
+- 1 перемещён в archive: `docs/backlog/tickets/T-222-...md` → `docs/backlog/archive/`.
+- `docs/ledger/decisions.jsonl` — D-038 (10 решений по архитектуре T-222).
+- `docs/ledger/findings.jsonl` — F-099 (T-223 отменён по запросу пользователя).
+- `docs/backlog/STATUS.md` — обновлены счётчики (50 архивов, 28 ledger).
+
+**Важно для следующей сессии:**
+- ✅ **PredictionsTable не интегрирован** ни в один роут/PassengerMode. Это отдельный reusable компонент — нужен отдельный тикет на интеграцию (например "T-226: PassengerMode встраивает PredictionsTable как секцию 'Прогноз по часам'").
+- ✅ **T-223 оставлен в `backlog/tickets/`**, но помечен как отменённый через F-099. При следующем RICE review — удалить или переписать как scope-down новый тикет.
+- ⚠️ **Виртуализация не тестируется в jsdom** (useVirtualizer требует getBoundingClientRect, всегда 0×0). Тесты проверяют наличие scroll container, footer и правильный счёт — не видимый текст строк. В реальном браузере работает.
+- ⚠️ **DEFAULT_SELECTED_ROUTES hardcoded** — пока лидерборд submission не подскажет лучший набор. После ещё одного submission можно пересмотреть.
+- ➡️ Следующий natural candidate — интегрировать в AnalystDashboard или новый /predictions роут. Или дальше по списку T-220 (export.csv уже есть) / T-204 (XLSX-экспорт).
+
+---
 
 ## Мини-сессия 2026-09-27T13:30:00Z — T-225 rename «Пассажир» → «Диспетчер» (F-098, D-037)
 
