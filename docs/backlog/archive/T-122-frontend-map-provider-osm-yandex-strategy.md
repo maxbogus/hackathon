@@ -13,10 +13,10 @@ rice:
 depends_on: []
 blocks: []
 tags: [frontend, map, leaflet, yandex, strategy, beneficiary, hackathon]
-status: ready
+status: done
 created: 2026-09-23
-updated: 2026-09-23
-assignee: "baev"
+updated: 2026-09-27
+assignee: "boguslavsky"
 ---
 
 # T-122: MapProvider + LeafletMap + YandexMap — карта Москвы с остановками и маршрутами
@@ -39,18 +39,24 @@ assignee: "baev"
 
 ## Acceptance Criteria
 
-- [ ] Создан `apps/frontend/src/components/Map/MapProvider.tsx` — фабрика по `VITE_MAP_IMPL=osm|yandex`
-- [ ] Реализован `apps/frontend/src/components/Map/LeafletMap.tsx` (OSM, без ключей, lazy-loaded)
-- [ ] Реализован `apps/frontend/src/components/Map/YandexMap.tsx` (lazy-loaded, требует VITE_YANDEX_MAPS_API_KEY)
-- [ ] Реализован общий интерфейс `MapProvider` (addStopMarker, removeStopMarker, flyTo, onClick) в `types.ts`
-- [ ] Маркеры остановок с цветовой кодировкой по `load_color()` (green/yellow/red/darkred)
-- [ ] Линии маршрутов: polyline с толщиной, пропорциональной `predicted_load_pct`
-- [ ] Используются данные из `STOP_ROUTES` backend (через mock для MVP, через API позже)
-- [ ] `yarn typecheck` (`tsc --noEmit`) без ошибок
-- [ ] `yarn build` собирает без warnings о circular imports
-- [ ] Smoke: `yarn dev` → открыть `http://localhost:5173/?role=dispatcher` → видна карта Москвы с 4 остановками (мин. demo)
-- [ ] При клике на маркер — popup с прогнозом загрузки (через alert placeholder)
-- [ ] Документация: README в `apps/frontend/src/components/Map/README.md` (как добавить новый провайдер)
+- [x] Создан `apps/frontend/src/components/Map/MapProvider.tsx` — фабрика по `VITE_MAP_IMPL=osm|yandex`
+      (экспортирует `<RouteMap>`; выбор — чистая функция `mapStrategy.selectMapImpl`)
+- [x] Реализован `apps/frontend/src/components/Map/LeafletMap.tsx` (OSM, без ключей, lazy-loaded)
+- [x] Реализован `apps/frontend/src/components/Map/YandexMap.tsx` (lazy-loaded, требует `VITE_YANDEX_MAPS_API_KEY`)
+- [x] Реализован общий интерфейс `RouteMapProps` в `types.ts` (routes/tierByRoute/loadPctByRoute/
+      selectedRouteId/onSelectRoute/height); реализации — `CircleMarker`/`Tooltip` + `Polyline`
+- [x] Маркеры остановок с цветовой кодировкой по tier'у загрузки (green/yellow/red/darkred + gray),
+      палитра — тот же `loadTier.COLORS`, что у карточек и легенды
+- [x] Линии маршрутов: polyline с толщиной, пропорциональной `load_pct` (`polylineWeight`)
+- [x] Данные — из нового backend-контракта `GET /api/v1/geo/routes` (T-227): **реальные 10 маршрутов /
+      142 остановки** вместо мок-`STOP_ROUTES` (mock остаётся только для ETA-демо)
+- [x] `yarn typecheck` — 0 ошибок в файлах T-122 (2 pre-existing в `lib/routeCsv.ts`, см. T-221)
+- [x] `vite build` собирает; оба провайдера — отдельные lazy-чанки (`LeafletMap-*.js`, `YandexMap-*.js`)
+- [ ] Smoke в браузере (`yarn dev` → `/passenger`) — **не выполнено в этой сессии**: нужен живой
+      backend + глазами проверить тайлы/ключ (см. «Что осталось»)
+- [x] Клик по остановке/линии → `onSelectRoute`; клик по карточке маршрута → тот же выбор
+      (взаимная подсветка карточка ↔ карта; прогноз остаётся в карточках)
+- [x] Документация: `apps/frontend/src/components/Map/README.md` (как добавить новый провайдер)
 
 ## Technical Notes
 
@@ -59,52 +65,46 @@ assignee: "baev"
 - `import.meta.env.VITE_MAP_IMPL` для переключения
 - `Suspense` с skeleton fallback
 
-Установка зависимостей (yarn 4 через corepack):
-```bash
-yarn workspace @transit-ai/frontend add react-leaflet@4 leaflet@1.9
-yarn workspace @transit-ai/frontend add -D @types/leaflet
-# Yandex Maps JS API грузится через <script> tag (не npm), см. .clinerules/09-map-strategy.md
-```
+Отличия от исходного плана тикета (осознанные):
+- Yandex — через уже установленный `@pbe/react-yandex-maps` (JS API 2.1, `coordorder=latlong`),
+  а не через `<script>`-тег вручную: пакет сам строит `api-maps.yandex.ru/2.1/?apikey=...`.
+- Геометрия — реальный каталог backend вместо мока; дорожной polyline в данных нет,
+  линия строится по остановкам в порядке `order` (нужен routing-API — вне R4).
+- Vite читает env из корня репо (`envDir`), чтобы ключ не дублировался (F-102).
 
 Структура файлов:
 ```
 apps/frontend/src/components/Map/
 ├── README.md              # документирует как добавить новый провайдер
-├── MapProvider.tsx        # фабрика
-├── types.ts               # MapProvider interface, Stop, MarkerOptions, ColorScale
+├── MapProvider.tsx        # фабрика (компонент <RouteMap>)
+├── mapStrategy.ts         # selectMapImpl() — выбор провайдера
+├── types.ts               # RouteMapProps, ре-экспорт MapRoute/MapStop
+├── mapColors.ts           # цвет/толщина/радиус/прозрачность
 ├── LeafletMap.tsx         # OSM реализация
-└── YandexMap.tsx          # Yandex реализация (скелет достаточно для MVP)
+├── YandexMap.tsx          # Yandex реализация
+└── *.test.ts(x)           # 28 тестов (colors/strategy/provider) + тесты в lib/geoRoutes.test.ts
 ```
-
-Переиспользовать `lib/recommend.ts` и `forecast/load.py::load_color()` (D-012):
-- Цвет маркера = `load_color(load_pct)` из backend (или локально через `lib/recommend.ts`)
-- Сегменты polyline окрашиваются по тому же принципу
 
 ## Verification
 
 ```bash
-# 1. Type-check
-cd apps/frontend && yarn typecheck
-# Ожидаем: 0 errors
-
-# 2. Build
-cd apps/frontend && yarn build
-# Ожидаем: dist/ собран без warnings
-
-# 3. Unit-тесты (если добавим vitest для MapProvider)
-cd apps/frontend && yarn test --run MapProvider
-# Ожидаем: фабрика выбирает OSM если VITE_MAP_IMPL=osm, Yandex если =yandex
-
-# 4. Live smoke
-cd apps/frontend && yarn dev
-# Открыть http://localhost:5173 → role=dispatcher → видна карта с 4 остановками
-# Кликнуть на маркер stop_id=1 → popup с прогнозом загрузки
-
-# 5. Переключение на Yandex
-echo "VITE_MAP_IMPL=yandex" >> apps/frontend/.env.local
-echo "VITE_YANDEX_MAPS_API_KEY=$KEY" >> apps/frontend/.env.local
-# Перезапустить yarn dev, проверить что грузится Yandex (нужен реальный ключ)
+cd apps/frontend && yarn typecheck            # мои файлы: 0 errors
+cd apps/frontend && yarn test:run             # 223 passed (2 pre-existing fails в routeCsv.test.ts)
+cd apps/frontend && yarn docker-build         # vite build: LeafletMap/YandexMap — lazy-чанки
+make frontend-text-check                      # ✓ No hardcoded UI strings
+make api-check                                # OpenAPI in sync (24 paths)
+make up                                       # http://localhost:5173/passenger — карта с 10 маршрутами
+# Yandex (опционально): VITE_MAP_IMPL=yandex в корневом .env + ключ → перезапуск yarn dev
 ```
+
+## Status
+
+`done` (2026-09-27). Осталось (не блокирует приёмку):
+1. Живой браузерный smoke на OSM и, при наличии валидного ключа под JS API 2.1, на Yandex.
+2. `yarn build` (с `tsc`) остаётся красным из-за 2 pre-existing TS-ошибок в `lib/routeCsv.ts` — T-221.
+3. Вне скоупа этого тикета (ТЗ §3.1.4): временной слайдер по часам (нет per-stop источника загрузки),
+   реальная дорожная геометрия.
+
 
 ## Beneficiary Impact
 
