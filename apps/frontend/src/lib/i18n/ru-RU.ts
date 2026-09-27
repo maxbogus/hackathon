@@ -44,6 +44,11 @@ export const TEXTS = {
       label: 'Аналитик',
       description: 'Графики и метрики (T-035/037)',
     },
+    // T-222 follow-up: новая вкладка /predictions с TanStack Table v8.
+    rolePredictions: {
+      label: 'Прогноз · таблица',
+      description: 'Все 14640 прогнозов (10 маршрутов × 61 день × 24 ч)',
+    },
     // T-200 / D-027: planner tab was removed — no rolePlanner key anymore.
   },
 
@@ -77,6 +82,13 @@ export const TEXTS = {
         severityInfo: 'ℹ️  Инфо',
       },
     },
+  },
+
+  /* T-222 follow-up: страница /predictions — таблица прогнозов. */
+  predictions: {
+    viewTitle: '📋 Прогноз — таблица на весь период',
+    viewHint:
+      'Все сохранённые прогнозы из БД (10 маршрутов, 1 ноября — 31 декабря). Фильтры по маршрутам, поиск, сортировка по любой колонке. По умолчанию показаны 4 маршрута с лучшим WAPE-score.',
   },
 
   passenger: {

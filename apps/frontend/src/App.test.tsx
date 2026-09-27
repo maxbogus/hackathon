@@ -9,8 +9,9 @@
  * T-200 / D-027: planner was removed — three roles remain.
  *
  * T-225 / D-037: /passenger переименован в «Диспетчер» (UX-rename). Старая
- * вкладка /dispatcher (AlertsPanel) убрана из nav как orphan-роут. В nav
- * остаются 2 ссылки: 🎛️ Диспетчер (= /passenger) и 📊 Аналитик.
+ * вкладка /dispatcher (AlertsPanel) убрана из nav как orphan-роут.
+ * T-222 follow-up: добавлена 3-я вкладка «📋 Прогноз · таблица» (PredictionsTable).
+ * В nav остаются 3 ссылки: 🎛️ Диспетчер, 📊 Аналитик, 📋 Прогноз · таблица.
  *
  * Covers AC-1 (role-switcher with two entries) at a minimal level. The
  * deeper <PassengerMode> behaviour is covered by PassengerMode.test.tsx;
@@ -37,18 +38,20 @@ function renderWithProviders(ui: React.ReactElement): void {
 }
 
 describe('<App>', () => {
-  it('renders a role-switcher with two role links (Диспетчер + Аналитик — T-225)', async () => {
+  it('renders a role-switcher with three role links (Диспетчер / Аналитик / Прогноз · таблица — T-225 + T-222)', async () => {
     renderWithProviders(<App />);
     // T-225: /passenger теперь называется «Диспетчер», /dispatcher удалён из nav.
     expect(await screen.findByRole('link', { name: /диспетчер/i })).toBeInTheDocument();
     expect(await screen.findByRole('link', { name: /аналитик/i })).toBeInTheDocument();
+    // T-222 follow-up: новая вкладка /predictions с TanStack Table v8.
+    expect(await screen.findByRole('link', { name: /прогноз.*таблица/i })).toBeInTheDocument();
     // T-225: «Пассажир» в nav больше нет (был переименован).
     expect(screen.queryByRole('link', { name: /^🧍\s*пассажир$/i })).not.toBeInTheDocument();
     // T-200 / D-027: planner tab was removed.
     expect(screen.queryByRole('link', { name: /планировщик/i })).not.toBeInTheDocument();
-    // Sanity: должно быть ровно 2 ссылки в nav.
+    // Sanity: должно быть ровно 3 ссылки в nav.
     const links = screen.getAllByRole('link');
-    expect(links).toHaveLength(2);
+    expect(links).toHaveLength(3);
   });
 
   it('redirects "/" to /passenger and renders the passenger panel', async () => {

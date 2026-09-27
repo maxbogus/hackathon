@@ -177,6 +177,8 @@ describe('TEXTS — locked snapshot', () => {
       'common',
       'dispatcher',
       'passenger',
+      // T-222 follow-up: новая вкладка /predictions с TanStack Table v8.
+      'predictions',
     ]);
   });
 

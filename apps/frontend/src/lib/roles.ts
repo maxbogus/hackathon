@@ -27,7 +27,7 @@
  * "coming soon" copy.
  */
 
-export type RoleId = 'passenger' | 'analyst';
+export type RoleId = 'passenger' | 'analyst' | 'predictions';
 
 export interface RoleDef {
   /** URL slug, used as the route path. */
@@ -35,11 +35,15 @@ export interface RoleDef {
   /** Emoji rendered next to the role label in the header. */
   readonly emoji: string;
   /** TKey whose value is the role button label. */
-  readonly labelKey: 'app.rolePassenger.label' | 'app.roleAnalyst.label';
+  readonly labelKey:
+    | 'app.rolePassenger.label'
+    | 'app.roleAnalyst.label'
+    | 'app.rolePredictions.label';
   /** TKey whose value is the description shown in the placeholder panel. */
   readonly descriptionKey:
     | 'app.rolePassenger.description'
-    | 'app.roleAnalyst.description';
+    | 'app.roleAnalyst.description'
+    | 'app.rolePredictions.description';
   /** Shared "coming soon" body. See file header for rationale. */
   readonly placeholderKey: 'app.rolePassenger.placeholder';
 }
@@ -60,6 +64,15 @@ export const ROLES: ReadonlyArray<RoleDef> = [
     emoji: '📊',
     labelKey: 'app.roleAnalyst.label',
     descriptionKey: 'app.roleAnalyst.description',
+    placeholderKey: 'app.rolePassenger.placeholder',
+  },
+  {
+    // T-222 follow-up: новая вкладка с таблицей прогнозов (D-038).
+    // TanStack Table v8 + react-virtual, 14640 строк.
+    id: 'predictions',
+    emoji: '📋',
+    labelKey: 'app.rolePredictions.label',
+    descriptionKey: 'app.rolePredictions.description',
     placeholderKey: 'app.rolePassenger.placeholder',
   },
 ];
