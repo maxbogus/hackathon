@@ -684,6 +684,244 @@
         }
       }
     },
+    "/api/v1/predictions/load": {
+      "get": {
+        "tags": [
+          "load-summary"
+        ],
+        "summary": "T-218: Summary predictions — avg load per route (block 'kak budet')",
+        "description": "Srednie boardings + load_pct za marshrutami (predictions).",
+        "operationId": "get_predictions_load_api_v1_predictions_load_get",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "name": "model_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Model Id"
+            }
+          },
+          {
+            "name": "feature_set",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Feature Set"
+            }
+          },
+          {
+            "name": "zeros_applied",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Zeros Applied"
+            }
+          },
+          {
+            "name": "horizon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "day",
+                "month",
+                "year"
+              ],
+              "type": "string",
+              "default": "day",
+              "title": "Horizon"
+            }
+          },
+          {
+            "name": "granularity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "hour",
+                "day",
+                "month"
+              ],
+              "type": "string",
+              "default": "hour",
+              "title": "Granularity"
+            }
+          },
+          {
+            "name": "tram_capacity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 50,
+              "default": 150,
+              "title": "Tram Capacity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RouteLoadListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/historical/load": {
+      "get": {
+        "tags": [
+          "load-summary"
+        ],
+        "summary": "T-218: Summary actuals — avg load per route (block 'kak bylo', fallback MAX period)",
+        "description": "Srednie boardings + load_pct za marshrutami (actuals).\n\nYesli from/to ne zadany → fallback na MAX(period_start) - 7d .. MAX.",
+        "operationId": "get_historical_load_api_v1_historical_load_get",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "name": "tram_capacity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 50,
+              "default": 150,
+              "title": "Tram Capacity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RouteLoadListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/historical/{route_id}": {
       "get": {
         "tags": [
@@ -1640,6 +1878,126 @@
         ],
         "title": "PredictionsDBResponse",
         "description": "Ответ /predictions/db/{route_id}."
+      },
+      "RouteLoadItem": {
+        "properties": {
+          "route_id": {
+            "type": "integer",
+            "title": "Route Id"
+          },
+          "boardings_avg": {
+            "type": "number",
+            "title": "Boardings Avg"
+          },
+          "load_pct": {
+            "type": "number",
+            "title": "Load Pct"
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "green",
+              "yellow",
+              "red",
+              "darkred"
+            ],
+            "title": "Tier"
+          },
+          "period_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Start"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period End"
+          },
+          "sample_size": {
+            "type": "integer",
+            "title": "Sample Size",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "route_id",
+          "boardings_avg",
+          "load_pct",
+          "tier"
+        ],
+        "title": "RouteLoadItem",
+        "description": "Один маршрут — avg boardings + load_pct + tier."
+      },
+      "RouteLoadListResponse": {
+        "properties": {
+          "loads": {
+            "items": {
+              "$ref": "#/components/schemas/RouteLoadItem"
+            },
+            "type": "array",
+            "title": "Loads"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "from_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Date"
+          },
+          "to_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Date"
+          },
+          "used_fallback": {
+            "type": "boolean",
+            "title": "Used Fallback",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "loads",
+          "count",
+          "source"
+        ],
+        "title": "RouteLoadListResponse",
+        "description": "Ответ /predictions/load и /historical/load."
       },
       "ValidationError": {
         "properties": {

@@ -1,127 +1,144 @@
 /**
- * T-200: data layer for route load grid on PassengerMode.
+ * T-218: data layer for PassengerMode — два summary endpoint.
+ *
+ * Поведение:
+ *  - fetchActualsLoad() → GET /api/v1/historical/load
+ *  - fetchPredictionsLoad() → GET /api/v1/predictions/load
+ *  - оба возвращают [] при network errors
  */
 
 import { describe, expect, it, vi, afterEach } from 'vitest';
 
-import { fetchAllRouteLoads, fetchRoutesList } from './routeLoad';
+import {
+  fetchAllRouteLoads,
+  fetchActualsLoad,
+  fetchPredictionsLoad,
+} from './routeLoad';
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('fetchRoutesList', () => {
-  it('returns the routes array from /api/v1/historical', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () =>
-        new Response(JSON.stringify({ routes: [1, 7, 11, 12, 17], count: 5 }), {
-          status: 200,
+function mockSummary(url: string, payload: unknown, status = 200): void {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL) => {
+      const u = typeof input === 'string' ? input : input.toString();
+      if (u.includes(url)) {
+        return new Response(JSON.stringify(payload), {
+          status,
           headers: { 'content-type': 'application/json' },
-        }),
-      ),
-    );
+        });
+      }
+      return new Response('not found', { status: 404 });
+    }),
+  );
+}
 
-    const result = await fetchRoutesList();
-    expect(result).toEqual([1, 7, 11, 12, 17]);
+describe('fetchActualsLoad', () => {
+  it('returns parsed RouteLoad[] from /api/v1/historical/load', async () => {
+    mockSummary('/api/v1/historical/load', {
+      loads: [
+        {
+          route_id: 1,
+          boardings_avg: 80,
+          load_pct: 53.33,
+          tier: 'green',
+          sample_size: 24,
+          period_start: '2025-10-30T00:00:00Z',
+          period_end: '2025-10-30T23:00:00Z',
+        },
+        {
+          route_id: 7,
+          boardings_avg: 120,
+          load_pct: 80,
+          tier: 'yellow',
+          sample_size: 24,
+        },
+      ],
+      count: 2,
+      source: 'actuals',
+      used_fallback: true,
+    });
+    const result = await fetchActualsLoad();
+    expect(result).toHaveLength(2);
+    expect(result[0]).toMatchObject({
+      routeId: 1,
+      boardings: 80,
+      loadPct: 53.33,
+      tier: 'green',
+      sampleSize: 24,
+    });
   });
 
   it('returns [] on 5xx (graceful failure)', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => new Response('boom', { status: 503 })),
-    );
-    expect(await fetchRoutesList()).toEqual([]);
+    mockSummary('/api/v1/historical/load', { detail: 'boom' }, 503);
+    expect(await fetchActualsLoad()).toEqual([]);
+  });
+
+  it('returns [] on network error', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('net'); }));
+    expect(await fetchActualsLoad()).toEqual([]);
   });
 });
 
-describe('fetchAllRouteLoads', () => {
-  it('maps routes to RouteLoad objects in the same order', async () => {
+describe('fetchPredictionsLoad', () => {
+  it('returns parsed RouteLoad[] from /api/v1/predictions/load', async () => {
+    mockSummary('/api/v1/predictions/load', {
+      loads: [
+        {
+          route_id: 1,
+          boardings_avg: 60,
+          load_pct: 40,
+          tier: 'green',
+          sample_size: 720,
+        },
+      ],
+      count: 1,
+      source: 'predictions',
+    });
+    const result = await fetchPredictionsLoad();
+    expect(result).toHaveLength(1);
+    expect(result[0]?.tier).toBe('green');
+  });
+
+  it('returns [] on 4xx', async () => {
+    mockSummary('/api/v1/predictions/load', { detail: 'bad' }, 400);
+    expect(await fetchPredictionsLoad()).toEqual([]);
+  });
+});
+
+describe('fetchAllRouteLoads (T-218: parallel)', () => {
+  it('returns {actuals, predictions} from two parallel fetches', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL) => {
-        const url = typeof input === 'string' ? input : input.toString();
-        const m = url.match(/\/api\/v1\/historical\/(\d+)/);
-        if (!m) return new Response('not found', { status: 404 });
-        const rid = Number(m[1]);
-        const valueByRoute: Record<number, number> = { 1: 60, 7: 150, 11: 200 };
-        return new Response(
-          JSON.stringify({
-            route_id: rid,
-            granularity: 'hour',
-            points: [{ period_start: '2025-09-30T20:00:00Z', value: valueByRoute[rid] ?? 0 }],
-          }),
-          { status: 200, headers: { 'content-type': 'application/json' } },
-        );
+        const u = typeof input === 'string' ? input : input.toString();
+        if (u.includes('/historical/load')) {
+          return new Response(
+            JSON.stringify({
+              loads: [{ route_id: 1, boardings_avg: 50, load_pct: 33, tier: 'green', sample_size: 24 }],
+              count: 1,
+              source: 'actuals',
+            }),
+            { status: 200, headers: { 'content-type': 'application/json' } },
+          );
+        }
+        if (u.includes('/predictions/load')) {
+          return new Response(
+            JSON.stringify({
+              loads: [{ route_id: 1, boardings_avg: 70, load_pct: 46, tier: 'green', sample_size: 24 }],
+              count: 1,
+              source: 'predictions',
+            }),
+            { status: 200, headers: { 'content-type': 'application/json' } },
+          );
+        }
+        return new Response('not found', { status: 404 });
       }),
     );
-
-    const result = await fetchAllRouteLoads([1, 7, 11]);
-    expect(result.map((r) => r.routeId)).toEqual([1, 7, 11]);
-    // 60/150 = 40 → green
-    expect(result[0]?.loadPct).toBeCloseTo(40, 1);
-    expect(result[0]?.tier).toBe('green');
-    // 150/150 = 100 → red
-    expect(result[1]?.loadPct).toBeCloseTo(100, 1);
-    expect(result[1]?.tier).toBe('red');
-    // 200/150 = 133.3 → darkred
-    expect(result[2]?.loadPct).toBeCloseTo(133.3, 1);
-    expect(result[2]?.tier).toBe('darkred');
-  });
-
-  it('returns tier=unknown for routes with no points', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () =>
-        new Response(
-          JSON.stringify({ route_id: 7, granularity: 'hour', points: [] }),
-          { status: 200 },
-        ),
-      ),
-    );
-
-    const result = await fetchAllRouteLoads([7]);
-    expect(result[0]?.tier).toBe('unknown');
-    expect(result[0]?.loadPct).toBeNull();
-  });
-
-  it('returns tier=unknown when fetch throws', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => {
-        throw new Error('network down');
-      }),
-    );
-
-    const result = await fetchAllRouteLoads([1, 7]);
-    expect(result.every((r) => r.tier === 'unknown')).toBe(true);
-  });
-
-  it('issues /historical/{route_id} without from/to (F-097 regression)', async () => {
-    // F-097: backend сделал `from`/`to` опциональными (default = last 7 days).
-    // Этот тест фиксирует контракт: клиент НЕ передаёт from/to, сервер их не требует.
-    const observed: string[] = [];
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (input: RequestInfo | URL) => {
-        const url = typeof input === 'string' ? input : input.toString();
-        observed.push(url);
-        return new Response(
-          JSON.stringify({
-            route_id: 7,
-            granularity: 'hour',
-            points: [{ period_start: '2025-09-30T20:00:00Z', value: 42 }],
-          }),
-          { status: 200, headers: { 'content-type': 'application/json' } },
-        );
-      }),
-    );
-
-    const result = await fetchAllRouteLoads([7]);
-    expect(result[0]?.tier).toBe('green');
-    // URL не содержит ?from=&to= — иначе сервер вернёт 422.
-    expect(observed[0]).toMatch(/^\/api\/v1\/historical\/7\?granularity=hour$/);
-    expect(observed[0]).not.toMatch(/from=/);
-    expect(observed[0]).not.toMatch(/to=/);
+    const result = await fetchAllRouteLoads();
+    expect(result.actuals[0]?.boardings).toBe(50);
+    expect(result.predictions[0]?.boardings).toBe(70);
   });
 });

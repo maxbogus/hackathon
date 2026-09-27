@@ -202,6 +202,50 @@ export interface PredictionsDBResponse {
   points: PredictionPointDB[];
 }
 
+export type RouteLoadItemTier = typeof RouteLoadItemTier[keyof typeof RouteLoadItemTier];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const RouteLoadItemTier = {
+  green: 'green',
+  yellow: 'yellow',
+  red: 'red',
+  darkred: 'darkred',
+} as const;
+
+export type RouteLoadItemPeriodStart = string | null;
+
+export type RouteLoadItemPeriodEnd = string | null;
+
+/**
+ * Один маршрут — avg boardings + load_pct + tier.
+ */
+export interface RouteLoadItem {
+  route_id: number;
+  boardings_avg: number;
+  load_pct: number;
+  tier: RouteLoadItemTier;
+  period_start?: RouteLoadItemPeriodStart;
+  period_end?: RouteLoadItemPeriodEnd;
+  sample_size?: number;
+}
+
+export type RouteLoadListResponseFromDate = string | null;
+
+export type RouteLoadListResponseToDate = string | null;
+
+/**
+ * Ответ /predictions/load и /historical/load.
+ */
+export interface RouteLoadListResponse {
+  loads: RouteLoadItem[];
+  count: number;
+  source: string;
+  from_date?: RouteLoadListResponseFromDate;
+  to_date?: RouteLoadListResponseToDate;
+  used_fallback?: boolean;
+}
+
 export type ValidationErrorLocItem = string | number;
 
 export type ValidationErrorCtx = { [key: string]: unknown };
@@ -343,6 +387,51 @@ zeros_applied?: boolean | null;
 coef_weather?: number;
 coef_event?: number;
 coef_season?: number;
+};
+
+export type GetPredictionsLoadApiV1PredictionsLoadGetParams = {
+from?: string | null;
+to?: string | null;
+model_id?: string | null;
+feature_set?: string | null;
+zeros_applied?: boolean | null;
+horizon?: GetPredictionsLoadApiV1PredictionsLoadGetHorizon;
+granularity?: GetPredictionsLoadApiV1PredictionsLoadGetGranularity;
+/**
+ * @minimum 50
+ * @maximum 500
+ */
+tram_capacity?: number;
+};
+
+export type GetPredictionsLoadApiV1PredictionsLoadGetHorizon = typeof GetPredictionsLoadApiV1PredictionsLoadGetHorizon[keyof typeof GetPredictionsLoadApiV1PredictionsLoadGetHorizon];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const GetPredictionsLoadApiV1PredictionsLoadGetHorizon = {
+  day: 'day',
+  month: 'month',
+  year: 'year',
+} as const;
+
+export type GetPredictionsLoadApiV1PredictionsLoadGetGranularity = typeof GetPredictionsLoadApiV1PredictionsLoadGetGranularity[keyof typeof GetPredictionsLoadApiV1PredictionsLoadGetGranularity];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const GetPredictionsLoadApiV1PredictionsLoadGetGranularity = {
+  hour: 'hour',
+  day: 'day',
+  month: 'month',
+} as const;
+
+export type GetHistoricalLoadApiV1HistoricalLoadGetParams = {
+from?: string | null;
+to?: string | null;
+/**
+ * @minimum 50
+ * @maximum 500
+ */
+tram_capacity?: number;
 };
 
 export type GetHistoricalApiV1HistoricalRouteIdGetParams = {

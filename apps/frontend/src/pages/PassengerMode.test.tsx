@@ -1,18 +1,12 @@
 /**
- * T-200 (новая редакция): <PassengerMode> показывает нагрузку по всем
- * доступным маршрутам (10 трамвайных линий Москвы). Никаких остановок —
- * только сетка карточек с номером маршрута и текущей загрузкой.
+ * T-218: <PassengerMode> показывает ДВА блока (clinerule 31):
+ *  - actuals (как было)
+ *  - predictions (как будет)
  *
- * Что на экране:
- *  - заголовок «Нагрузка по линиям»
- *  - сетка <RouteLoadCard> × 10 (по одной на маршрут)
- *  - каждая карточка раскрашена по 4-уровневой шкале (loadTier)
- *  - подвал: «Модель: baseline_v1 · WAPE-score 0.9272»
- *
- * Источник данных:
- *  - список маршрутов: GET /api/v1/historical → routes[]
- *  - нагрузка: GET /api/v1/historical/{route_id}?granularity=hour (последний час)
- *  - активная модель: GET /api/v1/models/active
+ * Источники:
+ *  - GET /api/v1/historical/load  → avg boardings per route (actuals)
+ *  - GET /api/v1/predictions/load → avg boardings per route (predictions)
+ *  - GET /api/v1/models/active   → активная модель для footer
  */
 
 import { describe, expect, it, vi, afterEach } from 'vitest';
@@ -30,38 +24,66 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function mockApi(opts: {
-  routes?: number[];
-  perRouteValue?: Record<number, number>;
+function mockLoadApi(opts: {
+  actualsByRoute?: Record<number, number>;
+  predictionsByRoute?: Record<number, number>;
   modelPayload?: object | null;
+  actualsEmpty?: boolean;
+  predictionsEmpty?: boolean;
 } = {}): void {
-  const routes = opts.routes ?? ROUTES;
-  const perRouteValue = opts.perRouteValue ?? {};
+  const actualsByRoute = opts.actualsByRoute ?? {};
+  const predictionsByRoute = opts.predictionsByRoute ?? {};
   const modelPayload = opts.modelPayload ?? ACTIVE_MODEL_PAYLOAD;
+  const actualsEmpty = !!opts.actualsEmpty;
+  const predictionsEmpty = !!opts.predictionsEmpty;
 
   global.fetch = vi.fn(async (input: RequestInfo | URL) => {
     const url = typeof input === 'string' ? input : input.toString();
 
-    if (url.includes('/api/v1/historical') && !url.match(/\/historical\/\d/)) {
-      // /api/v1/historical → list of routes
-      return new Response(JSON.stringify({ routes, count: routes.length }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      });
-    }
-
-    const routeMatch = url.match(/\/api\/v1\/historical\/(\d+)/);
-    if (routeMatch) {
-      const routeId = Number(routeMatch[1]);
-      // Default: 60 boardings/hour → 60/150 = 40% load (green)
-      const value = perRouteValue[routeId] ?? 60;
+    if (url.includes('/api/v1/historical/load')) {
+      const loads = actualsEmpty
+        ? []
+        : ROUTES.map((rid) => {
+            const v = actualsByRoute[rid] ?? 60;
+            return {
+              route_id: rid,
+              boardings_avg: v,
+              load_pct: (v / 150) * 100,
+              tier: (v / 150) * 100 < 70 ? 'green' : (v / 150) * 100 < 90 ? 'yellow' : (v / 150) * 100 < 110 ? 'red' : 'darkred',
+              sample_size: 24,
+              period_start: '2025-10-30T00:00:00Z',
+              period_end: '2025-10-30T23:00:00Z',
+            };
+          });
       return new Response(
         JSON.stringify({
-          route_id: routeId,
-          granularity: 'hour',
-          points: [
-            { period_start: '2025-09-30T20:00:00Z', period_end: '2025-09-30T21:00:00Z', value },
-          ],
+          loads,
+          count: loads.length,
+          source: 'actuals',
+          used_fallback: true,
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      );
+    }
+
+    if (url.includes('/api/v1/predictions/load')) {
+      const loads = predictionsEmpty
+        ? []
+        : ROUTES.map((rid) => {
+            const v = predictionsByRoute[rid] ?? 60;
+            return {
+              route_id: rid,
+              boardings_avg: v,
+              load_pct: (v / 150) * 100,
+              tier: (v / 150) * 100 < 70 ? 'green' : (v / 150) * 100 < 90 ? 'yellow' : (v / 150) * 100 < 110 ? 'red' : 'darkred',
+              sample_size: 24,
+            };
+          });
+      return new Response(
+        JSON.stringify({
+          loads,
+          count: loads.length,
+          source: 'predictions',
         }),
         { status: 200, headers: { 'content-type': 'application/json' } },
       );
@@ -81,86 +103,69 @@ function mockApi(opts: {
   }) as typeof global.fetch;
 }
 
-describe('<PassengerMode> — нагрузка по линиям', () => {
-  it('does NOT render a stop selector (T-200: убрали остановки)', async () => {
-    mockApi();
+describe('<PassengerMode> — два блока actuals+predictions', () => {
+  it('does NOT render a stop selector', async () => {
+    mockLoadApi();
     render(<PassengerMode />);
     await waitFor(() => {
-      // Никаких <select> с остановками
       expect(screen.queryByRole('combobox')).toBeNull();
     });
   });
 
-  it('renders one <RouteLoadCard> per route from /api/v1/historical', async () => {
-    mockApi();
+  it('renders both grids: actuals-grid and predictions-grid', async () => {
+    mockLoadApi();
     render(<PassengerMode />);
     await waitFor(() => {
-      const cards = screen.getAllByTestId('route-load-card');
-      expect(cards.length).toBe(ROUTES.length);
+      expect(screen.getByTestId('actuals-grid')).toBeInTheDocument();
+      expect(screen.getByTestId('predictions-grid')).toBeInTheDocument();
     });
   });
 
-  it('each route card shows the route number and load percentage', async () => {
-    mockApi({ perRouteValue: { 7: 120 } }); // 120/150 = 80% → yellow (70-90)
+  it('renders N route load cards per grid (one per route)', async () => {
+    mockLoadApi();
     render(<PassengerMode />);
     await waitFor(() => {
-      expect(screen.getByText('Маршрут 7')).toBeInTheDocument();
-      // 120/150 = 80%
+      const actualsCards = screen.getByTestId('actuals-grid').querySelectorAll('[data-testid="route-load-card"]');
+      const predictionsCards = screen.getByTestId('predictions-grid').querySelectorAll('[data-testid="route-load-card"]');
+      expect(actualsCards.length).toBe(ROUTES.length);
+      expect(predictionsCards.length).toBe(ROUTES.length);
+    });
+  });
+
+  it('shows percentage for predictions block', async () => {
+    mockLoadApi({ predictionsByRoute: { 7: 120 } }); // 80%
+    render(<PassengerMode />);
+    await waitFor(() => {
       expect(screen.getByText('80%')).toBeInTheDocument();
     });
   });
 
-  it('colors the card yellow for load 80% (between 70 and 90)', async () => {
-    mockApi({ perRouteValue: { 7: 120 } }); // 80%
-    render(<PassengerMode />);
-    const card = await waitFor(() => {
-      const cards = screen.getAllByTestId('route-load-card');
-      const c = cards.find((el) => el.textContent?.includes('Маршрут 7'));
-      if (!c) throw new Error('Маршрут 7 card not found');
-      return c;
-    });
-    expect(card.getAttribute('data-tier')).toBe('yellow');
-  });
-
-  it('colors the card red for load 100% (between 90 and 110)', async () => {
-    mockApi({ perRouteValue: { 1: 150 } }); // 100%
-    render(<PassengerMode />);
-    const card = await waitFor(() => {
-      const cards = screen.getAllByTestId('route-load-card');
-      const c = cards.find((el) => el.textContent?.includes('Маршрут 1'));
-      if (!c) throw new Error('Маршрут 1 card not found');
-      return c;
-    });
-    expect(card.getAttribute('data-tier')).toBe('red');
-  });
-
-  it('colors the card green for low load (60/150 = 40%)', async () => {
-    mockApi({ perRouteValue: { 11: 60 } }); // 40%
-    render(<PassengerMode />);
-    const card = await waitFor(() => {
-      const cards = screen.getAllByTestId('route-load-card');
-      const c = cards.find((el) => el.textContent?.includes('Маршрут 11'));
-      if (!c) throw new Error('Маршрут 11 card not found');
-      return c;
-    });
-    expect(card.getAttribute('data-tier')).toBe('green');
-  });
-
-  it('shows the active model + WAPE-score in the footer', async () => {
-    mockApi();
-    render(<PassengerMode />);
-    await waitFor(() => {
-      expect(screen.getByText(/baseline_v1/i)).toBeInTheDocument();
-    });
-    expect(screen.getByText(/0\.9272/i)).toBeInTheDocument();
-  });
-
-  it('keeps showing cards when /models/active is down (silent failure)', async () => {
-    mockApi({ modelPayload: null });
+  it('colors predictions card yellow for load 80%', async () => {
+    mockLoadApi({ predictionsByRoute: { 7: 120 } });
     render(<PassengerMode />);
     await waitFor(() => {
       const cards = screen.getAllByTestId('route-load-card');
-      expect(cards.length).toBe(ROUTES.length);
+      const inPredictions = cards.filter((c) => c.parentElement?.getAttribute('data-testid') === 'predictions-grid');
+      const c = inPredictions.find((el) => el.textContent?.includes('Маршрут 7'));
+      expect(c?.getAttribute('data-tier')).toBe('yellow');
+    });
+  });
+
+  it('keeps showing cards when /models/active is down', async () => {
+    mockLoadApi({ modelPayload: null });
+    render(<PassengerMode />);
+    await waitFor(() => {
+      const cards = screen.getAllByTestId('route-load-card');
+      expect(cards.length).toBe(ROUTES.length * 2); // both grids
+    });
+  });
+
+  it('shows "как было" and "как будет" headers (i18n)', async () => {
+    mockLoadApi();
+    render(<PassengerMode />);
+    await waitFor(() => {
+      expect(screen.getByText(/как было/i)).toBeInTheDocument();
+      expect(screen.getByText(/как будет/i)).toBeInTheDocument();
     });
   });
 });

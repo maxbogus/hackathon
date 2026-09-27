@@ -102,6 +102,10 @@ export const TEXTS = {
       red: 'тесно',
       darkred: 'перегруз',
     },
+    /* T-218: PassengerMode показывает ДВА блока (clinerule 31) */
+    actualsHeader: 'Как было (факт)',
+    predictionsHeader: 'Как будет (прогноз)',
+    routeNoData: 'нет данных',
   },
 
   common: {

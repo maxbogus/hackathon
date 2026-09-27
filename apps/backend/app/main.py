@@ -29,6 +29,7 @@ from app.api.models import router as models_router
 from app.api.pipeline import router as pipeline_router
 from app.api.predictions import router as predictions_router
 from app.api.predictions_db import router as predictions_db_router
+from app.api.load import router as load_router  # T-218: summary /load endpoints
 from app.api.predictions_status import router as predictions_status_router
 from app.config import settings
 
@@ -78,6 +79,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router)
     app.include_router(predictions_router)
     app.include_router(predictions_db_router)  # T-195: from DB + export.csv
+    app.include_router(load_router)  # T-218: /predictions/load, /historical/load
     app.include_router(historical_router)  # T-195: /historical/{route_id}
     app.include_router(models_router)
     app.include_router(alerts_router)

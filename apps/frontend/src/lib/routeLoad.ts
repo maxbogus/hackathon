@@ -1,115 +1,129 @@
 /**
- * T-200 (новая редакция): data layer для пассажирского экрана.
+ * T-218: data layer для пассажирского экрана.
  *
- * Получает список маршрутов из /api/v1/historical, потом для каждого — последний
- * час из /api/v1/historical/{route_id}?granularity=hour. Переводит `value`
- * (boardings) в `load_pct` делением на TRAM_CAPACITY (default 150, см.
- * `apps/backend/app/forecast/load.py` — DEFAULT_TRAM_CAPACITY = 150).
+ * PassengerMode показывает ДВА блока:
+ *  - "Как было" (actuals)     — GET /api/v1/historical/load
+ *  - "Как будет" (predictions) — GET /api/v1/predictions/load
+ *
+ * См. clinerule 31 (apps/frontend/src/lib/i18n/MIGRATION.md).
  *
  * Параллельные fetch через Promise.all (R6 SLA — все маршруты за <2с).
  *
- * Возвращает `null` для маршрута если:
+ * Возвращает `null` loadPct для маршрута если:
  *  - fetch упал
- *  - backend вернул 0 points (нет данных за выбранный час)
+ *  - endpoint вернул пустой список
  * UI рендерит такие карточки как «нет данных» (tier: unknown, текст «—»).
  */
 
-import type { LoadTier } from './loadTier';
-import { loadTier } from './loadTier';
+import { loadTier, type LoadTier } from './loadTier';
 
 export const DEFAULT_TRAM_CAPACITY = 150;
 
+export type RouteLoadVariant = 'actual' | 'prediction';
+
 export interface RouteLoad {
   readonly routeId: number;
-  /** Raw boardings count from /api/v1/historical. */
+  /** Raw boardings_avg из endpoint. */
   readonly boardings: number | null;
   /** Computed load_pct (boardings / TRAM_CAPACITY × 100). */
   readonly loadPct: number | null;
   /** Severity tier (green/yellow/red/darkred) or 'unknown' if no data. */
   readonly tier: LoadTier | 'unknown';
+  /** Количество точек, использованных для среднего (доверие). */
+  readonly sampleSize?: number;
+  /** Последний timestamp данных (для подписи «обновлено ...»). */
+  readonly periodEnd?: string | null;
 }
 
-interface RoutesListResponse {
-  routes: number[];
-  count: number;
-}
-
-interface HistoricalPoint {
-  period_start: string;
-  period_end: string;
-  value: number;
-}
-
-interface HistoricalResponse {
+interface RouteLoadApiItem {
   route_id: number;
-  granularity: string;
-  points: HistoricalPoint[];
+  boardings_avg: number;
+  load_pct: number;
+  tier: LoadTier;
+  sample_size?: number;
+  period_start?: string | null;
+  period_end?: string | null;
 }
 
-/**
- * Fetch all route IDs available on the server (today's data).
- */
-export async function fetchRoutesList(
-  baseUrl = '/api/v1/historical',
-): Promise<number[]> {
-  const response = await fetch(baseUrl, {
-    headers: { Accept: 'application/json' },
-  });
-  if (!response.ok) {
+interface RouteLoadApiResponse {
+  loads: RouteLoadApiItem[];
+  count: number;
+  source: string;
+  from_date?: string | null;
+  to_date?: string | null;
+  used_fallback?: boolean;
+}
+
+const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api/v1';
+
+function buildUrl(path: string): string {
+  // Orval сгенерил без /api, customInstance добавит через BASE_URL
+  return `${BASE_URL.replace(/\/$/, '')}${path}`;
+}
+
+async function fetchLoadSummary(
+  path: string,
+  signal?: AbortSignal,
+): Promise<RouteLoad[]> {
+  try {
+    const response = await fetch(buildUrl(path), {
+      headers: { Accept: 'application/json' },
+      signal,
+    });
+    if (!response.ok) {
+      return [];
+    }
+    const data = (await response.json()) as RouteLoadApiResponse;
+    if (!Array.isArray(data.loads) || data.loads.length === 0) {
+      return [];
+    }
+    return data.loads.map((item) => ({
+      routeId: item.route_id,
+      boardings: typeof item.boardings_avg === 'number' ? item.boardings_avg : null,
+      loadPct: typeof item.load_pct === 'number' ? item.load_pct : null,
+      tier: item.tier,
+      sampleSize: item.sample_size,
+      periodEnd: item.period_end ?? null,
+    }));
+  } catch {
     return [];
   }
-  const data = (await response.json()) as RoutesListResponse;
-  return Array.isArray(data.routes) ? data.routes : [];
 }
 
 /**
- * Fetch the latest hourly historical data point for a single route.
- * Returns null if no points or HTTP failure.
+ * Fetch avg boardings per route from /api/v1/historical/load.
+ * Block 'kak bylo' for PassengerMode.
  */
-async function fetchLatestRouteLoad(
-  routeId: number,
-  baseUrl = '/api/v1/historical',
-  capacity: number = DEFAULT_TRAM_CAPACITY,
-): Promise<RouteLoad> {
-  try {
-    // No from/to → backend returns latest available data
-    const response = await fetch(
-      `${baseUrl}/${routeId}?granularity=hour`,
-      { headers: { Accept: 'application/json' } },
-    );
-    if (!response.ok) {
-      return { routeId, boardings: null, loadPct: null, tier: 'unknown' };
-    }
-    const data = (await response.json()) as HistoricalResponse;
-    if (!Array.isArray(data.points) || data.points.length === 0) {
-      return { routeId, boardings: null, loadPct: null, tier: 'unknown' };
-    }
-    // Last point = most recent hour
-    const last = data.points[data.points.length - 1];
-    const value = typeof last?.value === 'number' ? last.value : 0;
-    const loadPct = capacity > 0 ? (value / capacity) * 100 : 0;
-    return {
-      routeId,
-      boardings: value,
-      loadPct,
-      tier: loadTier(loadPct),
-    };
-  } catch {
-    return { routeId, boardings: null, loadPct: null, tier: 'unknown' };
-  }
+export async function fetchActualsLoad(
+  signal?: AbortSignal,
+): Promise<RouteLoad[]> {
+  return fetchLoadSummary('/historical/load', signal);
 }
 
 /**
- * Fetch latest load for all routes in parallel.
- * Returns array in the SAME order as input routeIds.
- * Failed fetches return RouteLoad with tier='unknown'.
+ * Fetch avg predictions per route from /api/v1/predictions/load.
+ * Block 'kak budet' for PassengerMode.
+ */
+export async function fetchPredictionsLoad(
+  signal?: AbortSignal,
+): Promise<RouteLoad[]> {
+  return fetchLoadSummary('/predictions/load', signal);
+}
+
+/**
+ * Fetch both blocks in parallel. Returns in the SAME order as input.
+ * T-218: replaces fetchAllRouteLoads which used /historical/{route_id}.
  */
 export async function fetchAllRouteLoads(
-  routeIds: readonly number[],
-  baseUrl = '/api/v1/historical',
-  capacity: number = DEFAULT_TRAM_CAPACITY,
-): Promise<RouteLoad[]> {
-  return Promise.all(
-    routeIds.map((rid) => fetchLatestRouteLoad(rid, baseUrl, capacity)),
-  );
+  signal?: AbortSignal,
+): Promise<{ actuals: RouteLoad[]; predictions: RouteLoad[] }> {
+  const [actuals, predictions] = await Promise.all([
+    fetchActualsLoad(signal),
+    fetchPredictionsLoad(signal),
+  ]);
+  return { actuals, predictions };
 }
+
+// Re-export for backward-compat (tests)
+export { loadTier };
+export type { LoadTier };

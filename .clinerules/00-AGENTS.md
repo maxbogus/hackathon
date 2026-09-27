@@ -38,6 +38,7 @@
 | 28 | `28-submission-workflow-local-vs-platform.md` | Submission workflow: sanity-check 5 критериев + drift учёт (F-039, F-040) |
 | 29 | `29-zsh-shell-quirks.md` | zsh на Ubuntu — gotchas с `{}`, f-string в `-c "..."`, heredoc vs bash |
 | 30 | `30-no-replay-submissions.md` | Не предлагать варианты, которые уже залиты на платформу (F-061, D-027) |
+| 31 | `31-passenger-mode-actuals-and-predictions.md` | PassengerMode показывает actuals + predictions рядом (T-218, fallback MAX period) |
 | — | `MEMORY-BUDGET.md` | Анти-краш: не читать >1MB JSON |
 
 ## Quick rules

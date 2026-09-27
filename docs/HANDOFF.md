@@ -1,6 +1,45 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-27T11:00:00Z
+> Последнее обновление: 2026-09-27T12:35:00Z
+# Обновлено: Cline (агент) — T-218 done: PassengerMode показывает actuals + predictions рядом (clinerule 31, F-096, D-036).
+
+## Мини-сессия 2026-09-27T12:35:00Z — fix 'нет данных' на PassengerMode (T-218)
+
+**Баг:** Пассажирский экран показывал 9 карточек "net dannyh" с data-tier="unknown", потому что фронт брал /historical/{id} (actuals) у которого окно = now()-7d = 2026-09-20..2026-09-27 (вне датасета, заканчивается 2025-10-31).
+
+**Решение (D-036):**
+- 2 новых summary endpoint: GET /api/v1/historical/load (actuals, fallback MAX period) + GET /api/v1/predictions/load (predictions, submission period)
+- Backend: apps/backend/app/api/load.py + apps/backend/app/load_tier.py + apps/backend/app/schemas/load.py
+- Frontend: apps/frontend/src/lib/routeLoad.ts переписан на fetchActualsLoad/fetchPredictionsLoad + parallel fetchAllRouteLoads
+- PassengerMode: два блока с заголовками «Как было (факт)» и «Как будет (прогноз)»
+- RouteLoadCard: опциональный variant=actual|prediction
+
+**Метрики:**
+- Backend tests: 28 passed (5 load_tier + 3 historical_load + 3 predictions_load + 17 t195)
+- Frontend vitest: 110/110 passed
+- Typecheck: 0 errors
+- Live: curl /predictions/load → 9 route_ids (1007..1687 boardings/hour avg), curl /historical/load → 9 route_ids с used_fallback=true (MAX period 2025-10-24..2025-10-31)
+- OpenAPI: 22 paths (+2 новых), Orval хуки getHistoricalLoadApi* + getPredictionsLoadApi* сгенерированы
+- Ledger: F-096 (time-drift) + D-036 (two-block side-by-side)
+
+**Артефакты:**
+- apps/backend/app/api/load.py (новый, ~200 строк)
+- apps/backend/app/load_tier.py (новый, пороги)
+- apps/backend/app/schemas/load.py (новый)
+- apps/backend/tests/test_load_tier.py + test_historical_load.py + test_api_t218.py (новые, 11 тестов)
+- apps/frontend/src/lib/routeLoad.ts (переписан)
+- apps/frontend/src/pages/PassengerMode.tsx (2 блока)
+- apps/frontend/src/components/Passenger/RouteLoadCard.tsx (variant)
+- apps/frontend/src/lib/activeModel.ts (signal support)
+- apps/frontend/src/lib/i18n/ru-RU.ts (3 новых ключа)
+- .clinerules/31-passenger-mode-actuals-and-predictions.md (новый, 119 строк)
+- .clinerules/00-AGENTS.md (индекс обновлён)
+
+**На заметку:**
+- Tier=darkred для всех маршрутов (load_pct=655..1687) — потому что в БД хранится boardings за маршрут за час, а не среднее за день. Это отдельная UX задача (T-218+), не блокер для текущего fix.
+- Для следующей сессии: T-204 XLSX-экспорт (бэкенд готов с T-206).
+
+
 # Обновлено: Cline (агент) — дизайнерский аудит UI/UX (часть 1): T-200 (планёр), T-201 (active model), T-203 (horizon/granularity). 99 vitest passed (+13).
 
 ## Мини-сессия 2026-09-27T11:00:00Z — Дизайнерский аудит UI/UX (часть 1)

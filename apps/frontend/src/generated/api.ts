@@ -34,11 +34,13 @@ import type {
   GetActiveModelApiV1ModelsActiveGet200,
   GetEtaPredictionsApiV1PredictionsEtaGetParams,
   GetHistoricalApiV1HistoricalRouteIdGetParams,
+  GetHistoricalLoadApiV1HistoricalLoadGetParams,
   GetOverloadAlertsApiV1InsightsAlertsGetParams,
   GetPipelineStatusApiV1PipelineStatusTaskIdGet200,
   GetPredictionsDbApiV1PredictionsDbRouteIdGetParams,
   GetPredictionsForStopApiV1PredictionsStopStopIdGet200,
   GetPredictionsForStopApiV1PredictionsStopStopIdGetParams,
+  GetPredictionsLoadApiV1PredictionsLoadGetParams,
   GetStatusApiV1PredictionsStatusGet200,
   HTTPValidationError,
   HealthzApiV1HealthzGet200,
@@ -50,6 +52,7 @@ import type {
   PredictionsDBResponse,
   ReadyzApiV1ReadyzGet200,
   RootGet200,
+  RouteLoadListResponse,
   TriggerPipelineFullApiV1PipelineFullPost200,
   VersionApiV1VersionGet200,
   ZeroOverrideOut,
@@ -955,6 +958,198 @@ export function useExportPredictionsXlsxApiV1PredictionsExportXlsxGet<TData = Aw
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
 
   const queryOptions = getExportPredictionsXlsxApiV1PredictionsExportXlsxGetQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
+/**
+ * Srednie boardings + load_pct za marshrutami (predictions).
+ * @summary T-218: Summary predictions — avg load per route (block 'kak budet')
+ */
+export const getPredictionsLoadApiV1PredictionsLoadGet = (
+    params?: GetPredictionsLoadApiV1PredictionsLoadGetParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<RouteLoadListResponse>(
+      {url: `/api/v1/predictions/load`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getGetPredictionsLoadApiV1PredictionsLoadGetQueryKey = (params?: GetPredictionsLoadApiV1PredictionsLoadGetParams,) => {
+    return [
+    `/api/v1/predictions/load`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getGetPredictionsLoadApiV1PredictionsLoadGetQueryOptions = <TData = Awaited<ReturnType<typeof getPredictionsLoadApiV1PredictionsLoadGet>>, TError = HTTPValidationError>(params?: GetPredictionsLoadApiV1PredictionsLoadGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPredictionsLoadApiV1PredictionsLoadGet>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPredictionsLoadApiV1PredictionsLoadGetQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPredictionsLoadApiV1PredictionsLoadGet>>> = ({ signal }) => getPredictionsLoadApiV1PredictionsLoadGet(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPredictionsLoadApiV1PredictionsLoadGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
+}
+
+export type GetPredictionsLoadApiV1PredictionsLoadGetQueryResult = NonNullable<Awaited<ReturnType<typeof getPredictionsLoadApiV1PredictionsLoadGet>>>
+export type GetPredictionsLoadApiV1PredictionsLoadGetQueryError = HTTPValidationError
+
+
+export function useGetPredictionsLoadApiV1PredictionsLoadGet<TData = Awaited<ReturnType<typeof getPredictionsLoadApiV1PredictionsLoadGet>>, TError = HTTPValidationError>(
+ params: undefined |  GetPredictionsLoadApiV1PredictionsLoadGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPredictionsLoadApiV1PredictionsLoadGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPredictionsLoadApiV1PredictionsLoadGet>>,
+          TError,
+          Awaited<ReturnType<typeof getPredictionsLoadApiV1PredictionsLoadGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+export function useGetPredictionsLoadApiV1PredictionsLoadGet<TData = Awaited<ReturnType<typeof getPredictionsLoadApiV1PredictionsLoadGet>>, TError = HTTPValidationError>(
+ params?: GetPredictionsLoadApiV1PredictionsLoadGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPredictionsLoadApiV1PredictionsLoadGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPredictionsLoadApiV1PredictionsLoadGet>>,
+          TError,
+          Awaited<ReturnType<typeof getPredictionsLoadApiV1PredictionsLoadGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+export function useGetPredictionsLoadApiV1PredictionsLoadGet<TData = Awaited<ReturnType<typeof getPredictionsLoadApiV1PredictionsLoadGet>>, TError = HTTPValidationError>(
+ params?: GetPredictionsLoadApiV1PredictionsLoadGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPredictionsLoadApiV1PredictionsLoadGet>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+/**
+ * @summary T-218: Summary predictions — avg load per route (block 'kak budet')
+ */
+
+export function useGetPredictionsLoadApiV1PredictionsLoadGet<TData = Awaited<ReturnType<typeof getPredictionsLoadApiV1PredictionsLoadGet>>, TError = HTTPValidationError>(
+ params?: GetPredictionsLoadApiV1PredictionsLoadGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPredictionsLoadApiV1PredictionsLoadGet>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+
+  const queryOptions = getGetPredictionsLoadApiV1PredictionsLoadGetQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
+/**
+ * Srednie boardings + load_pct za marshrutami (actuals).
+
+Yesli from/to ne zadany → fallback na MAX(period_start) - 7d .. MAX.
+ * @summary T-218: Summary actuals — avg load per route (block 'kak bylo', fallback MAX period)
+ */
+export const getHistoricalLoadApiV1HistoricalLoadGet = (
+    params?: GetHistoricalLoadApiV1HistoricalLoadGetParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<RouteLoadListResponse>(
+      {url: `/api/v1/historical/load`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getGetHistoricalLoadApiV1HistoricalLoadGetQueryKey = (params?: GetHistoricalLoadApiV1HistoricalLoadGetParams,) => {
+    return [
+    `/api/v1/historical/load`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getGetHistoricalLoadApiV1HistoricalLoadGetQueryOptions = <TData = Awaited<ReturnType<typeof getHistoricalLoadApiV1HistoricalLoadGet>>, TError = HTTPValidationError>(params?: GetHistoricalLoadApiV1HistoricalLoadGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistoricalLoadApiV1HistoricalLoadGet>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHistoricalLoadApiV1HistoricalLoadGetQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHistoricalLoadApiV1HistoricalLoadGet>>> = ({ signal }) => getHistoricalLoadApiV1HistoricalLoadGet(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHistoricalLoadApiV1HistoricalLoadGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
+}
+
+export type GetHistoricalLoadApiV1HistoricalLoadGetQueryResult = NonNullable<Awaited<ReturnType<typeof getHistoricalLoadApiV1HistoricalLoadGet>>>
+export type GetHistoricalLoadApiV1HistoricalLoadGetQueryError = HTTPValidationError
+
+
+export function useGetHistoricalLoadApiV1HistoricalLoadGet<TData = Awaited<ReturnType<typeof getHistoricalLoadApiV1HistoricalLoadGet>>, TError = HTTPValidationError>(
+ params: undefined |  GetHistoricalLoadApiV1HistoricalLoadGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistoricalLoadApiV1HistoricalLoadGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getHistoricalLoadApiV1HistoricalLoadGet>>,
+          TError,
+          Awaited<ReturnType<typeof getHistoricalLoadApiV1HistoricalLoadGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+export function useGetHistoricalLoadApiV1HistoricalLoadGet<TData = Awaited<ReturnType<typeof getHistoricalLoadApiV1HistoricalLoadGet>>, TError = HTTPValidationError>(
+ params?: GetHistoricalLoadApiV1HistoricalLoadGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistoricalLoadApiV1HistoricalLoadGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getHistoricalLoadApiV1HistoricalLoadGet>>,
+          TError,
+          Awaited<ReturnType<typeof getHistoricalLoadApiV1HistoricalLoadGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+export function useGetHistoricalLoadApiV1HistoricalLoadGet<TData = Awaited<ReturnType<typeof getHistoricalLoadApiV1HistoricalLoadGet>>, TError = HTTPValidationError>(
+ params?: GetHistoricalLoadApiV1HistoricalLoadGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistoricalLoadApiV1HistoricalLoadGet>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+/**
+ * @summary T-218: Summary actuals — avg load per route (block 'kak bylo', fallback MAX period)
+ */
+
+export function useGetHistoricalLoadApiV1HistoricalLoadGet<TData = Awaited<ReturnType<typeof getHistoricalLoadApiV1HistoricalLoadGet>>, TError = HTTPValidationError>(
+ params?: GetHistoricalLoadApiV1HistoricalLoadGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistoricalLoadApiV1HistoricalLoadGet>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+
+  const queryOptions = getGetHistoricalLoadApiV1HistoricalLoadGetQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 

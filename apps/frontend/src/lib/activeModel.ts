@@ -36,11 +36,16 @@ export interface ActiveModelInfo {
  * We also accept a top-level `wape_score` for backward compatibility.
  */
 export async function fetchActiveModel(
-  baseUrl = '/api/v1/models/active',
+  signalOrBaseUrl?: AbortSignal | string,
+  maybeSignal?: AbortSignal,
 ): Promise<ActiveModelInfo | null> {
+  const baseUrl =
+    typeof signalOrBaseUrl === 'string' ? signalOrBaseUrl : '/api/v1/models/active';
+  const signal = typeof signalOrBaseUrl === 'object' ? signalOrBaseUrl : maybeSignal;
   try {
     const response = await fetch(baseUrl, {
       headers: { Accept: 'application/json' },
+      ...(signal ? { signal } : {}),
     });
     if (!response.ok) {
       return null;

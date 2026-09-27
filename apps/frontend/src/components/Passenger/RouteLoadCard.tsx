@@ -1,27 +1,26 @@
 /**
- * T-200 (новая редакция): карточка маршрута для пассажирского экрана.
+ * T-218: карточка маршрута для пассажирского экрана.
  *
- * Что показывает:
- *  - большой номер маршрута (слева)
- *  - процент загрузки (справа)
- *  - цветной фон по шкале loadTier (4 уровня):
- *      green   < 70    → комфортно
- *      yellow  70..90  → умеренно
- *      red     90..110 → тесно
- *      darkred 110..∞  → перегруз
+ * Variant 'actual' → block "Как было" (actuals).
+ * Variant 'prediction' → block "Как будет" (predictions).
  *
- * Без действий (passenger-mode — read-only), без EtaCard (тот был для ETA
- * ближайших трамваев на конкретной остановке; здесь — нагрузка по линии
- * целиком).
+ * Tiers (clinerule 31, синхронизировано с apps/backend/app/load_tier.py):
+ *   < 70    → green    🟢
+ *   70..90  → yellow   🟡
+ *   90..110 → red      🟠
+ *   >= 110  → darkred  🔴
  */
 
 import { t } from '@/lib/i18n/t';
 
 import { loadTier, type LoadTier } from '@/lib/loadTier';
+import type { RouteLoadVariant } from '@/lib/routeLoad';
 
 export interface RouteLoadCardProps {
   readonly routeId: number;
-  readonly loadPct: number;
+  /** null = "нет данных" (passing null ровно как в предыдущей реализации) */
+  readonly loadPct: number | null;
+  readonly variant?: RouteLoadVariant;
 }
 
 const BG_BY_TIER: Readonly<Record<LoadTier, string>> = {
@@ -45,7 +44,38 @@ const LABEL_BY_TIER: Readonly<Record<LoadTier, string>> = {
   darkred: '🔴',
 };
 
-export function RouteLoadCard({ routeId, loadPct }: RouteLoadCardProps): JSX.Element {
+export function RouteLoadCard({ routeId, loadPct, variant }: RouteLoadCardProps): JSX.Element {
+  const cardStyle: React.CSSProperties = {
+    borderRadius: 6,
+    padding: '16px 12px',
+    minWidth: 130,
+    boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 6,
+  };
+
+  if (loadPct === null) {
+    return (
+      <article
+        data-testid="route-load-card"
+        data-tier="unknown"
+        data-route-id={routeId}
+        data-variant={variant ?? 'prediction'}
+        style={{
+          ...cardStyle,
+          background: '#f5f5f5',
+          borderTop: '4px solid #9e9e9e',
+        }}
+      >
+        <div style={{ fontSize: 13, color: '#555' }}>{tfRouteLabel(routeId)}</div>
+        <div style={{ fontSize: 24, color: '#9e9e9e' }}>—</div>
+        <div style={{ fontSize: 12, color: '#888' }}>{t('passenger.routeNoData')}</div>
+      </article>
+    );
+  }
+
   const tier = loadTier(loadPct);
   const display = Math.round(loadPct);
 
@@ -54,22 +84,14 @@ export function RouteLoadCard({ routeId, loadPct }: RouteLoadCardProps): JSX.Ele
       data-testid="route-load-card"
       data-tier={tier}
       data-route-id={routeId}
+      data-variant={variant ?? 'prediction'}
       style={{
+        ...cardStyle,
         background: BG_BY_TIER[tier],
         borderTop: `4px solid ${BORDER_BY_TIER[tier]}`,
-        borderRadius: 6,
-        padding: '16px 12px',
-        minWidth: 130,
-        boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 6,
       }}
     >
-      <div style={{ fontSize: 13, color: '#555' }}>
-        {tfRouteLabel(routeId)}
-      </div>
+      <div style={{ fontSize: 13, color: '#555' }}>{tfRouteLabel(routeId)}</div>
       <div
         style={{
           fontSize: 36,

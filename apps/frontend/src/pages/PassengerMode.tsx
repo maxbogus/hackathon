@@ -1,20 +1,15 @@
 /**
- * T-200 (новая редакция): <PassengerMode> — нагрузка по линиям.
+ * T-218: <PassengerMode> — сравнение «как было» и «как будет».
  *
- * Что показывает:
- *  - заголовок «Нагрузка по линиям»
- *  - сетка <RouteLoadCard> × N (по одной на маршрут из /api/v1/historical)
- *  - подвал: «Модель: <id> · WAPE-score <value>»
+ * Layout (clinerule 31):
+ *   <h2>Как было (actuals)</h2>
+ *   <div data-testid="actuals-grid">{...RouteLoadCard variant="actual"}</div>
+ *   <h2>Как будет (predictions)</h2>
+ *   <div data-testid="predictions-grid">{...RouteLoadCard variant="prediction"}</div>
  *
- * Что УБРАНО в этой редакции (по запросу пользователя 2026-09-27):
- *  - ❌ <select> остановок (Белорусская / Чистые пруды / ...)
- *  - ❌ <EtaCard> с ETA ближайших трамваев
- *  - ❌ recommendation banner «Садитесь — будет комфортно»
- *
- * Зачем: пассажир хочет видеть «какой маршрут сейчас свободнее» ДО того,
- * как дойдёт до остановки. Остановка → карта (T-207/T-208 — отдельная сессия).
- *
- * T-141: все UI-строки через `t()` / `tf()`. Никаких хардкод-русских.
+ * Источники:
+ *   - actuals:     GET /api/v1/historical/load  (fallback MAX period)
+ *   - predictions: GET /api/v1/predictions/load (submission period)
  */
 
 import { useEffect, useState } from 'react';
@@ -23,65 +18,60 @@ import { t, tf } from '@/lib/i18n/t';
 
 import { Alert } from '@/lib/Alert';
 import { fetchActiveModel, formatWapeScore, type ActiveModelInfo } from '@/lib/activeModel';
-import { fetchAllRouteLoads, fetchRoutesList, type RouteLoad } from '@/lib/routeLoad';
+import { fetchAllRouteLoads, type RouteLoad } from '@/lib/routeLoad';
 
 import { RouteLoadCard } from '@/components/Passenger/RouteLoadCard';
 
 export function PassengerMode(): JSX.Element {
-  const [loads, setLoads] = useState<RouteLoad[]>([]);
+  const [actuals, setActuals] = useState<RouteLoad[]>([]);
+  const [predictions, setPredictions] = useState<RouteLoad[]>([]);
   const [activeModel, setActiveModel] = useState<ActiveModelInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load all route loads (routes list → for each → historical).
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
     setLoading(true);
     setError(null);
-
     (async (): Promise<void> => {
       try {
-        const routes = await fetchRoutesList();
-        if (routes.length === 0) {
-          if (!cancelled) {
-            setLoads([]);
-            setError(t('passenger.routesEmpty'));
-          }
-          return;
+        const { actuals: a, predictions: p } = await fetchAllRouteLoads(
+          controller.signal,
+        );
+        if (controller.signal.aborted) return;
+        if (controller.signal.aborted) return;
+        setActuals(a);
+        setPredictions(p);
+        if (a.length === 0 && p.length === 0) {
+          setError(t('passenger.routesEmpty'));
         }
-        const all = await fetchAllRouteLoads(routes);
-        if (!cancelled) setLoads(all);
       } catch (e: unknown) {
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           setError(e instanceof Error ? e.message : String(e));
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     })();
-
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, []);
 
-  // Active model from /api/v1/models/active — silent failure.
   useEffect(() => {
-    let cancelled = false;
-    fetchActiveModel()
+    const controller = new AbortController();
+    fetchActiveModel(controller.signal)
       .then((info) => {
-        if (!cancelled) setActiveModel(info);
+        if (!controller.signal.aborted) setActiveModel(info);
       })
-      .catch(() => {
-        // Silent
-      });
+      .catch(() => {});
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, []);
 
   const wapeLabel = formatWapeScore(activeModel?.wape_score ?? null);
-  const modelId = activeModel?.model_id ?? '—';
+  const modelId = activeModel?.model_id ?? '\u2014';
   const footerText =
     wapeLabel !== null
       ? tf('passenger.activeModelFooter', modelId, wapeLabel)
@@ -93,59 +83,81 @@ export function PassengerMode(): JSX.Element {
       <p style={{ color: '#666', marginTop: 4 }}>{t('passenger.modeHint')}</p>
 
       {error && (
-        <Alert severity="warning" icon="⚠️">
+        <Alert severity="warning" icon="\u26a0\ufe0f">
           {tf('passenger.etaError', error)}
         </Alert>
       )}
 
-      {loading && (
-        <p style={{ color: '#666' }}>{t('common.loading')}</p>
+      {loading && <p style={{ color: '#666' }}>{t('common.loading')}</p>}
+
+      {!loading && actuals.length > 0 && (
+        <>
+          <h3 style={{ marginTop: 16, color: '#555' }}>
+            {t('passenger.actualsHeader')}
+          </h3>
+          <div
+            data-testid="actuals-grid"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+              gap: 12,
+              marginTop: 8,
+            }}
+          >
+            {actuals.map((load) =>
+              load.loadPct === null ? (
+                <RouteLoadCard
+                  key={load.routeId}
+                  routeId={load.routeId}
+                  loadPct={null}
+                  variant="actual"
+                />
+              ) : (
+                <RouteLoadCard
+                  key={load.routeId}
+                  routeId={load.routeId}
+                  loadPct={load.loadPct}
+                  variant="actual"
+                />
+              ),
+            )}
+          </div>
+        </>
       )}
 
-      {!loading && loads.length > 0 && (
-        <div
-          data-testid="routes-grid"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-            gap: 12,
-            marginTop: 16,
-          }}
-        >
-          {loads.map((load) =>
-            load.loadPct === null ? (
-              <article
-                key={load.routeId}
-                data-testid="route-load-card"
-                data-tier="unknown"
-                data-route-id={load.routeId}
-                style={{
-                  background: '#f5f5f5',
-                  borderTop: '4px solid #9e9e9e',
-                  borderRadius: 6,
-                  padding: '16px 12px',
-                  minWidth: 130,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 6,
-                }}
-              >
-                <div style={{ fontSize: 13, color: '#555' }}>
-                  Маршрут {load.routeId}
-                </div>
-                <div style={{ fontSize: 24, color: '#9e9e9e' }}>—</div>
-                <div style={{ fontSize: 12, color: '#888' }}>нет данных</div>
-              </article>
-            ) : (
-              <RouteLoadCard
-                key={load.routeId}
-                routeId={load.routeId}
-                loadPct={load.loadPct}
-              />
-            ),
-          )}
-        </div>
+      {!loading && predictions.length > 0 && (
+        <>
+          <h3 style={{ marginTop: 24, color: '#555' }}>
+            {t('passenger.predictionsHeader')}
+          </h3>
+          <div
+            data-testid="predictions-grid"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+              gap: 12,
+              marginTop: 8,
+            }}
+          >
+            {predictions.map((load) =>
+              load.loadPct === null ? (
+                <RouteLoadCard
+                  key={load.routeId}
+                  routeId={load.routeId}
+                  loadPct={null}
+                  variant="prediction"
+                />
+              ) : (
+                <RouteLoadCard
+                  key={load.routeId}
+                  routeId={load.routeId}
+                  loadPct={load.loadPct}
+                  variant="prediction"
+                />
+              ),
+            )}
+          </div>
+        </>
       )}
 
       <p style={{ marginTop: 16, color: '#888', fontSize: 12 }}>{footerText}</p>
