@@ -13,6 +13,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -56,6 +57,44 @@ def _resolve_history_window(
             else to_date
         )
     return resolved_from, resolved_to
+
+
+@router.get(
+    "/historical/export.csv",
+    summary="Historical actuals as CSV (T-220)",
+    response_class=Response,
+)
+async def get_historical_csv(
+    from_date: datetime | None = Query(
+        default=None,
+        alias="from",
+        description="Start date (inclusive).",
+    ),
+    to_date: datetime | None = Query(
+        default=None,
+        alias="to",
+        description="End date (exclusive).",
+    ),
+    session: AsyncSession = Depends(get_db),
+) -> Response:
+    """Единый формат с /predictions/export.csv: route;date;hour;value.
+
+    Используется в PassengerMode (T-223) для прямой загрузки сырых CSV-данных.
+    Заменяет /historical/load (AVG-агрегат) на честный SUM за день по маршруту.
+    """
+    stmt = select(Actual).order_by(Actual.route_id, Actual.period_start)
+    if from_date is not None:
+        stmt = stmt.where(Actual.period_start >= from_date)
+    if to_date is not None:
+        stmt = stmt.where(Actual.period_start < to_date)
+    rows = (await session.execute(stmt)).scalars().all()
+    lines = ["route;date;hour;value"]
+    for r in rows:
+        date_str = r.period_start.date().isoformat()
+        hour = r.period_start.hour
+        lines.append(f"{r.route_id};{date_str};{hour};{r.value:.2f}")
+    csv = "\n".join(lines) + "\n"
+    return Response(content=csv, media_type="text/csv; charset=utf-8")
 
 
 @router.get(

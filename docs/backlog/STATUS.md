@@ -7,8 +7,8 @@ _Обновлено: 2026-09-25 22:00 (T-168 done, F-033..F-043 + T-171 in-progr
 | Счётчик | Значение |
 |---|---|
 | Тикетов в `archive/` (done за всё время) | **49** (+T-137/T-160/T-161/T-163/T-165/T-167) |
-| Тикетов в `tickets/`: | **27** (+T-168 POI features, +T-169 anomaly-proneness) |
-| &nbsp;&nbsp;• `ready` (готовы к старту) | **27** |
+| Тикетов в `tickets/`: | **32** (+T-220..T-224 CSV-таблица + LastDayCard) |
+| &nbsp;&nbsp;• `ready` (готовы к старту) | **32** |
 | &nbsp;&nbsp;• `backlog` (отложены) | **0** |
 | &nbsp;&nbsp;• `in-progress` | **0** |
 | Решений в ledger (`decisions.jsonl`) | **24** (D-001..D-023) |
