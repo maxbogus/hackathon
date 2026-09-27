@@ -5,9 +5,10 @@
  * working dashboards (passenger, dispatcher, analyst). The placeholder
  * `PlaceholderPanel` is gone.
  *
- * T-200 (новая редакция): вместо хардкода DEFAULT_WINDOW_MIN = 30 минут
- * пользовательский <HorizonToggle> с 3 кнопками (1 день / 3 месяца / 1 год).
- * Дефолт = '1d' (1 день = 1440 минут).
+ * T-200 (ревизия): пользовательский <HorizonToggle> с 3 кнопками
+ * (1 день / 3 месяца / 1 год). Дефолт = '1d'.
+ * F-097: вместо window_min (минуты) передаём семантический параметр
+ * horizon=day|month/year (см. HorizonToggle.apiHorizonFor).
  *
  * Polling: TanStack Query's `refetchInterval` does the same job as the
  * `streamlit-autorefresh` snippet in the original AC.
@@ -25,7 +26,7 @@ import { t, tf } from '@/lib/i18n/t';
 import { useGetOverloadAlertsApiV1InsightsAlertsGet } from '@/generated/api';
 
 import { AlertCard } from './AlertCard';
-import { HorizonToggle, windowMinFor, type HorizonKey } from './HorizonToggle';
+import { HorizonToggle, apiHorizonFor, type HorizonKey } from './HorizonToggle';
 import type { OverloadAlert } from '@/generated/api.schemas';
 
 const REFETCH_INTERVAL_MS = 60_000;
@@ -33,11 +34,13 @@ const DEFAULT_HORIZON: HorizonKey = '1d';
 
 export function AlertsPanel(): JSX.Element {
   const [horizon, setHorizon] = useState<HorizonKey>(DEFAULT_HORIZON);
-  const windowMin = windowMinFor(horizon);
 
   const { data, isLoading, isError, error, refetch, isFetching } =
     useGetOverloadAlertsApiV1InsightsAlertsGet(
-      { window_min: windowMin },
+      // F-097: вместо `window_min` (≤1440) передаём семантический параметр
+      // `horizon=day|month|year`, который сервер использует для выбора
+      // количества ближайших трамваев (5/30/60). window_min по умолчанию 30.
+      { horizon: apiHorizonFor(horizon) },
       { query: { refetchInterval: REFETCH_INTERVAL_MS } },
     );
 
@@ -78,7 +81,9 @@ export function AlertsPanel(): JSX.Element {
 
   const alerts = data?.alerts ?? [];
   const generatedAt = data?.generated_at ? new Date(data.generated_at) : null;
-  const responseWindowMin = data?.window_min ?? windowMin;
+  // F-097: window_min теперь ≤ 1440 (по умолчанию 30), horizon отображается как подпись.
+  // В footer показываем horizon label, а не минуты.
+  const responseHorizon = data?.horizon ?? 'day';
   const generatedAtLabel = generatedAt?.toLocaleTimeString() ?? t('dispatcher.alerts.unknownTime');
   const updatedText = isFetching
     ? t('dispatcher.alerts.fetching')
@@ -101,7 +106,8 @@ export function AlertsPanel(): JSX.Element {
           <HorizonToggle value={horizon} onChange={setHorizon} />
           <span style={{ fontSize: 12, color: '#6b7280' }}>
             {updatedText}
-            {tf('dispatcher.alerts.windowSuffix', responseWindowMin)}
+            {' '}
+            {tf('dispatcher.alerts.horizonSuffix', responseHorizon)}
           </span>
         </div>
       </header>
@@ -117,7 +123,7 @@ export function AlertsPanel(): JSX.Element {
             color: '#065f46',
           }}
         >
-          {tf('dispatcher.alerts.emptyState', responseWindowMin)}
+          {t('dispatcher.alerts.emptyStateNoMin')}
         </p>
       ) : (
         <div data-testid="alerts-list">

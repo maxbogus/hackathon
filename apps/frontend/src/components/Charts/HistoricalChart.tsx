@@ -44,11 +44,12 @@ export function HistoricalChart({ routeId, fromDate, toDate }: HistoricalChartPr
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['historical', routeId, fromDate, toDate],
     queryFn: async () => {
-      const response = await customInstance<HistoricalResponse>({
+      // F-097: customInstance теперь возвращает развёрнутый T, а не {data, headers, status}.
+      const data = await customInstance<HistoricalResponse>({
         url: `/api/v1/historical/${routeId}?from=${fromDate}&to=${toDate}&granularity=day`,
         method: 'GET',
       });
-      return response.data;
+      return data;
     },
     refetchInterval: 5 * 60_000, // 5 min
   });

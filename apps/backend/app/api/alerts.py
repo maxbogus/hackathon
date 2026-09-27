@@ -18,7 +18,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.data.transit import (
     STOP_ROUTES,
@@ -27,7 +27,9 @@ from app.data.transit import (
 )
 from app.forecast.loader import ArtifactLoader, get_loader
 from app.insights.alerts import (
+    DEFAULT_HORIZON,
     DEFAULT_WINDOW_MIN,
+    HORIZON_ETA_COUNT,
     MAX_WINDOW_MIN,
     OverloadAlert,
     find_overload_alerts,
@@ -56,13 +58,17 @@ def _eta_by_stop(
     stop_ids: list[int],
     *,
     predictor: Predictor,
+    n: int,
 ) -> dict[int, list[ETAPrediction]]:
-    """For each stop in ``stop_ids`` compute its next tram predictions."""
+    """For each stop in ``stop_ids`` compute its next ``n`` tram predictions.
+
+    F-097: ``n`` увеличивается с горизонтом (5/30/60 для day/month/year).
+    """
     out: dict[int, list[ETAPrediction]] = {}
     for stop_id in stop_ids:
         out[stop_id] = compute_eta_predictions(
             stop_id=stop_id,
-            n=5,
+            n=n,
             predictor=predictor,
         )
     return out
@@ -76,13 +82,33 @@ def get_overload_alerts(
         le=MAX_WINDOW_MIN,
         description=(
             "Look-ahead horizon in minutes. Defaults to 30 (current peak commute). "
-            f"Hard cap {MAX_WINDOW_MIN} (4 hours) for dispatcher UI sanity."
+            f"Hard cap {MAX_WINDOW_MIN} (24 hours) for dispatcher UI sanity. "
+            "For longer horizons use ``horizon`` parameter below."
         ),
+    ),
+    horizon: str = Query(
+        DEFAULT_HORIZON,
+        description=(
+            "Forecast horizon (day | month | year). Determines how many "
+            "upcoming trams are scored per route. Use the horizon toggle in "
+            "the UI; this is the backend parameter for it."
+        ),
+        pattern="^(day|month|year)$",
     ),
     loader: ArtifactLoader = Depends(get_loader),
 ) -> OverloadAlertsResponse:
-    """Return sorted overload alerts for the upcoming ``window_min`` minutes."""
+    """Return sorted overload alerts for the upcoming horizon.
+
+    F-097: добавлен параметр ``horizon=day|month|year`` (T-200). Раньше
+    использовался только ``window_min`` (≤120), что блокировало UI с 3 кнопками
+    horizon. Теперь ``window_min`` ≤ 1440 покрывает day, а month/year
+    достигаются через ``n`` (количество ближайших трамваев) per horizon.
+    """
     from transit_ai.models.baseline import BaselineMean
+
+    if horizon not in HORIZON_ETA_COUNT:
+        # Pydantic pattern уже должен это поймать; defensive guard.
+        raise HTTPException(status_code=422, detail=f"unknown horizon: {horizon}")
 
     artifact = loader.get_active()
     model_path = artifact.path / artifact.files["model"]
@@ -93,7 +119,11 @@ def get_overload_alerts(
         predictor = BaselineMean.load(model_path)
 
     stop_ids = list(STOP_ROUTES.keys())
-    eta_by_stop = _eta_by_stop(stop_ids, predictor=predictor)
+    eta_by_stop = _eta_by_stop(
+        stop_ids,
+        predictor=predictor,
+        n=HORIZON_ETA_COUNT[horizon],
+    )
 
     domain_alerts: list[OverloadAlert] = find_overload_alerts(
         eta_by_route=eta_by_stop,
@@ -107,6 +137,7 @@ def get_overload_alerts(
     return OverloadAlertsResponse(
         generated_at=datetime.now(UTC),
         window_min=window_min,
+        horizon=horizon,
         alerts=schema_alerts,
     )
 

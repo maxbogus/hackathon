@@ -134,9 +134,9 @@ export interface OverloadAlert {
    */
   predicted_load_pct: number;
   /**
-   * ETA in minutes of the specific tram this alert refers to (minutes until the tram leaves this stop). Each alert card in the dispatcher UI is rendered against its own time-to-overload.
+   * ETA in minutes of the specific tram this alert refers to (minutes until the tram leaves this stop). Each alert card in the dispatcher UI is rendered against its own time-to-overload. Hard cap 1440 (=24h) mirrors backend's MAX_WINDOW_MIN.
    * @minimum 0
-   * @maximum 120
+   * @maximum 1440
    */
   time_to_overload_min: number;
   /** Bucketed risk level. info in [75,90), warning in [90,110), critical >=110. */
@@ -152,9 +152,11 @@ export interface OverloadAlertsResponse {
   /**
    * Look-ahead horizon used for this scan (minutes).
    * @minimum 1
-   * @maximum 120
+   * @maximum 1440
    */
   window_min: number;
+  /** Forecast horizon used to score alerts. One of ('day', 'month', 'year'). */
+  horizon?: string;
   /** Sorted alerts: critical first, then warning, then info. Within a severity, by time_to_overload_min ascending. */
   alerts?: OverloadAlert[];
 }
@@ -315,8 +317,20 @@ to_date?: string;
 model_id?: string | null;
 feature_set?: string | null;
 zeros_applied?: boolean | null;
+/**
+ * @minimum 0
+ * @maximum 3
+ */
 coef_weather?: number;
+/**
+ * @minimum 0
+ * @maximum 3
+ */
 coef_event?: number;
+/**
+ * @minimum 0
+ * @maximum 3
+ */
 coef_season?: number;
 };
 
@@ -333,13 +347,13 @@ coef_season?: number;
 
 export type GetHistoricalApiV1HistoricalRouteIdGetParams = {
 /**
- * Start date (inclusive)
+ * Start date (inclusive). Optional — default = to_date - 7 days (or now - 7 days if both are omitted).
  */
-from: string;
+from?: string | null;
 /**
- * End date (inclusive)
+ * End date (inclusive). Optional — default = from_date + 7 days (or now if both omitted).
  */
-to: string;
+to?: string | null;
 /**
  * Aggregation granularity: hour | day
  * @pattern ^(hour|day)$
@@ -360,12 +374,23 @@ export type ListModelsApiV1ModelsGet200 = { [key: string]: unknown };
 
 export type GetOverloadAlertsApiV1InsightsAlertsGetParams = {
 /**
- * Look-ahead horizon in minutes. Defaults to 30 (current peak commute). Hard cap 120 (4 hours) for dispatcher UI sanity.
+ * Look-ahead horizon in minutes. Defaults to 30 (current peak commute). Hard cap 1440 (24 hours) for dispatcher UI sanity. For longer horizons use ``horizon`` parameter below.
  * @minimum 1
- * @maximum 120
+ * @maximum 1440
  */
 window_min?: number;
+/**
+ * Forecast horizon (day | month | year). Determines how many upcoming trams are scored per route. Use the horizon toggle in the UI; this is the backend parameter for it.
+ * @pattern ^(day|month|year)$
+ */
+horizon?: string;
 };
+
+export type GetStatusApiV1PredictionsStatusGet200 = { [key: string]: unknown };
+
+export type TriggerPipelineFullApiV1PipelineFullPost200 = {[key: string]: string};
+
+export type GetPipelineStatusApiV1PipelineStatusTaskIdGet200 = { [key: string]: unknown };
 
 export type RootGet200 = {[key: string]: string};
 

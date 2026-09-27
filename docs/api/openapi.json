@@ -420,7 +420,7 @@
           "predictions-db"
         ],
         "summary": "Export predictions as CSV (default params = best submission)",
-        "description": "Возвращает CSV (route;date;hour;prediction).\n\nDefault params: zeros_applied=True, feature_set=with_all — соответствует\nbest submission (F-083: 0.83455 platform score).\n\nФормат совместим с submission pipeline (clinerule 23):\n  - separator `;`\n  - колонки: route, date (YYYY-MM-DD), hour (0-23), prediction\n  - header НЕ включён (для совместимости с ml platform scoring)",
+        "description": "Возвращает CSV (route;date;hour;prediction).\n\nDefault params: zeros_applied=True, feature_set=with_all — соответствует\nbest submission (F-083: 0.83455 platform score).\n\nФормат совместим с submission pipeline (clinerule 23):\n  - separator `;`\n  - колонки: route, date (YYYY-MM-DD), hour (0-23), prediction\n  - header НЕ включён (для совместимости с ml platform scoring)\n\nВалидация (clinerule 23):\n  - coef_weather/event/season ∈ [0, 3] (FastAPI Query ge/le → 422)\n  - from_date < to_date (HTTPException 400)",
         "operationId": "export_predictions_csv_api_v1_predictions_export_csv_get",
         "parameters": [
           {
@@ -499,6 +499,8 @@
             "required": false,
             "schema": {
               "type": "number",
+              "maximum": 3,
+              "minimum": 0,
               "default": 1.0,
               "title": "Coef Weather"
             }
@@ -509,6 +511,8 @@
             "required": false,
             "schema": {
               "type": "number",
+              "maximum": 3,
+              "minimum": 0,
               "default": 1.0,
               "title": "Coef Event"
             }
@@ -519,6 +523,8 @@
             "required": false,
             "schema": {
               "type": "number",
+              "maximum": 3,
+              "minimum": 0,
               "default": 1.0,
               "title": "Coef Season"
             }
@@ -684,7 +690,7 @@
           "historical"
         ],
         "summary": "Historical boardings (actuals) for a route",
-        "description": "Возвращает исторические boardings из БД.\n\nEmpty list — нормально, если actuals пуста (dev-режим).",
+        "description": "Возвращает исторические boardings из БД.\n\nEmpty list — нормально, если actuals пуста (dev-режим).\n\nF-097: ``from`` и ``to`` стали опциональными. Если оба опущены — берётся\nпоследние ``DEFAULT_HISTORICAL_DAYS`` дней. Нужен для PassengerMode\n(routeLoad.ts), который агрегирует «последний час» без явного диапазона.",
         "operationId": "get_historical_api_v1_historical__route_id__get",
         "parameters": [
           {
@@ -699,26 +705,40 @@
           {
             "name": "from",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": "string",
-              "format": "date-time",
-              "description": "Start date (inclusive)",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Start date (inclusive). Optional — default = to_date - 7 days (or now - 7 days if both are omitted).",
               "title": "From"
             },
-            "description": "Start date (inclusive)"
+            "description": "Start date (inclusive). Optional — default = to_date - 7 days (or now - 7 days if both are omitted)."
           },
           {
             "name": "to",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": "string",
-              "format": "date-time",
-              "description": "End date (inclusive)",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "End date (inclusive). Optional — default = from_date + 7 days (or now if both omitted).",
               "title": "To"
             },
-            "description": "End date (inclusive)"
+            "description": "End date (inclusive). Optional — default = from_date + 7 days (or now if both omitted)."
           },
           {
             "name": "granularity",
@@ -836,7 +856,7 @@
           "insights"
         ],
         "summary": "Get Overload Alerts",
-        "description": "Return sorted overload alerts for the upcoming ``window_min`` minutes.",
+        "description": "Return sorted overload alerts for the upcoming horizon.\n\nF-097: добавлен параметр ``horizon=day|month|year`` (T-200). Раньше\nиспользовался только ``window_min`` (≤120), что блокировало UI с 3 кнопками\nhorizon. Теперь ``window_min`` ≤ 1440 покрывает day, а month/year\nдостигаются через ``n`` (количество ближайших трамваев) per horizon.",
         "operationId": "get_overload_alerts_api_v1_insights_alerts_get",
         "parameters": [
           {
@@ -845,13 +865,26 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "maximum": 120,
+              "maximum": 1440,
               "minimum": 1,
-              "description": "Look-ahead horizon in minutes. Defaults to 30 (current peak commute). Hard cap 120 (4 hours) for dispatcher UI sanity.",
+              "description": "Look-ahead horizon in minutes. Defaults to 30 (current peak commute). Hard cap 1440 (24 hours) for dispatcher UI sanity. For longer horizons use ``horizon`` parameter below.",
               "default": 30,
               "title": "Window Min"
             },
-            "description": "Look-ahead horizon in minutes. Defaults to 30 (current peak commute). Hard cap 120 (4 hours) for dispatcher UI sanity."
+            "description": "Look-ahead horizon in minutes. Defaults to 30 (current peak commute). Hard cap 1440 (24 hours) for dispatcher UI sanity. For longer horizons use ``horizon`` parameter below."
+          },
+          {
+            "name": "horizon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(day|month|year)$",
+              "description": "Forecast horizon (day | month | year). Determines how many upcoming trams are scored per route. Use the horizon toggle in the UI; this is the backend parameter for it.",
+              "default": "day",
+              "title": "Horizon"
+            },
+            "description": "Forecast horizon (day | month | year). Determines how many upcoming trams are scored per route. Use the horizon toggle in the UI; this is the backend parameter for it."
           }
         ],
         "responses": {
@@ -987,6 +1020,101 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ZeroOverrideOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/status": {
+      "get": {
+        "tags": [
+          "predictions-status"
+        ],
+        "summary": "Predictions DB status (T-198)",
+        "description": "Возвращает dict с has_predictions, count, model_ids, running_pipeline.\n\nИспользуется UI чтобы решить: показывать EmptyPredictions или графики.\n\nПример:\n    GET /api/v1/predictions/status\n    → {\"has_predictions\": true, \"predictions_count\": 14640, ...}",
+        "operationId": "get_status_api_v1_predictions_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Status Api V1 Predictions Status Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pipeline/full": {
+      "post": {
+        "tags": [
+          "pipeline"
+        ],
+        "summary": "Trigger ml_pipeline.full_pipeline (T-198)",
+        "description": "Запускает Celery task full_pipeline (train + predict).",
+        "operationId": "trigger_pipeline_full_api_v1_pipeline_full_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Trigger Pipeline Full Api V1 Pipeline Full Post"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pipeline/status/{task_id}": {
+      "get": {
+        "tags": [
+          "pipeline"
+        ],
+        "summary": "Get Celery task status (T-198)",
+        "description": "Возвращает текущий статус Celery task.",
+        "operationId": "get_pipeline_status_api_v1_pipeline_status__task_id__get",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Pipeline Status Api V1 Pipeline Status  Task Id  Get"
                 }
               }
             }
@@ -1295,10 +1423,10 @@
           },
           "time_to_overload_min": {
             "type": "integer",
-            "maximum": 120.0,
+            "maximum": 1440.0,
             "minimum": 0.0,
             "title": "Time To Overload Min",
-            "description": "ETA in minutes of the specific tram this alert refers to (minutes until the tram leaves this stop). Each alert card in the dispatcher UI is rendered against its own time-to-overload."
+            "description": "ETA in minutes of the specific tram this alert refers to (minutes until the tram leaves this stop). Each alert card in the dispatcher UI is rendered against its own time-to-overload. Hard cap 1440 (=24h) mirrors backend's MAX_WINDOW_MIN."
           },
           "severity": {
             "type": "string",
@@ -1334,10 +1462,16 @@
           },
           "window_min": {
             "type": "integer",
-            "maximum": 120.0,
+            "maximum": 1440.0,
             "minimum": 1.0,
             "title": "Window Min",
             "description": "Look-ahead horizon used for this scan (minutes)."
+          },
+          "horizon": {
+            "type": "string",
+            "title": "Horizon",
+            "description": "Forecast horizon used to score alerts. One of ('day', 'month', 'year').",
+            "default": "day"
           },
           "alerts": {
             "items": {

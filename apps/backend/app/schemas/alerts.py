@@ -16,7 +16,9 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.insights.alerts import (
+    HORIZONS,
     MAX_LOAD_PCT,
+    MAX_WINDOW_MIN,
     SEVERITY_INFO_MIN,
 )
 
@@ -47,11 +49,12 @@ class OverloadAlert(BaseModel):
     )
     time_to_overload_min: int = Field(
         ge=0,
-        le=120,
+        le=MAX_WINDOW_MIN,
         description=(
             "ETA in minutes of the specific tram this alert refers to "
             "(minutes until the tram leaves this stop). Each alert card in "
-            "the dispatcher UI is rendered against its own time-to-overload."
+            "the dispatcher UI is rendered against its own time-to-overload. "
+            f"Hard cap {MAX_WINDOW_MIN} (=24h) mirrors backend's MAX_WINDOW_MIN."
         ),
     )
     severity: SeverityLevel = Field(
@@ -71,8 +74,14 @@ class OverloadAlertsResponse(BaseModel):
     )
     window_min: int = Field(
         ge=1,
-        le=120,
+        le=MAX_WINDOW_MIN,
         description="Look-ahead horizon used for this scan (minutes).",
+    )
+    horizon: str = Field(
+        default="day",
+        description=(
+            f"Forecast horizon used to score alerts. One of {HORIZONS}."
+        ),
     )
     alerts: list[OverloadAlert] = Field(
         default_factory=list,

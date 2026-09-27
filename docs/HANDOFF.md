@@ -1,5 +1,55 @@
 # HANDOFF — Transit-AI
 
+> Последнее обновление: 2026-09-27T11:00:00Z
+# Обновлено: Cline (агент) — дизайнерский аудит UI/UX (часть 1): T-200 (планёр), T-201 (active model), T-203 (horizon/granularity). 99 vitest passed (+13).
+
+## Мини-сессия 2026-09-27T11:00:00Z — Дизайнерский аудит UI/UX (часть 1)
+
+**Контекст:** Пришёл детальный ревью от дизайнера по 4 экранам (passenger/dispatcher/analyst/planner). Главные замечания:
+1. ❌ Планёр — пустая заглушка, удалить до хакатона.
+2. ➕ Карта Москвы (тепловая карта остановок) на Аналитике + Диспетчере.
+3. ➕ Селекторы горизонта (день/месяц/год) и гранулярности (час/день/месяц) на Аналитике.
+4. ➕ Активная модель на Пассажире через /models/active (был хардкод "—").
+5. ➕ XLSX-экспорт (бэкенд готов T-206, не было UI).
+6. ➕ Таблица данных под графиками.
+
+**Что сделано (3 коммита: 27e0eeb, 7098507, +T-204 в работе):**
+
+**T-200 ❌ Удалить Планёр (commit 27e0eeb):**
+- routes/planner.tsx — удалён
+- components/Layout/PlaceholderPanel.tsx — удалён
+- lib/roles.ts — RoleId сужен с 4 до 3 ('passenger'|'dispatcher'|'analyst')
+- lib/i18n/ru-RU.ts — убран блок rolePlanner
+- routeTree.gen.ts — убраны /planner записи
+- Тесты обновлены: App.test.tsx, -__root.test.tsx, t.test.ts
+- Ledger: D-035 (drop planner tab)
+
+**T-201 + T-203 ➕ Active model + Horizon/Granularity (commit 7098507):**
+- lib/activeModel.ts (новый) — fetchActiveModel + formatWapeScore
+- lib/activeModel.test.ts (новый) — 6 тестов
+- components/Filters/HorizonGranularity.tsx (новый) — controlled selector
+- components/Filters/HorizonGranularity.test.tsx (новый) — 4 теста
+- pages/PassengerMode.tsx — active model в подвале: `Модель: baseline_v1 · WAPE-score 0.9272 · обновлено`
+- components/Charts/PredictionsChart.tsx — проброс horizon/granularity в API
+- components/Charts/AnalystDashboard.tsx — state для horizon/granularity
+- lib/i18n/ru-RU.ts — analyst.horizon{Label,Day,Month,Year}, granularity{Label,Month}, passenger.activeModelFooter
+
+**Метрики:**
+- vitest: 86 → **99 passed (+13)**
+- typecheck: 5 → **4 pre-existing ошибки** (3 в generated/api.ts про model_id null, 1 в AlertsPanel.tsx — НЕ от этой сессии)
+- 2 коммита, 13 файлов
+
+**Следующая задача:** T-204 XLSX-экспорт (бэкенд готов с T-206).
+**Дальше:** T-207 карта Leaflet, T-208 карта Диспетчер, T-209 фильтры, T-202 поиск остановок, T-210 collapse, T-206 таблица, T-205+T-212 модель+агрегация.
+
+**Артефакты:** baseline_v1 (WAPE 0.9272), xgboost_v8_poi (0.8751/0.73231), submission_xgboost_v8_poi_*.csv — best.
+**Открытые вопросы:** typecheck 4 pre-existing ошибки (отдельный тикет T-216), T-215 stop-level predictions отложен.
+
+---
+
+
+# HANDOFF — Transit-AI
+
 > Последнее обновление: 2026-09-27T07:25:00Z
 # Обновлено: Cline (агент) — fix(frontend): двойной /api префикс в customInstance.ts (F-095). 86 vitest passed (+3 регрессионных).
 

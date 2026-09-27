@@ -51,11 +51,11 @@ export function FiltersPanel({
   const { data, isLoading, isError } = useQuery({
     queryKey: ['features'],
     queryFn: async () => {
-      const r = await customInstance<FeaturesResponse>({
+      const data = await customInstance<FeaturesResponse>({
         url: '/api/v1/features',
         method: 'GET',
       });
-      return r.data;
+      return data;
     },
   });
 

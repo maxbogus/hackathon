@@ -34,7 +34,20 @@ ALERT_LOAD_THRESHOLD: float = SEVERITY_INFO_MIN
 MAX_LOAD_PCT: float = 150.0
 
 DEFAULT_WINDOW_MIN: int = 30
-MAX_WINDOW_MIN: int = 120
+# F-097: лимит поднят с 120 до 1440 (1 день), чтобы покрывать кнопку "1 день" в
+# HorizonToggle (T-200) без 422. Для бо́льших горизонтов (месяц/год) используется
+# параметр `horizon=day|month|year` в /api/v1/insights/alerts, а не window_min.
+MAX_WINDOW_MIN: int = 1440  # 1 day
+HORIZONS: tuple[str, ...] = ("day", "month", "year")
+DEFAULT_HORIZON: str = "day"
+
+# Количество ближайших ETA на маршрут в зависимости от горизонта.
+# Ограничено, чтобы не упереться в перфоманс-стену для года.
+HORIZON_ETA_COUNT: Mapping[str, int] = {
+    "day": 5,    # ~каждые 5-10 мин в пик
+    "month": 30, # 30 ближайших трамваев = аппроксимация месячного горизонта
+    "year": 60,  # 60 ближайших = ~сутки в пик, более широкий обзор
+}
 
 _SEVERITY_RANK: Mapping[str, int] = {
     "critical": 0,
@@ -128,7 +141,10 @@ def find_overload_alerts(
 
 __all__ = [
     "ALERT_LOAD_THRESHOLD",
+    "DEFAULT_HORIZON",
     "DEFAULT_WINDOW_MIN",
+    "HORIZONS",
+    "HORIZON_ETA_COUNT",
     "MAX_LOAD_PCT",
     "MAX_WINDOW_MIN",
     "SEVERITY_CRITICAL_MIN",

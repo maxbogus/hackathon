@@ -196,6 +196,41 @@ def test_historical_invalid_granularity(client) -> None:
     assert r.status_code == 422
 
 
+def test_historical_optional_from_to_defaults_to_7_days(client) -> None:
+    """F-097: ``from`` и ``to`` теперь опциональны. Без них → последние 7 дней."""
+    r = client.get("/api/v1/historical/7?granularity=hour")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["route_id"] == 7
+    assert body["granularity"] == "hour"
+    # from_date и to_date заполнены автоматически (окно 7 дней)
+    assert body["from_date"] is not None
+    assert body["to_date"] is not None
+
+
+def test_historical_only_from_to_derives_to(client) -> None:
+    """F-097: только ``from`` → ``to`` = from + 7 дней."""
+    r = client.get(
+        "/api/v1/historical/7?from=2025-09-01T00:00:00",
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["from_date"].startswith("2025-09-01")
+    # to_date = from_date + 7 days = 2025-09-08
+    assert body["to_date"].startswith("2025-09-08")
+
+
+def test_historical_only_to_to_derives_from(client) -> None:
+    """F-097: только ``to`` → ``from`` = to - 7 дней."""
+    r = client.get(
+        "/api/v1/historical/7?to=2025-09-08T00:00:00",
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["to_date"].startswith("2025-09-08")
+    assert body["from_date"].startswith("2025-09-01")
+
+
 def test_list_routes_with_history_empty(client) -> None:
     r = client.get("/api/v1/historical")
     assert r.status_code == 200

@@ -53,8 +53,11 @@ export const TEXTS = {
       fetching: 'обновление…',
       updatedAt: (time: string) => `обновлено: ${time}`,
       windowSuffix: (min: number) => ` · горизонт ${min} мин`,
+      /* F-097: новый суффикс для horizon label (day|month|year) */
+      horizonSuffix: (horizon: string) => ` · горизонт ${horizon}`,
       unknownTime: '—',
       emptyState: (min: number) => `✅ Всё в норме на ближайшие ${min} мин.`,
+      emptyStateNoMin: '✅ Всё в норме на выбранный горизонт.',
       /* T-200 (новая редакция): 3 горизонта вместо 30 мин */
       horizonGroupLabel: 'Горизонт прогноза',
       horizon1Day: '1 день',
@@ -79,6 +82,8 @@ export const TEXTS = {
     stopsLabel: 'Остановка',
     stopsLoading: 'Загрузка остановок…',
     stopsEmpty: 'Нет маршрутов',
+    /* F-097: pre-existing missing key — добавлен по дороге */
+    routesEmpty: 'Нет доступных маршрутов',
     etaLoading: 'Загрузка нагрузки…',
     etaError: (msg: string) => `Ошибка загрузки данных: ${msg}`,
     modelFooter: (modelId: string) => `Модель: ${modelId} · обновлено только что`,

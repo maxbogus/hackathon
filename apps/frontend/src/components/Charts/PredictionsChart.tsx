@@ -70,14 +70,14 @@ export function PredictionsChart({
       coefSeason,
     ],
     queryFn: async () => {
-      const response = await customInstance<PredictionsResponse>({
+      const data = await customInstance<PredictionsResponse>({
         url:
           `/api/v1/predictions/db/${routeId}?from=${fromDate}&to=${toDate}` +
           `&horizon=${horizon}&granularity=${granularity}` +
           `&coef_weather=${coefWeather}&coef_event=${coefEvent}&coef_season=${coefSeason}`,
         method: 'GET',
       });
-      return response.data;
+      return data;
     },
     refetchInterval: 5 * 60_000,
   });

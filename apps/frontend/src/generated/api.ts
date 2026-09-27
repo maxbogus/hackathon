@@ -35,9 +35,11 @@ import type {
   GetEtaPredictionsApiV1PredictionsEtaGetParams,
   GetHistoricalApiV1HistoricalRouteIdGetParams,
   GetOverloadAlertsApiV1InsightsAlertsGetParams,
+  GetPipelineStatusApiV1PipelineStatusTaskIdGet200,
   GetPredictionsDbApiV1PredictionsDbRouteIdGetParams,
   GetPredictionsForStopApiV1PredictionsStopStopIdGet200,
   GetPredictionsForStopApiV1PredictionsStopStopIdGetParams,
+  GetStatusApiV1PredictionsStatusGet200,
   HTTPValidationError,
   HealthzApiV1HealthzGet200,
   HistoricalResponse,
@@ -48,6 +50,7 @@ import type {
   PredictionsDBResponse,
   ReadyzApiV1ReadyzGet200,
   RootGet200,
+  TriggerPipelineFullApiV1PipelineFullPost200,
   VersionApiV1VersionGet200,
   ZeroOverrideOut,
   ZeroOverrideUpdate
@@ -769,6 +772,10 @@ best submission (F-083: 0.83455 platform score).
   - separator `;`
   - колонки: route, date (YYYY-MM-DD), hour (0-23), prediction
   - header НЕ включён (для совместимости с ml platform scoring)
+
+Валидация (clinerule 23):
+  - coef_weather/event/season ∈ [0, 3] (FastAPI Query ge/le → 422)
+  - from_date < to_date (HTTPException 400)
  * @summary Export predictions as CSV (default params = best submission)
  */
 export const exportPredictionsCsvApiV1PredictionsExportCsvGet = (
@@ -964,11 +971,15 @@ export function useExportPredictionsXlsxApiV1PredictionsExportXlsxGet<TData = Aw
  * Возвращает исторические boardings из БД.
 
 Empty list — нормально, если actuals пуста (dev-режим).
+
+F-097: ``from`` и ``to`` стали опциональными. Если оба опущены — берётся
+последние ``DEFAULT_HISTORICAL_DAYS`` дней. Нужен для PassengerMode
+(routeLoad.ts), который агрегирует «последний час» без явного диапазона.
  * @summary Historical boardings (actuals) for a route
  */
 export const getHistoricalApiV1HistoricalRouteIdGet = (
     routeId: number,
-    params: GetHistoricalApiV1HistoricalRouteIdGetParams,
+    params?: GetHistoricalApiV1HistoricalRouteIdGetParams,
  signal?: AbortSignal
 ) => {
       
@@ -992,7 +1003,7 @@ export const getGetHistoricalApiV1HistoricalRouteIdGetQueryKey = (routeId?: numb
 
     
 export const getGetHistoricalApiV1HistoricalRouteIdGetQueryOptions = <TData = Awaited<ReturnType<typeof getHistoricalApiV1HistoricalRouteIdGet>>, TError = HTTPValidationError>(routeId: number,
-    params: GetHistoricalApiV1HistoricalRouteIdGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistoricalApiV1HistoricalRouteIdGet>>, TError, TData>>, }
+    params?: GetHistoricalApiV1HistoricalRouteIdGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistoricalApiV1HistoricalRouteIdGet>>, TError, TData>>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
@@ -1016,7 +1027,7 @@ export type GetHistoricalApiV1HistoricalRouteIdGetQueryError = HTTPValidationErr
 
 export function useGetHistoricalApiV1HistoricalRouteIdGet<TData = Awaited<ReturnType<typeof getHistoricalApiV1HistoricalRouteIdGet>>, TError = HTTPValidationError>(
  routeId: number,
-    params: GetHistoricalApiV1HistoricalRouteIdGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistoricalApiV1HistoricalRouteIdGet>>, TError, TData>> & Pick<
+    params: undefined |  GetHistoricalApiV1HistoricalRouteIdGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistoricalApiV1HistoricalRouteIdGet>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getHistoricalApiV1HistoricalRouteIdGet>>,
           TError,
@@ -1027,7 +1038,7 @@ export function useGetHistoricalApiV1HistoricalRouteIdGet<TData = Awaited<Return
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
 export function useGetHistoricalApiV1HistoricalRouteIdGet<TData = Awaited<ReturnType<typeof getHistoricalApiV1HistoricalRouteIdGet>>, TError = HTTPValidationError>(
  routeId: number,
-    params: GetHistoricalApiV1HistoricalRouteIdGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistoricalApiV1HistoricalRouteIdGet>>, TError, TData>> & Pick<
+    params?: GetHistoricalApiV1HistoricalRouteIdGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistoricalApiV1HistoricalRouteIdGet>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getHistoricalApiV1HistoricalRouteIdGet>>,
           TError,
@@ -1038,7 +1049,7 @@ export function useGetHistoricalApiV1HistoricalRouteIdGet<TData = Awaited<Return
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
 export function useGetHistoricalApiV1HistoricalRouteIdGet<TData = Awaited<ReturnType<typeof getHistoricalApiV1HistoricalRouteIdGet>>, TError = HTTPValidationError>(
  routeId: number,
-    params: GetHistoricalApiV1HistoricalRouteIdGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistoricalApiV1HistoricalRouteIdGet>>, TError, TData>>, }
+    params?: GetHistoricalApiV1HistoricalRouteIdGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistoricalApiV1HistoricalRouteIdGet>>, TError, TData>>, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
 /**
@@ -1047,7 +1058,7 @@ export function useGetHistoricalApiV1HistoricalRouteIdGet<TData = Awaited<Return
 
 export function useGetHistoricalApiV1HistoricalRouteIdGet<TData = Awaited<ReturnType<typeof getHistoricalApiV1HistoricalRouteIdGet>>, TError = HTTPValidationError>(
  routeId: number,
-    params: GetHistoricalApiV1HistoricalRouteIdGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistoricalApiV1HistoricalRouteIdGet>>, TError, TData>>, }
+    params?: GetHistoricalApiV1HistoricalRouteIdGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistoricalApiV1HistoricalRouteIdGet>>, TError, TData>>, }
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
 
@@ -1259,7 +1270,12 @@ export function useListModelsApiV1ModelsGet<TData = Awaited<ReturnType<typeof li
 
 
 /**
- * Return sorted overload alerts for the upcoming ``window_min`` minutes.
+ * Return sorted overload alerts for the upcoming horizon.
+
+F-097: добавлен параметр ``horizon=day|month|year`` (T-200). Раньше
+использовался только ``window_min`` (≤120), что блокировало UI с 3 кнопками
+horizon. Теперь ``window_min`` ≤ 1440 покрывает day, а month/year
+достигаются через ``n`` (количество ближайших трамваев) per horizon.
  * @summary Get Overload Alerts
  */
 export const getOverloadAlertsApiV1InsightsAlertsGet = (
@@ -1579,6 +1595,264 @@ export const useToggleZeroApiV1ZerosNameTogglePost = <TError = HTTPValidationErr
       return useMutation(mutationOptions, queryClient);
     }
     
+/**
+ * Возвращает dict с has_predictions, count, model_ids, running_pipeline.
+
+Используется UI чтобы решить: показывать EmptyPredictions или графики.
+
+Пример:
+    GET /api/v1/predictions/status
+    → {"has_predictions": true, "predictions_count": 14640, ...}
+ * @summary Predictions DB status (T-198)
+ */
+export const getStatusApiV1PredictionsStatusGet = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<GetStatusApiV1PredictionsStatusGet200>(
+      {url: `/api/v1/predictions/status`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getGetStatusApiV1PredictionsStatusGetQueryKey = () => {
+    return [
+    `/api/v1/predictions/status`
+    ] as const;
+    }
+
+    
+export const getGetStatusApiV1PredictionsStatusGetQueryOptions = <TData = Awaited<ReturnType<typeof getStatusApiV1PredictionsStatusGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getStatusApiV1PredictionsStatusGet>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetStatusApiV1PredictionsStatusGetQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getStatusApiV1PredictionsStatusGet>>> = ({ signal }) => getStatusApiV1PredictionsStatusGet(signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getStatusApiV1PredictionsStatusGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
+}
+
+export type GetStatusApiV1PredictionsStatusGetQueryResult = NonNullable<Awaited<ReturnType<typeof getStatusApiV1PredictionsStatusGet>>>
+export type GetStatusApiV1PredictionsStatusGetQueryError = unknown
+
+
+export function useGetStatusApiV1PredictionsStatusGet<TData = Awaited<ReturnType<typeof getStatusApiV1PredictionsStatusGet>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getStatusApiV1PredictionsStatusGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getStatusApiV1PredictionsStatusGet>>,
+          TError,
+          Awaited<ReturnType<typeof getStatusApiV1PredictionsStatusGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+export function useGetStatusApiV1PredictionsStatusGet<TData = Awaited<ReturnType<typeof getStatusApiV1PredictionsStatusGet>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getStatusApiV1PredictionsStatusGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getStatusApiV1PredictionsStatusGet>>,
+          TError,
+          Awaited<ReturnType<typeof getStatusApiV1PredictionsStatusGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+export function useGetStatusApiV1PredictionsStatusGet<TData = Awaited<ReturnType<typeof getStatusApiV1PredictionsStatusGet>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getStatusApiV1PredictionsStatusGet>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+/**
+ * @summary Predictions DB status (T-198)
+ */
+
+export function useGetStatusApiV1PredictionsStatusGet<TData = Awaited<ReturnType<typeof getStatusApiV1PredictionsStatusGet>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getStatusApiV1PredictionsStatusGet>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+
+  const queryOptions = getGetStatusApiV1PredictionsStatusGetQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
+/**
+ * Запускает Celery task full_pipeline (train + predict).
+ * @summary Trigger ml_pipeline.full_pipeline (T-198)
+ */
+export const triggerPipelineFullApiV1PipelineFullPost = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<TriggerPipelineFullApiV1PipelineFullPost200>(
+      {url: `/api/v1/pipeline/full`, method: 'POST', signal
+    },
+      );
+    }
+  
+
+
+export const getTriggerPipelineFullApiV1PipelineFullPostMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof triggerPipelineFullApiV1PipelineFullPost>>, TError,void, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof triggerPipelineFullApiV1PipelineFullPost>>, TError,void, TContext> => {
+
+const mutationKey = ['triggerPipelineFullApiV1PipelineFullPost'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof triggerPipelineFullApiV1PipelineFullPost>>, void> = () => {
+          
+
+          return  triggerPipelineFullApiV1PipelineFullPost()
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TriggerPipelineFullApiV1PipelineFullPostMutationResult = NonNullable<Awaited<ReturnType<typeof triggerPipelineFullApiV1PipelineFullPost>>>
+    
+    export type TriggerPipelineFullApiV1PipelineFullPostMutationError = unknown
+
+    /**
+ * @summary Trigger ml_pipeline.full_pipeline (T-198)
+ */
+export const useTriggerPipelineFullApiV1PipelineFullPost = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof triggerPipelineFullApiV1PipelineFullPost>>, TError,void, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof triggerPipelineFullApiV1PipelineFullPost>>,
+        TError,
+        void,
+        TContext
+      > => {
+
+      const mutationOptions = getTriggerPipelineFullApiV1PipelineFullPostMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * Возвращает текущий статус Celery task.
+ * @summary Get Celery task status (T-198)
+ */
+export const getPipelineStatusApiV1PipelineStatusTaskIdGet = (
+    taskId: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<GetPipelineStatusApiV1PipelineStatusTaskIdGet200>(
+      {url: `/api/v1/pipeline/status/${taskId}`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getGetPipelineStatusApiV1PipelineStatusTaskIdGetQueryKey = (taskId?: string,) => {
+    return [
+    `/api/v1/pipeline/status/${taskId}`
+    ] as const;
+    }
+
+    
+export const getGetPipelineStatusApiV1PipelineStatusTaskIdGetQueryOptions = <TData = Awaited<ReturnType<typeof getPipelineStatusApiV1PipelineStatusTaskIdGet>>, TError = HTTPValidationError>(taskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPipelineStatusApiV1PipelineStatusTaskIdGet>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPipelineStatusApiV1PipelineStatusTaskIdGetQueryKey(taskId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPipelineStatusApiV1PipelineStatusTaskIdGet>>> = ({ signal }) => getPipelineStatusApiV1PipelineStatusTaskIdGet(taskId, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(taskId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPipelineStatusApiV1PipelineStatusTaskIdGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
+}
+
+export type GetPipelineStatusApiV1PipelineStatusTaskIdGetQueryResult = NonNullable<Awaited<ReturnType<typeof getPipelineStatusApiV1PipelineStatusTaskIdGet>>>
+export type GetPipelineStatusApiV1PipelineStatusTaskIdGetQueryError = HTTPValidationError
+
+
+export function useGetPipelineStatusApiV1PipelineStatusTaskIdGet<TData = Awaited<ReturnType<typeof getPipelineStatusApiV1PipelineStatusTaskIdGet>>, TError = HTTPValidationError>(
+ taskId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPipelineStatusApiV1PipelineStatusTaskIdGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPipelineStatusApiV1PipelineStatusTaskIdGet>>,
+          TError,
+          Awaited<ReturnType<typeof getPipelineStatusApiV1PipelineStatusTaskIdGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+export function useGetPipelineStatusApiV1PipelineStatusTaskIdGet<TData = Awaited<ReturnType<typeof getPipelineStatusApiV1PipelineStatusTaskIdGet>>, TError = HTTPValidationError>(
+ taskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPipelineStatusApiV1PipelineStatusTaskIdGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPipelineStatusApiV1PipelineStatusTaskIdGet>>,
+          TError,
+          Awaited<ReturnType<typeof getPipelineStatusApiV1PipelineStatusTaskIdGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+export function useGetPipelineStatusApiV1PipelineStatusTaskIdGet<TData = Awaited<ReturnType<typeof getPipelineStatusApiV1PipelineStatusTaskIdGet>>, TError = HTTPValidationError>(
+ taskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPipelineStatusApiV1PipelineStatusTaskIdGet>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+/**
+ * @summary Get Celery task status (T-198)
+ */
+
+export function useGetPipelineStatusApiV1PipelineStatusTaskIdGet<TData = Awaited<ReturnType<typeof getPipelineStatusApiV1PipelineStatusTaskIdGet>>, TError = HTTPValidationError>(
+ taskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPipelineStatusApiV1PipelineStatusTaskIdGet>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+
+  const queryOptions = getGetPipelineStatusApiV1PipelineStatusTaskIdGetQueryOptions(taskId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
 /**
  * @summary Root
  */

@@ -1,34 +1,34 @@
 /**
- * T-200 (новая редакция): 3 кнопки-плашки для горизонта алертов.
+ * T-200 (ревизия): 3 кнопки-плашки для горизонта алертов.
  *
- * Раньше был хардкод DEFAULT_WINDOW_MIN = 30 минут. По запросу 2026-09-27:
- *  - дефолт = 1 день (1440 минут)
- *  - 3 месяца (131400 минут)
- *  - 1 год   (525600 минут)
+ * F-097: раньше UI передавал ``window_min=1440/131400/525600``, но backend
+ * ограничивал ``window_min ≤ 120`` (≤1440 после фикса), и эти минуты — не
+ * тот же домен, что «3 месяца» или «1 год». Теперь UI отправляет
+ * семантический ``horizon=day|month|year`` (через ``apiHorizonFor``),
+ * а backend использует его для выбора количества ближайших трамваев
+ * (5 / 30 / 60) — это и есть «прогноз на 3 горизонта» из ТЗ задачи 1.
  *
- * Window_min передаётся в GET /api/v1/insights/alerts как query param.
- *
- * Контракт:
+ * Контракт (контрактируем с backend `apps/backend/app/insights/alerts.py`):
  *   value="1d"   onChange={next}   // pure controlled
- *
- *   1d = 1440 min = 1 день
- *   3m = 131400 min = 3 месяца (90 × 1440)
- *   1y = 525600 min = 1 год   (365 × 1440)
+ *   1d → apiHorizonFor('1d') = 'day'
+ *   3m → apiHorizonFor('3m') = 'month'
+ *   1y → apiHorizonFor('1y') = 'year'
  */
 
 import { t } from '@/lib/i18n/t';
+import type { TKey } from '@/lib/i18n/keys';
 
 export type HorizonKey = '1d' | '3m' | '1y';
 
 export interface HorizonSpec {
   readonly key: HorizonKey;
-  readonly windowMin: number;
+  readonly apiHorizon: 'day' | 'month' | 'year';
 }
 
 export const HORIZONS: ReadonlyArray<HorizonSpec> = [
-  { key: '1d', windowMin: 1440 },
-  { key: '3m', windowMin: 131_400 },
-  { key: '1y', windowMin: 525_600 },
+  { key: '1d', apiHorizon: 'day' },
+  { key: '3m', apiHorizon: 'month' },
+  { key: '1y', apiHorizon: 'year' },
 ];
 
 const LABEL_KEY: Readonly<Record<HorizonKey, string>> = {
@@ -37,10 +37,11 @@ const LABEL_KEY: Readonly<Record<HorizonKey, string>> = {
   '1y': 'dispatcher.alerts.horizon1Year',
 };
 
-export function windowMinFor(key: HorizonKey): number {
+/** API horizon param для бэкенда: day | month | year. */
+export function apiHorizonFor(key: HorizonKey): 'day' | 'month' | 'year' {
   const found = HORIZONS.find((h) => h.key === key);
   if (!found) throw new Error(`HorizonToggle: unknown key ${key}`);
-  return found.windowMin;
+  return found.apiHorizon;
 }
 
 export interface HorizonToggleProps {
@@ -79,7 +80,7 @@ export function HorizonToggle({ value, onChange }: HorizonToggleProps): JSX.Elem
               fontWeight: selected ? 600 : 400,
             }}
           >
-            {t(LABEL_KEY[h.key])}
+            {t(LABEL_KEY[h.key] as TKey)}
           </button>
         );
       })}

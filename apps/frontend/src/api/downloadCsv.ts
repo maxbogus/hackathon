@@ -6,7 +6,7 @@
  * { rowCount, md5 } — md5 нужен для теста "скачанный CSV == best submission".
  */
 
-import { customInstance } from '@/api/customInstance';
+import { customInstance, lastResponse } from '@/api/customInstance';
 
 export interface DownloadCsvParams {
   from: string; // ISO datetime
@@ -52,22 +52,26 @@ export async function downloadPredictionsCsv(
   const qs = buildQuery(params);
   const url = `/api/v1/predictions/export.csv?${qs}`;
 
-  const response = await customInstance<string>({
+  // F-097: customInstance теперь возвращает развёрнутый string, headers/status
+  // доступны через lastResponse() helper (singleton).
+  const content = await customInstance<string>({
     url,
     method: 'GET',
     responseType: 'text',
     headers: { Accept: 'text/csv' },
   });
 
-  const contentDisposition = response.headers?.['content-disposition'] ?? '';
+  const env = lastResponse();
+  const headers = env?.headers ?? {};
+  const contentDisposition = headers['content-disposition'] ?? '';
   const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
   const filename = filenameMatch?.[1] ?? 'submission.csv';
 
   return {
     filename,
-    rowCount: Number(response.headers?.['x-row-count'] ?? 0),
-    md5: response.headers?.['x-csv-md5'] ?? '',
-    content: String(response.data ?? ''),
+    rowCount: Number(headers['x-row-count'] ?? 0),
+    md5: headers['x-csv-md5'] ?? '',
+    content: String(content ?? ''),
   };
 }
 

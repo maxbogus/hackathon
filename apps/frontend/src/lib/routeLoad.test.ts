@@ -96,4 +96,32 @@ describe('fetchAllRouteLoads', () => {
     const result = await fetchAllRouteLoads([1, 7]);
     expect(result.every((r) => r.tier === 'unknown')).toBe(true);
   });
+
+  it('issues /historical/{route_id} without from/to (F-097 regression)', async () => {
+    // F-097: backend сделал `from`/`to` опциональными (default = last 7 days).
+    // Этот тест фиксирует контракт: клиент НЕ передаёт from/to, сервер их не требует.
+    const observed: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        observed.push(url);
+        return new Response(
+          JSON.stringify({
+            route_id: 7,
+            granularity: 'hour',
+            points: [{ period_start: '2025-09-30T20:00:00Z', value: 42 }],
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        );
+      }),
+    );
+
+    const result = await fetchAllRouteLoads([7]);
+    expect(result[0]?.tier).toBe('green');
+    // URL не содержит ?from=&to= — иначе сервер вернёт 422.
+    expect(observed[0]).toMatch(/^\/api\/v1\/historical\/7\?granularity=hour$/);
+    expect(observed[0]).not.toMatch(/from=/);
+    expect(observed[0]).not.toMatch(/to=/);
+  });
 });

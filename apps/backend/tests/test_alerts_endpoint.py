@@ -44,9 +44,34 @@ def test_alerts_route_rejects_negative_window_min() -> None:
 
 
 def test_alerts_route_rejects_overlong_window_min() -> None:
-    """window_min > 120 (4-hour horizon) is rejected — slack bound for dispatcher UI."""
-    response = _client().get("/api/v1/insights/alerts?window_min=600")
+    """window_min > 1440 (1 day) is rejected — F-097: поднято с 120 до 1440.
+
+    F-097: для горизонтов больше 1 дня используется отдельный параметр
+    ``horizon=month|year`` (а не window_min в минутах).
+    """
+    response = _client().get("/api/v1/insights/alerts?window_min=2000")
     assert response.status_code == 422
+
+
+def test_alerts_route_accepts_horizon_param() -> None:
+    """F-097: новый параметр horizon=day|month|year (T-200). Default = 'day'."""
+    for horizon in ("day", "month", "year"):
+        response = _client().get(f"/api/v1/insights/alerts?horizon={horizon}")
+        assert response.status_code == 200, horizon
+        body = response.json()
+        assert body["horizon"] == horizon
+
+
+def test_alerts_route_rejects_unknown_horizon() -> None:
+    response = _client().get("/api/v1/insights/alerts?horizon=week")
+    assert response.status_code == 422
+
+
+def test_alerts_route_accepts_window_min_1440() -> None:
+    """F-097: window_min=1440 (=1 день) теперь допустим (раньше было ≤120)."""
+    response = _client().get("/api/v1/insights/alerts?window_min=1440")
+    assert response.status_code == 200
+    assert response.json()["window_min"] == 1440
 
 
 def test_alerts_payload_alert_shape_when_present() -> None:
