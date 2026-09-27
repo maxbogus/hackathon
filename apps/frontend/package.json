@@ -16,7 +16,8 @@
     "test:run": "vitest run",
     "test:cov": "vitest run --coverage",
     "orval": "orval --config orval.config.ts",
-    "prepare": "husky || true"
+    "prepare": "husky || true",
+    "docker-build": "vite build"
   },
   "dependencies": {
     "@pbe/react-yandex-maps": "^1.2.5",
