@@ -1,0 +1,30 @@
+# ============================================================================
+# Transit-AI — .gitattributes (Git LFS)
+# ----------------------------------------------------------------------------
+# В LFS уходят крупные бинарные артефакты: модели, датасеты, двоичные
+# документы/диаграммы. Текст (код, .csv-сабмиты, .json-меты, ledger) остаётся
+# в обычной истории git, чтобы diff/просмотр на GitHub работали.
+#
+# Датасет организаторов (data/real/train.csv 8.16 GB, data/real/test.csv 2.23 GB)
+# в git НЕ входит вообще — только .dvc-указатели и локальный mlops/dvc-cache.
+# См. export/README.md «Что НЕ входит в GitHub».
+#
+# Клон репозитория требует установленного git-lfs (`git lfs install`),
+# иначе вместо файлов будут LFS-указатели.
+# ============================================================================
+
+# === Модели и данные (на будущее; сейчас в git их нет, кроме бандла ниже) ===
+*.pkl     filter=lfs diff=lfs merge=lfs -text
+*.parquet filter=lfs diff=lfs merge=lfs -text
+*.onnx    filter=lfs diff=lfs merge=lfs -text
+*.joblib  filter=lfs diff=lfs merge=lfs -text
+*.pt      filter=lfs diff=lfs merge=lfs -text
+*.zip     filter=lfs diff=lfs merge=lfs -text
+*.tar.gz  filter=lfs diff=lfs merge=lfs -text
+
+# === Доставляемый ML-бандл: XGBoost quantile boosters (~1.5 MB × 6) ===
+export/01-ml/artifacts/**/model_boosters/*.json filter=lfs diff=lfs merge=lfs -text
+
+# === Бинарные документы и диаграммы ===
+*.png filter=lfs diff=lfs merge=lfs -text
+*.pdf filter=lfs diff=lfs merge=lfs -text
