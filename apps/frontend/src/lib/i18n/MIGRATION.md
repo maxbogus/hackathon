@@ -34,3 +34,6 @@ dictionary (T-141). Read this when:
   `expect(text).toContain("садитесь")`).
 
 The CI gate (`make frontend-text-check`) excludes all of these.
+
+
+| T-222  | components/Passenger/PredictionsTable.tsx, lib/predictionsTable.ts, components/Passenger/index.ts | passenger.predictionsTable.{title,searchPlaceholder,routesFilterLabel,columnRoute,columnDate,columnHour,columnValue,showAll,collapse,emptyMessage,loadErrorPrefix,rowsFooter,routesFooter,sortAsc,sortDesc,sortNone} | New TanStack Table v8 component + react-virtual for the full submission period (14640 rows). pure-UI component (rows prop), 5-min TanStack Query cache via lib/predictionsTable helper. Gentle default routes: {1,7,17,25}. Multi-select + globalFilter + sortable headers + loading/error/empty states. |

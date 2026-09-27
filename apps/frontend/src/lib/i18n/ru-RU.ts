@@ -123,6 +123,25 @@ export const TEXTS = {
       lightblue: 'недогруз · меньше чем ожидалось',
       gray: 'нет данных',
     },
+    /* T-222: PredictionsTable.tsx — TanStack Table v8 + virtual scroll */
+    predictionsTable: {
+      title: '📋 Прогноз — весь период',
+      searchPlaceholder: 'Поиск… (маршрут, дата, час)',
+      routesFilterLabel: 'Маршруты',
+      columnRoute: 'Маршрут',
+      columnDate: 'Дата',
+      columnHour: 'Час',
+      columnValue: 'Прогноз',
+      showAll: 'Показать все',
+      collapse: 'Свернуть',
+      emptyMessage: 'Нет данных за выбранный период',
+      loadErrorPrefix: 'Не удалось загрузить прогноз:',
+      rowsFooter: (n: number) => `строк: ${n}`,
+      routesFooter: (n: number) => `маршрутов: ${n}`,
+      sortAsc: 'asc',
+      sortDesc: 'desc',
+      sortNone: 'none',
+    },
   },
 
   common: {
