@@ -7,6 +7,16 @@
 
 set -e
 
+# F-123: git-lfs pre-push читает refs со stdin, а наш core.hooksPath (.githooks)
+# перекрывает LFS-хук, поставленный `git lfs install`. Сохраняем stdin один раз
+# и вызываем LFS сами (шаг 7) — иначе LFS-объекты молча не уезжают на GitHub,
+# а на сервере остаются указатели без объектов (битые файлы у жюри).
+if [ ! -t 0 ]; then
+  LFS_STDIN=$(cat)
+else
+  LFS_STDIN=""
+fi
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -86,6 +96,17 @@ if git diff --stat origin/HEAD..HEAD --name-only 2>/dev/null | grep -qE '^(docs/
   fi
   cd ../..
   printf "${GREEN}✓ orval in sync${NC}\n"
+fi
+
+# 7. Git LFS objects (F-123: наш core.hooksPath=.githooks перекрывает LFS-хук,
+# поэтому объекты LFS иначе молча не уезжают на GitHub)
+if command -v git-lfs > /dev/null 2>&1 && [ -n "$LFS_STDIN" ]; then
+  printf "${YELLOW}→ git lfs pre-push (upload LFS objects)...${NC}\n"
+  printf '%s' "$LFS_STDIN" | git lfs pre-push "$@" || {
+    printf "${RED}✗ git lfs pre-push failed. Run: git lfs push --all origin <branch>${NC}\n"
+    exit 1
+  }
+  printf "${GREEN}✓ lfs objects uploaded${NC}\n"
 fi
 
 printf "${GREEN}✓ pre-push passed${NC}\n\n"

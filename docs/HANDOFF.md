@@ -1,7 +1,44 @@
 # HANDOFF — Transit-AI
 
 > Последнее обновление: 2026-09-27T19:30:30Z
-> Обновлено: Cline (агент) — T-232: таблицы historical/predictions на всю ширину и высоту, «Маршрут» целиком, вертикальные разделители колонок (F-121, clinerule 32 R5).
+> Обновлено: Cline (агент) — T-234: решение залито на GitHub (164 коммита, push `3c5d2bd..71064f2`), бинарные артефакты переведены в Git LFS, датасет организаторов остаётся вне git (D-046, F-123).
+
+## Сессия 2026-09-27T21:00:00Z — T-234: заливка на GitHub + Git LFS (вариант A)
+
+**Контекст:** локальный `master` опережал `origin/master` на 164 коммита; в дереве
+24 ГБ локальных данных (датасет организаторов ~10.4 ГБ, `mlops/dvc-cache` 9.8 ГБ,
+`.venv` 6.7 ГБ, `docs/apps/**/wheels` 6.4 ГБ). Требовалось залить решение на GitHub
+через git-lfs, не публикуя тяжёлые файлы (их поставляют организаторы сами).
+
+**Что сделано:**
+- `git lfs install --local` + новый `.gitattributes`: в LFS ушли 11 файлов (10.6 МБ) —
+  6 × `export/01-ml/artifacts/**/model_boosters/*.json` (~1.5 МБ), `docs/TZ.pdf`,
+  `docs/architecture/schema_erd.png`, `export/04-architecture/erd.png`,
+  `docs/submission/diagrams/dfd_ru.png`, `export/04-architecture/dfd_ru.png`.
+  На будущее закреплены `*.pkl *.parquet *.onnx *.joblib *.pt *.zip *.tar.gz`.
+- `git add --renormalize .` → коммит `71064f2`; `git push origin master`
+  (`3c5d2bd..71064f2`, 164 коммита). История **не перезаписана** — старые блобы
+  в существующих коммитах остались (вариант A).
+- LFS-объекты выгружены: `git lfs push --all origin master` (9 уникальных, 10 МБ).
+  Проверено в чистом клоне `/tmp/lfs-verify`: `git lfs pull` отдаёт реальные размеры
+  (273178 / 821241 / 1551521 / 1489753 байт).
+- Датасет организаторов вне git: `data/real/train.csv` 8.16 ГБ, `test.csv` 2.23 ГБ —
+  только `.dvc`-указатели + локальный `mlops/dvc-cache` (`dvc checkout`).
+- `.githooks/pre-push` — добавлен шаг 7 `git lfs pre-push` (сохраняет stdin с refs),
+  `export/README.md` — раздел «Что лежит в GitHub, а что нет».
+
+**Находки/решения этой сессии:**
+- D-046 — политика: LFS для бинарников, датасет через DVC вне git, текст в обычной истории.
+- F-123 — `core.hooksPath=.githooks` перекрывает LFS pre-push → объекты молча не уезжают;
+  `git lfs push origin master` без `--all` — no-op; `lfs.github.com` недоступен в этой сети
+  → `lfs.<url>.locksverify=false`.
+- F-122 подтверждён: pre-commit/pre-push маскируют падения пайпом `| tail`, реальных проверок нет.
+
+**Следующая задача:** убедиться, что следующий push сам выгружает LFS-объекты
+(шаг 7 в `.githooks/pre-push`); далее — `make backlog-ready`.
+
+**Что НЕ в GitHub (и не должно):** `data/`, `ml/artifacts/`, `predictions/`, `.venv`,
+`mlops/dvc-cache`, `docs/apps/**/wheels`, `mlartifacts/`, `mlruns/`.
 
 ## Сессия 2026-09-27T19:30:30Z — T-232: таблицы на всю ширину/высоту + разделители колонок
 

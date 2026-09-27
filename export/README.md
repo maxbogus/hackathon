@@ -90,3 +90,32 @@ make export-verify       # обязательные файлы + sha256 (см. c
 - Датасет организаторов (`data/real`, ~10 ГБ) в пакет **не входит** — поставляется хакатоном.
 - `export/01-ml/artifacts/` — только выбранные модели (baseline_v1, xgboost_v8_poi, xgboost_v9_events);
   полный список sweep-артефактов остался в `ml/artifacts/` (гитигнор).
+
+## Что лежит в GitHub, а что нет (T-234, D-046)
+
+Репозиторий `git@github.com:maxbogus/hackathon.git` (private) содержит **код и
+документацию**, тяжёлые данные — нет.
+
+| Что | Где | Как попадает к проверяющему |
+|---|---|---|
+| Код (`apps/`, `ml/`, `scripts/`), документация, ledger | GitHub | `git clone` |
+| Бинарные артефакты (XGBoost boosters, PNG/PDF) | GitHub через **Git LFS** (11 файлов, 10.6 МБ) | `git clone` + `git lfs pull` |
+| Датасет организаторов `data/real/train.csv` (8.16 ГБ), `test.csv` (2.23 ГБ) | **не в git** — только `.dvc`-указатели | поставляется хакатоном; локально `dvc checkout` из `mlops/dvc-cache` |
+| `ml/artifacts/*`, `predictions/*`, `.venv`, `docs/apps/**/wheels`, `mlartifacts/`, `mlruns/` | **не в git** (gitignore) | поставляются архивом/собираются заново (`make train-*`) |
+
+Требования к клону:
+
+```bash
+git lfs install              # обязательно: без git-lfs вместо файлов будут указатели
+git clone git@github.com:maxbogus/hackathon.git
+git lfs pull                 # догрузить бинарные артефакты
+```
+
+Если сеть не пускает хост `lfs.github.com` (Locking API) — git-lfs печатает
+`dial tcp ... i/o timeout` на `locks/verify`: выключить проверку локов и
+повторить загрузку объектов:
+
+```bash
+git config lfs.https://github.com/maxbogus/hackathon.git/info/lfs.locksverify false
+git lfs push --all origin master    # --all обязателен: без него объекты того же коммита пропускаются (F-123)
+```
