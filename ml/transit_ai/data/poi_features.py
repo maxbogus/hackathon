@@ -118,21 +118,37 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[3]
 
 
+# Шаг 0 (T-231): normalized-артефакты ETL приоритетнее raw-файлов.
+_POI_JSON = _repo_root() / "data" / "external" / "poi_moscow.json"
+_STOPS_JSON = _repo_root() / "data" / "external" / "stops_routes.json"
+_POI_NORMALIZED = _repo_root() / "data" / "external" / "normalized" / "poi.json"
+_STOPS_NORMALIZED = _repo_root() / "data" / "external" / "normalized" / "stops.json"
+
+
 def load_poi_catalog() -> list[dict[str, Any]]:
-    """Загрузить POI каталог из JSON."""
-    path = _repo_root() / "data" / "external" / "poi_moscow.json"
-    return json.loads(path.read_text(encoding="utf-8"))
+    """Загрузить POI каталог: normalized/poi.json → фолбэк raw poi_moscow.json."""
+    if _POI_NORMALIZED.exists():
+        payload = json.loads(_POI_NORMALIZED.read_text(encoding="utf-8"))
+        rows = payload.get("rows", [])
+        return [row for row in rows if isinstance(row, dict)]
+    return json.loads(_POI_JSON.read_text(encoding="utf-8"))
 
 
 def load_stops_catalog() -> dict[int, list[dict[str, Any]]]:
     """Загрузить каталог остановок маршрутов.
 
+    Источник: `normalized/stops.json` (ключ `routes`), фолбэк — raw
+    `stops_routes.json` (ключи-маршруты + `_comment`).
+
     Returns:
         dict[int, list[dict]]: ключ=route_id, значение=[{name, lat, lon}, ...].
     """
-    path = _repo_root() / "data" / "external" / "stops_routes.json"
-    raw = json.loads(path.read_text(encoding="utf-8"))
-    return {int(k): v for k, v in raw.items() if k != "_comment"}
+    if _STOPS_NORMALIZED.exists():
+        payload = json.loads(_STOPS_NORMALIZED.read_text(encoding="utf-8"))
+        raw = payload.get("routes", {}) if isinstance(payload, dict) else {}
+    else:
+        raw = json.loads(_STOPS_JSON.read_text(encoding="utf-8"))
+    return {int(k): v for k, v in raw.items() if not str(k).startswith("_")}
 
 
 def count_poi_for_stop(

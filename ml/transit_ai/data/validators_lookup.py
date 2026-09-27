@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,8 @@ __all__ = [
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _CACHE_PATH = _REPO_ROOT / "data" / "external" / "validators_lookup.csv"
+# Шаг 0 (T-231): нормализованный артефакт ETL; при наличии — приоритетный источник.
+_NORMALIZED_PATH = _REPO_ROOT / "data" / "external" / "normalized" / "validators.json"
 _TRAIN_CSV = _REPO_ROOT / "data" / "real" / "train.csv"
 
 
@@ -130,7 +133,10 @@ def build_validators_lookup(use_cache_only: bool = False) -> pd.DataFrame:
 
 
 def load_validators_lookup() -> pd.DataFrame:
-    """Загрузить lookup из CSV кэша."""
+    """Загрузить lookup: `normalized/validators.json` → фолбэк CSV-кэш."""
+    if _NORMALIZED_PATH.exists():
+        payload = json.loads(_NORMALIZED_PATH.read_text(encoding="utf-8"))
+        return pd.DataFrame(payload.get("rows", []))
     if not _CACHE_PATH.exists():
         return build_validators_lookup(use_cache_only=False)
     return pd.read_csv(_CACHE_PATH)

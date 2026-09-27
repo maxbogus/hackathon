@@ -20,10 +20,15 @@ from app.schemas.geo import GeoRoute, GeoStop
 
 # Путь относительно `settings.data_dir` (в Docker = /app/data, локально = <repo>/data).
 GEO_CATALOG_RELATIVE = Path("external") / "stops_routes.json"
+# Шаг 0 (T-231): нормализованный артефакт ETL приоритетнее raw-разметки.
+GEO_NORMALIZED_RELATIVE = Path("external") / "normalized" / "stops.json"
 
 
 def catalog_path() -> Path:
-    """Актуальный путь к каталогу (переопределяется через settings.data_dir)."""
+    """Актуальный путь к каталогу: `normalized/stops.json` → фолбэк raw."""
+    normalized = settings.data_dir / GEO_NORMALIZED_RELATIVE
+    if normalized.exists():
+        return normalized
     return settings.data_dir / GEO_CATALOG_RELATIVE
 
 
@@ -71,8 +76,13 @@ def load_route_geo(path: Path) -> tuple[GeoRoute, ...]:
     if not isinstance(payload, dict):
         return ()
 
+    routes_raw: dict[str, object] = payload
+    if isinstance(payload.get("routes"), dict):
+        # Normalized-формат ETL (шаг 0, T-231): {"source": ..., "routes": {...}}.
+        routes_raw = payload["routes"]
+
     routes: list[GeoRoute] = []
-    for key, raw in payload.items():
+    for key, raw in routes_raw.items():
         # Ключи `_comment` и прочие не-числовые пропускаем.
         if not isinstance(key, str) or not key.isdigit():
             continue
@@ -89,4 +99,10 @@ def get_route_geo() -> tuple[GeoRoute, ...]:
     return load_route_geo(catalog_path())
 
 
-__all__ = ["GEO_CATALOG_RELATIVE", "catalog_path", "get_route_geo", "load_route_geo"]
+__all__ = [
+    "GEO_CATALOG_RELATIVE",
+    "GEO_NORMALIZED_RELATIVE",
+    "catalog_path",
+    "get_route_geo",
+    "load_route_geo",
+]

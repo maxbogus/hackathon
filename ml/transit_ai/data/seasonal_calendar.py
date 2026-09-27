@@ -19,7 +19,9 @@ seasonal_calendar.py — шире: школьные каникулы, начал
 
 from __future__ import annotations
 
+import json
 from datetime import date
+from pathlib import Path
 from typing import Any
 
 # ────────────────────────────────────────────────────────────────────
@@ -40,9 +42,37 @@ def _in_ranges(d: date, ranges: list[tuple[date, date]]) -> bool:
     return any(start <= d <= end for start, end in ranges)
 
 
+# Шаг 0 (T-231): каникулы как данные (normalized/calendar.json), код — фолбэк.
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_NORMALIZED_PATH = _REPO_ROOT / "data" / "external" / "normalized" / "calendar.json"
+
+
+def _load_school_breaks() -> list[tuple[date, date]]:
+    """Школьные каникулы: `normalized/calendar.json` → фолбэк hardcode.
+
+    Артефакт пишется ETL (`make external-gen`) из
+    `data/external/school_breaks_2025.json`.
+    """
+    if _NORMALIZED_PATH.exists():
+        try:
+            payload = json.loads(_NORMALIZED_PATH.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return list(SCHOOL_BREAKS)
+        items = payload.get("school_breaks")
+        if isinstance(items, list) and items:
+            try:
+                return [
+                    (date.fromisoformat(str(start)), date.fromisoformat(str(end)))
+                    for start, end in items
+                ]
+            except (ValueError, TypeError):
+                return list(SCHOOL_BREAKS)
+    return list(SCHOOL_BREAKS)
+
+
 def is_school_break(d: date) -> bool:
     """True если d — школьные каникулы (нет занятий)."""
-    return _in_ranges(d, SCHOOL_BREAKS)
+    return _in_ranges(d, _load_school_breaks())
 
 
 # ────────────────────────────────────────────────────────────────────

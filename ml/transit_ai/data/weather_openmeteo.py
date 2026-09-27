@@ -11,6 +11,7 @@ Open-Meteo — бесплатный, без ключа, R4 hackathon-rules compl
 
 from __future__ import annotations
 
+import json
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,8 @@ __all__ = ["get_weather_features", "get_weather_for_date", "load_weather_2025"]
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _CACHE_PATH = _REPO_ROOT / "data" / "external" / "weather_2025.csv"
+# Шаг 0 (T-231): нормализованный артефакт ETL; при наличии — приоритетный источник.
+_NORMALIZED_PATH = _REPO_ROOT / "data" / "external" / "normalized" / "weather.json"
 
 
 def _ensure_cache() -> Path:
@@ -40,12 +43,18 @@ def _ensure_cache() -> Path:
 def load_weather_2025() -> pd.DataFrame:
     """Загрузить DataFrame с погодой на 2025 год.
 
+    Источник: `normalized/weather.json` (шаг 0, T-231), фолбэк — raw CSV.
+
     Returns:
         DataFrame с колонками: date, temp_max, temp_min, precipitation_sum,
         snowfall_sum, wind_speed_max.
     """
-    path = _ensure_cache()
-    df = pd.read_csv(path)
+    path = _NORMALIZED_PATH if _NORMALIZED_PATH.exists() else _ensure_cache()
+    if path.suffix == ".json":
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        df = pd.DataFrame(payload.get("rows", []))
+    else:
+        df = pd.read_csv(path)
     df["date"] = pd.to_datetime(df["date"]).dt.date
     return df
 

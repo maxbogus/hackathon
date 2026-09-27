@@ -94,6 +94,14 @@ predictions/*.json
 !predictions/.gitkeep
 
 # Harvester runtime output (T-193) — normalized копии external источников
+# F-109: паттерн `build/` (Python) случайно игнорировал пакет ETL
+# apps/harvester/app/build — это исходники, а не артефакты сборки.
+!apps/harvester/app/build/
+!apps/harvester/app/build/**
+apps/harvester/app/build/__pycache__/
+
+# legacy: до шага 0 (T-231) нормализация писалась рядом с raw; теперь артефакты
+# лежат в data/external/normalized/ и КОММИТЯТСЯ (маленькие, нужны жюри).
 data/external/*_normalized.json
 
 # === Кэши ML ===

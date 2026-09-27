@@ -33,6 +33,8 @@ __all__ = [
 # ────────────────────────────────────────────────────────────────────
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _EVENTS_JSON = _REPO_ROOT / "data" / "external" / "events_moscow.json"
+# Шаг 0 (T-231): нормализованный артефакт ETL; при наличии — приоритетный источник.
+_EVENTS_NORMALIZED = _REPO_ROOT / "data" / "external" / "normalized" / "events.json"
 
 # Порядок имён фичей для совместимости с FEATURE_NAMES в xgboost_route.py
 EVENT_FEATURE_NAMES: tuple[str, ...] = (
@@ -90,14 +92,17 @@ def load_events() -> list[dict[str, Any]]:
         FileNotFoundError: если JSON не найден.
         ValueError: если schema невалидна (отсутствуют обязательные поля).
     """
-    if not _EVENTS_JSON.exists():
-        raise FileNotFoundError(
-            f"Events catalog not found: {_EVENTS_JSON}. "
-            f"Expected: 8 events with id/date/category/magnitude/tau_days/affected_routes/notes."
-        )
-
-    raw = json.loads(_EVENTS_JSON.read_text())
-    events_raw = raw.get("_events", [])
+    if _EVENTS_NORMALIZED.exists():
+        payload = json.loads(_EVENTS_NORMALIZED.read_text(encoding="utf-8"))
+        events_raw = payload.get("rows", [])
+    else:
+        if not _EVENTS_JSON.exists():
+            raise FileNotFoundError(
+                f"Events catalog not found: {_EVENTS_JSON}. "
+                f"Expected: 8 events with id/date/category/magnitude/tau_days/"
+                f"affected_routes/notes."
+            )
+        events_raw = json.loads(_EVENTS_JSON.read_text()).get("_events", [])
 
     required = {
         "id",

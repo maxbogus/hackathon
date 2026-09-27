@@ -26,6 +26,8 @@ __all__ = [
 # Расположение JSON-каталога
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _CATALOG_PATH = _REPO_ROOT / "data" / "external" / "traffic_osm_moscow.json"
+# Шаг 0 (T-231): нормализованный артефакт ETL; при наличии — приоритетный источник.
+_NORMALIZED_PATH = _REPO_ROOT / "data" / "external" / "normalized" / "traffic.json"
 
 # Порядок имён фичей (для FEATURE_NAMES в xgboost_route)
 TRAFFIC_FEATURE_NAMES: tuple[str, ...] = (
@@ -64,13 +66,16 @@ def load_traffic_catalog() -> list[dict[str, Any]]:
     Raises:
         FileNotFoundError: если JSON не найден.
     """
-    if not _CATALOG_PATH.exists():
-        raise FileNotFoundError(
-            f"Traffic catalog not found: {_CATALOG_PATH}. "
-            f"Expected: 40 traffic points (intersections + tram_car_shared)."
-        )
-    raw = json.loads(_CATALOG_PATH.read_text())
-    points = raw.get("_points", [])
+    if _NORMALIZED_PATH.exists():
+        payload = json.loads(_NORMALIZED_PATH.read_text(encoding="utf-8"))
+        points = payload.get("rows", [])
+    else:
+        if not _CATALOG_PATH.exists():
+            raise FileNotFoundError(
+                f"Traffic catalog not found: {_CATALOG_PATH}. "
+                f"Expected: 40 traffic points (intersections + tram_car_shared)."
+            )
+        points = json.loads(_CATALOG_PATH.read_text()).get("_points", [])
 
     required = {"id", "lat", "lon", "category", "jam_level", "notes"}
     for p in points:

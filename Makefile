@@ -40,6 +40,7 @@ REPO_ROOT := $(shell pwd)
         note-from-finding promote handoff handoff-update \
         backlog-ready backlog-list ticket docs         pyscn pyscn-compare pyscn-baseline         arch-dbml arch-dbml-check         benchmark-baseline benchmark-all benchmark-compare         run-benchmark         loadtest-smoke loadtest-baseline loadtest-stress loadtest-spike loadtest-soak loadtest-all loadtest-check check-training-time \
         pipeline-up pipeline-down pipeline-logs pipeline-fetch pipeline-train pipeline-predict pipeline-full pipeline-status pipeline-test \
+        external-fetch external-gen external-verify external-show external-all \
         predictions-list predictions-activate predictions-restore-etalon predictions-ingest-csv \
         db-upgrade db-downgrade db-revision db-current db-history
 
@@ -590,8 +591,26 @@ pipeline-logs: ## Tail pipeline logs (both workers)
 
 # === Trigger tasks (Eager mode: запускает через .apply() вместо брокера) ===
 
-pipeline-fetch: ## Run all harvester tasks eagerly (no broker)  [WIP: T-193]
-	$(UV) --directory apps/harvester run python -c "from app.tasks import fetch_all; import json; print(json.dumps(fetch_all.apply().get(), indent=2, ensure_ascii=False))"
+pipeline-fetch: ## Собрать все внешние источники → normalized/*.json + manifest (T-231)
+	$(UV) --directory apps/harvester run python -m app.build --source all
+
+# === T-231: external ETL (шаг 0) — raw → training-ready JSON ===
+# Пайплайн: external-fetch (online, dev) → external-gen (offline) → external-verify.
+# Артефакты: data/external/normalized/*.json + manifest.json (sha256 каждого).
+
+external-fetch: ## Обновить raw из Open-Meteo/Overpass (dev only, R4: не в runtime)  [T-231]
+	HARVESTER_MODE=online $(UV) --directory apps/harvester run python -c "from app.tasks import fetch_all; import json; print(json.dumps(fetch_all.apply().get(), indent=2, ensure_ascii=False))"
+
+external-gen: ## Сгенерировать normalized/*.json + manifest.json из raw (шаг 0, offline)  [T-231]
+	$(UV) --directory apps/harvester run python -m app.build --source all
+
+external-verify: ## Проверить артефакты против манифеста (sha256 + rows_count + schema)  [T-231]
+	$(UV) --directory apps/harvester run python -m app.build --verify
+
+external-show: ## Таблица источников: строки / sha256 / потребитель  [T-231]
+	$(UV) --directory apps/harvester run python -m app.build --show
+
+external-all: external-gen external-verify ## gen + verify (offline)  [T-231]
 
 pipeline-train: ## Trigger ml_pipeline.train_xgboost via broker
 	$(UV) run python -c "from apps.ml_pipeline.app.celery_app import celery_app; r = celery_app.send_task('ml_pipeline.train_xgboost'); print('Task:', r.id); print('Result:', r.get(timeout=600))"

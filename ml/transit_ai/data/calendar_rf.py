@@ -17,7 +17,9 @@ R4: no internet at runtime → нельзя HTTP API (isdayoff.ru, LawMatic).
 
 from __future__ import annotations
 
+import json
 from datetime import date
+from pathlib import Path
 from typing import Literal
 
 __all__ = [
@@ -54,13 +56,39 @@ RF_HOLIDAYS_2025: set[date] = {
 }
 
 
+# Шаг 0 (T-231): календарь как данные (normalized/calendar.json), код — фолбэк.
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_NORMALIZED_PATH = _REPO_ROOT / "data" / "external" / "normalized" / "calendar.json"
+
+
+def _load_holidays() -> set[date]:
+    """Праздники РФ: `normalized/calendar.json` → фолбэк hardcode.
+
+    Артефакт пишется ETL (`make external-gen`) из
+    `data/external/holidays_ru_2025.json`; тест
+    `test_external_calendar_equivalence` доказывает эквивалентность наборов.
+    """
+    if _NORMALIZED_PATH.exists():
+        try:
+            payload = json.loads(_NORMALIZED_PATH.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return set(RF_HOLIDAYS_2025)
+        items = payload.get("holidays")
+        if isinstance(items, list) and items:
+            try:
+                return {date.fromisoformat(str(item)) for item in items}
+            except ValueError:
+                return set(RF_HOLIDAYS_2025)
+    return set(RF_HOLIDAYS_2025)
+
+
 def is_holiday(d: date) -> bool:
     """True если d — официальный нерабочий праздничный день РФ (на 2025).
 
     Выходные Сб/Вс — НЕ считаются праздниками (см. is_weekend).
     Совпадение праздника с Сб/Вс → True (праздник важнее для трафика).
     """
-    return d in RF_HOLIDAYS_2025
+    return d in _load_holidays()
 
 
 def is_weekend(d: date) -> bool:
