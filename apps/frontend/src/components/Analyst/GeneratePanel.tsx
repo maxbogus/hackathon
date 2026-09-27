@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react';
 
 import type { TKey } from '@/lib/i18n/keys';
 import { t, tf } from '@/lib/i18n/t';
+import { featureSetName, modelName, zerosStateText } from '@/lib/labels';
 import {
   RUN_POLL_INTERVAL_MS,
   fetchActiveSet,
@@ -153,6 +154,13 @@ export function GeneratePanel({
   const needsFix = run?.recommendation === 'NEEDS_FIX';
   const busy = regenerate.isPending || polling;
 
+  // T-231: в UI не показываем внутренние идентификаторы (`test_submission_baseline`,
+  // `with_all`, `zeros=ON`). Raw model_id остаётся в tooltip для трассируемости.
+  const activeModelLabel = active ? modelName(active.model_id, t) : '';
+  const activeFeatureSet = active ? featureSetName(active.feature_set, t) : '';
+  const activeZeros = active ? zerosStateText(active.zeros_applied, t) : '';
+  const activeMeta = [activeFeatureSet, activeZeros].filter((part) => part.length > 0).join(' · ');
+
   return (
     <div
       data-testid="generate-panel"
@@ -161,7 +169,8 @@ export function GeneratePanel({
       <h3>{t('analyst.generateTitle')}</h3>
 
       <p data-testid="active-set" style={{ fontSize: 13, margin: '4px 0' }}>
-        <strong>{t('analyst.activeSetTitle')}</strong>: {active?.model_id ?? '—'}{' '}
+        <strong>{t('analyst.activeSetTitle')}</strong>:{' '}
+        <span title={active?.model_id ?? undefined}>{activeModelLabel || '—'}</span>{' '}
         <em data-testid="active-set-badge">
           (
           {active?.is_etalon
@@ -170,8 +179,8 @@ export function GeneratePanel({
           )
         </em>
         <br />
-        {t('analyst.activeSetRows')}: {active?.row_count ?? 0} · {active?.feature_set ?? '—'}
-        {active?.zeros_applied ? ' · zeros=ON' : ''}
+        {t('analyst.activeSetRows')}: {active?.row_count ?? 0}
+        {activeMeta ? ` · ${activeMeta}` : ''}
       </p>
 
       <button

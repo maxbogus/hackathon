@@ -133,10 +133,16 @@ describe('активный набор', () => {
   it('показывает эталон сразу после загрузки', async () => {
     renderPanel();
     await waitFor(() =>
-      expect(screen.getByTestId('active-set').textContent).toContain('test_submission_baseline'),
+      expect(screen.getByTestId('active-set').textContent).toContain('Базовый тестовый'),
     );
     expect(screen.getByTestId('active-set-badge').textContent).toContain('эталон');
     expect(screen.getByTestId('active-set').textContent).toContain('14640');
+    // T-231: вместо идентификаторов — человекочитаемые подписи.
+    expect(screen.getByTestId('active-set').textContent).toContain('Все факторы');
+    expect(screen.getByTestId('active-set').textContent).toContain('Исключения: вкл.');
+    expect(screen.getByTestId('active-set').textContent).not.toContain('test_submission_baseline');
+    expect(screen.getByTestId('active-set').textContent).not.toContain('with_all');
+    expect(screen.getByTestId('active-set').textContent).not.toContain('zeros=ON');
   });
 });
 
@@ -196,13 +202,13 @@ describe('загрузка / отклонение / эталон', () => {
     );
   });
 
-  it('«Вернуть эталон» доступна всегда и сообщает об успехе', async () => {
+  it('«Восстановить исходный прогноз» доступна всегда и сообщает об успехе', async () => {
     renderPanel();
     fireEvent.click(await screen.findByTestId('restore-etalon-button'));
 
     await waitFor(() =>
       expect(screen.getByTestId('generate-message').textContent).toContain(
-        'Активен эталонный набор',
+        'Активен исходный прогноз',
       ),
     );
   });

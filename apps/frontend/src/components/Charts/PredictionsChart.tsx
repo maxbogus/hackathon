@@ -17,6 +17,7 @@ import {
 } from 'recharts';
 
 import { t } from '@/lib/i18n/t';
+import { featureSetName, zerosStateText } from '@/lib/labels';
 
 import { customInstance } from '@/api/customInstance';
 
@@ -119,12 +120,16 @@ export function PredictionsChart(props: PredictionsChartProps): JSX.Element {
     value: p.value,
   }));
 
+  // T-231: в заголовке графика — не `(with_all) · zeros=ON`, а человекочитаемо.
+  const featureSetLabel = featureSetName(data?.feature_set, t);
+  const zerosLabel = zerosStateText(data?.zeros_applied, t);
+
   return (
     <div data-testid="predictions-chart">
       <h3>
         {t('analyst.predictionsChartTitle')}
-        {data?.feature_set ? ` (${data.feature_set})` : ''}
-        {data?.zeros_applied ? ' · zeros=ON' : ''}
+        {featureSetLabel ? ` · ${featureSetLabel}` : ''}
+        {zerosLabel ? ` · ${zerosLabel}` : ''}
       </h3>
       {usingFallback && (
         <p

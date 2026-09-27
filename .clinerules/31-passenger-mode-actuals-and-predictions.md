@@ -2,14 +2,17 @@
 
 ## Зачем
 
-Пассажирский экран (`apps/frontend/src/pages/PassengerMode.tsx`) показывает
-**два блока рядом**, чтобы пассажир мог сравнить «как было» vs «как будет»
-и выбрать свободный маршрут:
+Экран диспетчера (`apps/frontend/src/pages/PassengerMode.tsx`) показывает
+**два блока рядом**, чтобы можно было сравнить факт и прогноз по маршрутам:
 
-| Блок | Источник | Эндпоинт | Период |
-|---|---|---|---|
-| «Как было» (actuals) | таблица `actuals` (БД) | `GET /api/v1/historical/load` | последний день с данными (НЕ `now()-7d`!) |
-| «Как будет» (predictions) | таблица `predictions` (БД) | `GET /api/v1/predictions/load` | submission period (`2025-11-01..2025-12-31`) |
+| Блок | Источник | Эндпоинт | Период | i18n-ключ заголовка |
+|---|---|---|---|---|
+| «Фактическая нагрузка» (actuals) | таблица `actuals` (БД) | `GET /api/v1/historical/load` | последний день с данными (НЕ `now()-7d`!) | `passenger.actualsHeader` |
+| «Прогнозируемая нагрузка» (predictions) | таблица `predictions` (БД) | `GET /api/v1/predictions/load` | submission period (`2025-11-01..2025-12-31`) | `passenger.predictionsHeader` |
+
+> T-231: заголовки переименованы из разговорных «Как было (факт)» / «Как будет
+> (прогноз)» в официальные термины (см. `.clinerules/32-ui-copy-standards.md`).
+> Сам экран тоже переименован: `passenger.modeTitle` = «Пассажиропоток по маршрутам».
 
 ## Почему НЕ actuals + NOW()
 

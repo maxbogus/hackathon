@@ -20,7 +20,8 @@ import {
   predictionsCsvQueryKey,
   PREDICTIONS_CSV_STALE_TIME_MS,
 } from '@/lib/predictionsTable';
-import { fetchActiveModel } from '@/lib/activeModel';
+import { fetchActiveModel, formatWapeScore } from '@/lib/activeModel';
+import { modelName } from '@/lib/labels';
 
 export function PredictionsView(): JSX.Element {
   // 5-min cached query (clinerule D-038.2 / R6 SLA).
@@ -38,16 +39,16 @@ export function PredictionsView(): JSX.Element {
   });
 
   const rows = data ?? [];
-  const errMessage = error
-    ? error instanceof Error
-      ? error.message
-      : String(error)
-    : null;
+  const errMessage = error ? (error instanceof Error ? error.message : String(error)) : null;
 
-  const modelLabel = modelQuery.data
-    ? typeof modelQuery.data.wape_score === 'number'
-      ? tf('passenger.activeModelFooter', modelQuery.data.model_id, modelQuery.data.wape_score.toFixed(4))
-      : tf('passenger.modelFooter', modelQuery.data.model_id)
+  // T-231: человекочитаемое имя модели + «Точность (WAPE)» вместо `WAPE-score`.
+  const activeModel = modelQuery.data ?? null;
+  const activeModelName = activeModel ? modelName(activeModel.model_id, t) || '—' : '—';
+  const activeWape = activeModel ? formatWapeScore(activeModel.wape_score) : null;
+  const modelLabel = activeModel
+    ? activeWape !== null
+      ? tf('passenger.activeModelFooter', activeModelName, activeWape)
+      : tf('passenger.modelFooter', activeModelName)
     : null;
 
   return (
@@ -67,7 +68,10 @@ export function PredictionsView(): JSX.Element {
       </header>
 
       {modelLabel && (
-        <p data-testid="predictions-view-model" style={{ marginBottom: 12, fontSize: 13, color: '#475569' }}>
+        <p
+          data-testid="predictions-view-model"
+          style={{ marginBottom: 12, fontSize: 13, color: '#475569' }}
+        >
           {modelLabel}
         </p>
       )}

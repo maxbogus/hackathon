@@ -22,9 +22,16 @@
  * Цвета берутся из loadTier.COLORS (single source of truth).
  */
 
-import { t } from '@/lib/i18n/t';
+import type { TKey } from '@/lib/i18n/keys';
+import { t, tf } from '@/lib/i18n/t';
 
-import { computeDeviation, deviationInfo, loadTier, visualFor, type LoadTier } from '@/lib/loadTier';
+import {
+  computeDeviation,
+  deviationInfo,
+  loadTier,
+  visualFor,
+  type LoadTier,
+} from '@/lib/loadTier';
 import type { RouteLoadVariant } from '@/lib/routeLoad';
 
 export interface RouteLoadCardProps {
@@ -44,11 +51,15 @@ export interface RouteLoadCardProps {
   readonly onSelect?: (routeId: number) => void;
 }
 
-const SIDE_TEXT: Readonly<Record<'over' | 'under' | 'normal' | 'unknown', string>> = {
-  over: 'перегруз',
-  under: 'недогруз',
-  normal: 'в норме',
-  unknown: 'нет прогноза',
+/**
+ * T-231: подписи отклонения берутся из реестра (полные существительные:
+ * «Перегрузка»/«Недогрузка»), а не из хардкода «перегруз/недогруз».
+ */
+const SIDE_TEXT_KEYS: Readonly<Record<'over' | 'under' | 'normal' | 'unknown', TKey>> = {
+  over: 'passenger.side.over',
+  under: 'passenger.side.under',
+  normal: 'passenger.side.normal',
+  unknown: 'passenger.side.unknown',
 };
 
 /**
@@ -57,11 +68,11 @@ const SIDE_TEXT: Readonly<Record<'over' | 'under' | 'normal' | 'unknown', string
  * Single source of truth для tier-цветов — loadTier.COLORS.
  */
 const VISUALS_BY_TIER = {
-  green:   { bg: '#f1f8e9', border: '#2e7d32', label: '🟢' },
-  yellow:  { bg: '#fff8e1', border: '#f9a825', label: '🟡' },
-  red:     { bg: '#ffebee', border: '#c62828', label: '🟠' },
+  green: { bg: '#f1f8e9', border: '#2e7d32', label: '🟢' },
+  yellow: { bg: '#fff8e1', border: '#f9a825', label: '🟡' },
+  red: { bg: '#ffebee', border: '#c62828', label: '🟠' },
   darkred: { bg: '#ffcdd2', border: '#7f0000', label: '🔴' },
-  gray:    { bg: '#f5f5f5', border: '#9e9e9e', label: '⚪' },
+  gray: { bg: '#f5f5f5', border: '#9e9e9e', label: '⚪' },
 } as const;
 
 export function RouteLoadCard({
@@ -106,7 +117,7 @@ export function RouteLoadCard({
         }}
         {...interaction}
       >
-        <div style={{ fontSize: 13, color: '#555' }}>{tfRouteLabel(routeId)}</div>
+        <div style={{ fontSize: 13, color: '#555' }}>{tf('map.routeLabel', routeId)}</div>
         <div style={{ fontSize: 22, color: '#9e9e9e' }}>—</div>
         <div style={{ fontSize: 11, color: '#888' }}>{t('passenger.routeNoData')}</div>
       </article>
@@ -141,7 +152,7 @@ export function RouteLoadCard({
       footerText = t('passenger.routeNoPrediction');
     } else {
       const sign = deviation > 0 ? '+' : '';
-      footerText = `${iconLabel} ${sign}${deviation.toFixed(1)}% · ${SIDE_TEXT[info.side]}`;
+      footerText = `${iconLabel} ${sign}${deviation.toFixed(1)}% · ${t(SIDE_TEXT_KEYS[info.side])}`;
     }
   } else {
     // prediction-карточка: число и есть прогноз, deviation не имеет смысла.
@@ -174,7 +185,7 @@ export function RouteLoadCard({
       }}
       {...interaction}
     >
-      <div style={{ fontSize: 13, color: '#555' }}>{tfRouteLabel(routeId)}</div>
+      <div style={{ fontSize: 13, color: '#555' }}>{tf('map.routeLabel', routeId)}</div>
       <div
         style={{
           fontSize: 30,
@@ -183,23 +194,19 @@ export function RouteLoadCard({
           color: borderColor,
         }}
       >
-        {roundedBoardings} чел
+        {roundedBoardings} {t('common.unitPeople')}
       </div>
       {isActual && (
         <div style={{ fontSize: 11, color: '#666' }}>
           {t('passenger.predictedShort')}:{' '}
           {predictionBoardings !== null && predictionBoardings !== undefined
-            ? `${Math.round(predictionBoardings)} чел`
+            ? `${Math.round(predictionBoardings)} ${t('common.unitPeople')}`
             : '—'}
         </div>
       )}
       <div style={{ fontSize: 12, color: '#555' }}>{footerText}</div>
     </article>
   );
-}
-
-function tfRouteLabel(routeId: number): string {
-  return `Маршрут ${routeId}`;
 }
 
 /**

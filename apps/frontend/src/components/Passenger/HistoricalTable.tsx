@@ -41,7 +41,7 @@ const VIRTUAL_OVERSCAN = 10;
  * T-226: тот же шаблон колонок, что и PredictionsTable (route/date/hour/value).
  * CSS Grid делит один шаблон между header и всеми data rows, включая virtualized.
  */
-const GRID_TEMPLATE_COLUMNS = '70px 120px 60px 1fr';
+const GRID_TEMPLATE_COLUMNS = '110px 120px 60px 1fr';
 
 const fieldsetStyle = {
   border: '1px solid #cbd5e1',
@@ -298,7 +298,7 @@ function HistoricalTableInner({
               >
                 <input
                   type="checkbox"
-                  aria-label={`Маршрут ${rid}`}
+                  aria-label={tf('map.routeLabel', rid)}
                   checked={isChecked}
                   disabled={showAllRoutes}
                   onChange={() => toggleRoute(rid)}

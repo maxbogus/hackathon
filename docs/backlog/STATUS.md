@@ -6,8 +6,8 @@ _Обновлено: 2026-09-25 22:00 (T-168 done, F-033..F-043 + T-171 in-progr
 
 | Счётчик | Значение |
 |---|---|
-| Тикетов в `archive/` (done за всё время) | **51** (+T-137/T-160/T-161/T-163/T-165/T-167/T-222/T-226) |
-| Тикетов в `tickets/`: | **30** (+T-220, T-221, T-224 — T-223 отменён, T-222/T-226 done) |
+| Тикетов в `archive/` (done за всё время) | **56** (последний: T-231) |
+| Тикетов в `tickets/`: | **47** |
 | &nbsp;&nbsp;• `ready` (готовы к старту) | **31** |
 | &nbsp;&nbsp;• `backlog` (отложены) | **0** |
 | &nbsp;&nbsp;• `in-progress` | **0** |
@@ -37,7 +37,8 @@ _Пусто (готовы брать T-115 / T-137 / T-125 / T-122)._
 
 ## Последние архивированные (для контекста)
 
-- **T-135** — TanStack Router URL routing (5 file-based маршрутов + `<RouterProvider>` singleton + `<Link>` nav + `defaultPreload: 'intent'`, 6+2 новых тестов, 60/60 frontend зелёные, F-014 зафиксирован) ✨ новый
+- **T-231** — department-grade UI copy: ревизия текстов 4 экранов (убраны идентификаторы `use_*`/`with_all`/`zeros=ON`/`baseline_v1`, англицизмы `boardings`/`WAPE-score`/«фичи», тон «и езжайте»; единицы измерения; фикс обрезки «Мар…»; `lib/labels.ts` + clinerule 32, F-120, D-045) ✨ новый
+- **T-135** — TanStack Router URL routing (5 file-based маршрутов + `<RouterProvider>` singleton + `<Link>` nav + `defaultPreload: 'intent'`, 6+2 новых тестов, 60/60 frontend зелёные, F-014 зафиксирован)
 - T-141 — frontend text registry hybrid t(key) (`apps/frontend/src/lib/i18n/` × 5 файлов мигрированы, 17 i18n тестов, 55/55 frontend зелёные, `make frontend-text-check` gate)
 - T-131 — dispatcher overload alerts (`/insights/alerts` + AlertsPanel + 21+3 теста)
 - T-128 — capacity-aware load_pct (TRAM_CAPACITY, compute_load_pct, load_color, +20 тестов)

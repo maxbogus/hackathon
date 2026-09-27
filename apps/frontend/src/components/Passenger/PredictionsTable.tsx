@@ -42,12 +42,13 @@ const VIRTUAL_OVERSCAN = 10;
  * including virtualized.
  *
  * Empirical column widths (chosen by content):
- *   route  — '1'..'50', usually 2 digits → 70px
+ *   route  — 'Маршрут' (7 chars, bold) needs ~110px, otherwise CSS ellipsis
+ *            turns the header into «Мар…» (T-231)
  *   date   — 'YYYY-MM-DD' (10 chars) → 120px
  *   hour   — '0'..'23' → 60px
  *   value  — '1234.56' (7 chars) → 1fr (fills remainder)
  */
-const GRID_TEMPLATE_COLUMNS = '70px 120px 60px 1fr';
+const GRID_TEMPLATE_COLUMNS = '110px 120px 60px 1fr';
 
 const fieldsetStyle = {
   border: '1px solid #cbd5e1',
@@ -306,7 +307,7 @@ return (
               >
                 <input
                   type="checkbox"
-                  aria-label={`Маршрут ${rid}`}
+                  aria-label={tf('map.routeLabel', rid)}
                   checked={isChecked}
                   disabled={showAllRoutes}
                   onChange={() => toggleRoute(rid)}

@@ -27,8 +27,8 @@ T-220..T-222 подготовили:
 - `PredictionsTable.tsx` (TanStack Table) + `LastDayCard.tsx` (T-222)
 
 Переписываем `PassengerMode.tsx` — 3 секции:
-1. «Как было» — карточки `LastDayCard` per route за **последний день actuals**
-2. «Как будет» — карточки `LastDayCard` per route за **последний день predictions**
+1. «Фактическая нагрузка» — карточки `LastDayCard` per route за **последний день actuals**
+2. «Прогнозируемая нагрузка» — карточки `LastDayCard` per route за **последний день predictions**
 3. «Данные» — `<PredictionsTable rows={predictionRows} />`
 
 Существующая логика с `/predictions/load` и `/historical/load` (T-218, AVG-агрегаты)
@@ -42,11 +42,11 @@ T-220..T-222 подготовили:
 - [ ] «Последний день actuals» = `MAX(period_start::date)` из actualRows
 - [ ] «Последний день predictions» = `MAX(period_start::date)` из predictionRows
 - [ ] Карточки показывают `SUM(value) GROUP BY route_id` для этого дня
-- [ ] Секция «Как было» НЕ рендерится если actualRows пусты
-- [ ] Секция «Как будет» НЕ рендерится если predictionRows пусты
+- [ ] Секция «Фактическая нагрузка» НЕ рендерится если actualRows пусты
+- [ ] Секция «Прогнозируемая нагрузка» НЕ рендерится если predictionRows пусты
 - [ ] Loading state — `<p>{t('common.loading')}</p>` пока грузятся CSV
 - [ ] Error state — `Alert` если fetch упал
-- [ ] Footer с active model — как было в T-218
+- [ ] Footer с active model — как в T-218, но с человекочитаемым именем и «Точность (WAPE)» (T-231)
 - [ ] vitest 6+ passed (`PassengerMode.test.tsx`)
 - [ ] `yarn typecheck` 0 errors
 - [ ] `yarn lint` без новых ошибок
@@ -85,8 +85,8 @@ describe('<PassengerMode> — 3 секции', () => {
     });
     render(<PassengerMode />);
     await waitFor(() => {
-      expect(screen.getByText(/как было/i)).toBeInTheDocument();
-      expect(screen.getByText(/как будет/i)).toBeInTheDocument();
+      expect(screen.getByText(/фактическая нагрузка/i)).toBeInTheDocument();
+      expect(screen.getByText(/прогнозируемая нагрузка/i)).toBeInTheDocument();
       expect(screen.getByText(/данные/i)).toBeInTheDocument();
     });
   });
@@ -142,11 +142,11 @@ describe('<PassengerMode> — 3 секции', () => {
     });
   });
 
-  it('не рендерит секцию «как было» если actuals пусты', async () => {
+  it('не рендерит секцию «фактическая нагрузка» если actuals пусты', async () => {
     mockCsv({predictions: '1;a;b;100\n'});
     render(<PassengerMode />);
     await waitFor(() => {
-      expect(screen.queryByText(/как было/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/фактическая нагрузка/i)).not.toBeInTheDocument();
     });
   });
 
@@ -168,8 +168,8 @@ function cardByTestId(gridTestId: string, routeId: number): HTMLElement | undefi
 ```tsx
 /**
  * T-223: PassengerMode = 3 секции (факт / прогноз / таблица) из CSV.
- * - «Как было» — LastDayCard per route за MAX(actual.period_start)
- * - «Как будет» — LastDayCard per route за MAX(prediction.period_start)
+ * - «Фактическая нагрузка» — LastDayCard per route за MAX(actual.period_start) (T-231: copy)
+ * - «Прогнозируемая нагрузка» — LastDayCard per route за MAX(prediction.period_start)
  * - «Данные» — TanStack Table со всеми строками
  */
 import { useEffect, useMemo, useState } from 'react';

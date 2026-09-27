@@ -3,12 +3,16 @@
  *
  * T-196: использует GET /api/v1/features для списка,
  * POST /api/v1/features/{name}/toggle и /api/v1/zeros/{name}/toggle для переключения.
+ *
+ * T-231: в UI не протекают внутренние имена (`use_lag`, `zero_route_5`) —
+ * подписи берутся из реестра через `lib/labels.ts` (fallback: описание из API).
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { t } from '@/lib/i18n/t';
+import { featureHint, featureName, zeroHint, zeroName } from '@/lib/labels';
 
 import { customInstance } from '@/api/customInstance';
 
@@ -97,40 +101,55 @@ export function FiltersPanel({
 
       <section>
         <h3>{t('analyst.featuresTitle')}</h3>
-        {data?.feature_toggles.map((f) => (
-          <label key={f.name} style={{ display: 'block', margin: '4px 0' }}>
-            <input
-              type="checkbox"
-              checked={f.enabled}
-              onChange={(e) => toggleFeature.mutate({ name: f.name, enabled: e.target.checked })}
-              data-testid={`feature-${f.name}`}
-            />{' '}
-            {f.name} {f.is_default && <small>({t('analyst.defaultBadge')})</small>}
-            <br />
-            <small style={{ color: '#666' }}>{f.description}</small>
-          </label>
-        ))}
+        {data?.feature_toggles.map((f) => {
+          const hint = featureHint(f.name, t);
+          return (
+            <label key={f.name} style={{ display: 'block', margin: '4px 0' }}>
+              <input
+                type="checkbox"
+                checked={f.enabled}
+                onChange={(e) => toggleFeature.mutate({ name: f.name, enabled: e.target.checked })}
+                data-testid={`feature-${f.name}`}
+              />{' '}
+              {featureName(f.name, f.description, t)}{' '}
+              {f.is_default && <small>({t('analyst.defaultBadge')})</small>}
+              {hint && (
+                <>
+                  <br />
+                  <small style={{ color: '#666' }}>{hint}</small>
+                </>
+              )}
+            </label>
+          );
+        })}
       </section>
 
       <section>
         <h3>{t('analyst.zerosTitle')}</h3>
-        {data?.zero_overrides.map((z) => (
-          <label key={z.name} style={{ display: 'block', margin: '4px 0' }}>
-            <input
-              type="checkbox"
-              checked={z.enabled}
-              onChange={(e) => toggleZero.mutate({ name: z.name, enabled: e.target.checked })}
-              data-testid={`zero-${z.name}`}
-            />{' '}
-            {z.name}
-            <br />
-            <small style={{ color: '#666' }}>{z.description}</small>
-          </label>
-        ))}
+        {data?.zero_overrides.map((z) => {
+          const hint = zeroHint(z.name, t);
+          return (
+            <label key={z.name} style={{ display: 'block', margin: '4px 0' }}>
+              <input
+                type="checkbox"
+                checked={z.enabled}
+                onChange={(e) => toggleZero.mutate({ name: z.name, enabled: e.target.checked })}
+                data-testid={`zero-${z.name}`}
+              />{' '}
+              {zeroName(z.name, z.description, t)}
+              {hint && (
+                <>
+                  <br />
+                  <small style={{ color: '#666' }}>{hint}</small>
+                </>
+              )}
+            </label>
+          );
+        })}
       </section>
 
       <section>
-        <h3>Коэффициенты</h3>
+        <h3>{t('analyst.coefsTitle')}</h3>
         <label>
           {t('analyst.coefWeather')}: {localWeather.toFixed(2)}
           <input

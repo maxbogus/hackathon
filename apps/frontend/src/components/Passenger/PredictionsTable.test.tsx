@@ -135,6 +135,6 @@ describe('<PredictionsTable>', () => {
     const header = screen.getByTestId('predictions-table-header');
     expect(header).toBeInTheDocument();
     // Конкретное значение, не just truthy — это контракт между header и data rows.
-    expect(header.getAttribute('data-grid-template-columns')).toBe('70px 120px 60px 1fr');
+    expect(header.getAttribute('data-grid-template-columns')).toBe('110px 120px 60px 1fr');
   });
 });

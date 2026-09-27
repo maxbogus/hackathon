@@ -263,21 +263,21 @@ describe('<PassengerMode> — два блока actuals+predictions', () => {
       expect(card).toBeDefined();
       expect(card?.textContent).toMatch(/100 чел/);
       // Под числом прогноза не должно быть «нет прогноза» и не должно быть +/-0.0%.
-      expect(card?.textContent).not.toMatch(/нет прогноза/);
+      expect(card?.textContent).not.toMatch(/Нет прогноза/);
       expect(card?.textContent).not.toMatch(/[+-]0\.0%/);
     });
   });
 
-  it('actuals card without matching prediction shows "нет прогноза" (existing behavior)', async () => {
+  it('actuals card without matching prediction shows «Нет прогноза» (existing behavior)', async () => {
     // Контр-тест: actual-карточка БЕЗ прогноза по тому же routeId должна
-    // показывать «нет прогноза» (as designed in T-218+).
+    // показывать «Нет прогноза» (as designed in T-218+).
     mockLoadApi({ actualsByRoute: { 7: 80 }, predictionsEmpty: true });
     render(<PassengerMode />);
     await waitFor(() => {
       const card = cardByRoute('actuals-grid', 7);
       expect(card).toBeDefined();
-      expect(card?.textContent).toMatch(/80 чел/);
-      expect(card?.textContent).toMatch(/нет прогноза/);
+      expect(card?.textContent).toMatch(/80 чел\./);
+      expect(card?.textContent).toMatch(/Нет прогноза/);
     });
   });
 
@@ -290,12 +290,12 @@ describe('<PassengerMode> — два блока actuals+predictions', () => {
     });
   });
 
-  it('shows "как было" and "как будет" headers (i18n)', async () => {
+  it('shows «Фактическая нагрузка» and «Прогнозируемая нагрузка» headers (i18n)', async () => {
     mockLoadApi();
     render(<PassengerMode />);
     await waitFor(() => {
-      expect(screen.getByText(/как было/i)).toBeInTheDocument();
-      expect(screen.getByText(/как будет/i)).toBeInTheDocument();
+      expect(screen.getByText(/фактическая нагрузка/i)).toBeInTheDocument();
+      expect(screen.getByText(/прогнозируемая нагрузка/i)).toBeInTheDocument();
     });
   });
 });

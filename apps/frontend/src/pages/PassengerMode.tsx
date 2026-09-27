@@ -30,6 +30,7 @@ import { t, tf } from '@/lib/i18n/t';
 import { Alert } from '@/lib/Alert';
 import { fetchActiveModel, formatWapeScore, type ActiveModelInfo } from '@/lib/activeModel';
 import { fetchRouteGeo, mergeRouteTiers, type MapRoute } from '@/lib/geoRoutes';
+import { modelName } from '@/lib/labels';
 import { fetchAllRouteLoads, type RouteLoad } from '@/lib/routeLoad';
 
 import { RouteMap } from '@/components/Map/MapProvider';
@@ -106,11 +107,13 @@ export function PassengerMode(): JSX.Element {
   }, []);
 
   const wapeLabel = formatWapeScore(activeModel?.wape_score ?? null);
-  const modelId = activeModel?.model_id ?? '\u2014';
+  // T-231: показываем человекочитаемое имя модели («baseline_v1» → «Базовая v1»),
+  // raw model_id доступен в tooltip (title) для трассируемости к артефакту.
+  const activeModelName = activeModel ? modelName(activeModel.model_id, t) || '—' : '—';
   const footerText =
     wapeLabel !== null
-      ? tf('passenger.activeModelFooter', modelId, wapeLabel)
-      : tf('passenger.modelFooter', modelId);
+      ? tf('passenger.activeModelFooter', activeModelName, wapeLabel)
+      : tf('passenger.modelFooter', activeModelName);
 
   return (
     <section style={{ padding: '16px 24px', fontFamily: 'system-ui, sans-serif' }}>
@@ -199,7 +202,12 @@ export function PassengerMode(): JSX.Element {
 
       <LoadLegend />
 
-      <p style={{ marginTop: 16, color: '#888', fontSize: 12 }}>{footerText}</p>
+      <p
+        title={activeModel?.model_id ?? undefined}
+        style={{ marginTop: 16, color: '#888', fontSize: 12 }}
+      >
+        {footerText}
+      </p>
     </section>
   );
 }

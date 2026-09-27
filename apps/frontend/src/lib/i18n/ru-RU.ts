@@ -92,13 +92,15 @@ export const TEXTS = {
   /* T-222 follow-up: страница /predictions — таблица прогнозов. */
   predictions: {
     viewTitle: ' Прогноз — таблица на весь период',
+    /* T-231: убраны «из БД», «поиск» (нет с F-101) и «WAPE-score» (жаргон). */
     viewHint:
-      'Все сохранённые прогнозы из БД (10 маршрутов, 1 ноября — 31 декабря). Фильтры по маршрутам, поиск, сортировка по любой колонке. По умолчанию показаны 4 маршрута с лучшим WAPE-score.',
+      'Все сохранённые прогнозы за 1 ноября — 31 декабря (10 маршрутов). Фильтры по маршрутам и сортировка по любой колонке. По умолчанию показаны 4 маршрута с наилучшей точностью прогноза.',
   },
 
   passenger: {
-    modeTitle: ' Пассажир — нагрузка по линиям',
-    modeHint: 'Текущая загрузка каждого маршрута. Выберите свободный — и езжайте.',
+    /* T-231: экран диспетчера, а не пассажира — официальное название раздела. */
+    modeTitle: ' Пассажиропоток по маршрутам',
+    modeHint: 'Текущая загрузка маршрутов. Выберите маршрут для анализа или перераспределения.',
     stopsLabel: 'Остановка',
     stopsLoading: 'Загрузка остановок…',
     stopsEmpty: 'Нет маршрутов',
@@ -106,9 +108,11 @@ export const TEXTS = {
     routesEmpty: 'Нет доступных маршрутов',
     etaLoading: 'Загрузка нагрузки…',
     etaError: (msg: string) => `Ошибка загрузки данных: ${msg}`,
-    modelFooter: (modelId: string) => `Модель: ${modelId} · обновлено только что`,
-    activeModelFooter: (modelId: string, wape: string) =>
-      `Модель: ${modelId} · WAPE-score ${wape} · обновлено только что`,
+    /* T-231: «Точность (WAPE)» вместо жаргонного «WAPE-score», имя модели —
+       человекочитаемое (см. lib/labels.ts modelName). */
+    modelFooter: (modelName: string) => `Модель: ${modelName} · Обновлено только что`,
+    activeModelFooter: (modelName: string, wape: string) =>
+      `Модель: ${modelName} · Точность (WAPE): ${wape} · Обновлено только что`,
     /* EtaCard.tsx — small visual primitives */
     etaCard: {
       departed: '🚉 Ушёл',
@@ -123,22 +127,32 @@ export const TEXTS = {
       darkred: 'перегруз',
     },
     /* T-218: PassengerMode показывает ДВА блока (clinerule 31) */
-    actualsHeader: 'Как было (факт)',
-    predictionsHeader: 'Как будет (прогноз)',
-    routeNoData: 'нет данных',
+    /* T-231: строгие термины вместо разговорных «как было / как будет». */
+    actualsHeader: 'Фактическая нагрузка',
+    predictionsHeader: 'Прогнозируемая нагрузка',
+    routeNoData: 'Нет данных',
     /* T-218+ (отзыв пользователя): карточка показывает прогноз и отклонение */
-    predictedShort: 'прогноз',
-    deviationShort: 'отклонение',
-    routeNoPrediction: 'нет прогноза',
+    /* T-231: заглавная буква + точка в единицах («Прогноз: 754 чел.») */
+    predictedShort: 'Прогноз',
+    deviationShort: 'Отклонение',
+    routeNoPrediction: 'Нет прогноза',
+    /* T-231: подписи отклонения actual vs prediction (RouteLoadCard footer) */
+    side: {
+      over: 'Перегрузка',
+      under: 'Недогрузка',
+      normal: 'В норме',
+      unknown: 'Нет прогноза',
+    },
     /* T-218+: легенда цветовой шкалы (LoadLegend.tsx) */
+    /* T-231: полные существительные, без сокращений «перегруз/недогруз/откл.». */
     legend: {
       title: 'Условные обозначения',
-      green: 'в норме · |откл| < 15%',
-      yellow: '+15..+30% от прогноза',
-      red: '+30..+60%',
-      darkred: 'перегруз +60%+',
-      lightblue: 'недогруз · меньше чем ожидалось',
-      gray: 'нет данных',
+      green: 'Норма · отклонение менее 15%',
+      yellow: 'Перегрузка +15…+30% от прогноза',
+      red: 'Перегрузка +30…+60%',
+      darkred: 'Перегрузка · более +60%',
+      lightblue: 'Недогрузка · ниже прогноза',
+      gray: 'Нет данных',
     },
     /* T-222: PredictionsTable.tsx — TanStack Table v8 + virtual scroll.
        T-226 / F-101: searchPlaceholder удалён (поиск работает глючно,
@@ -149,8 +163,8 @@ export const TEXTS = {
       columnRoute: 'Маршрут',
       columnDate: 'Дата',
       columnHour: 'Час',
-      columnValue: 'Прогноз',
-      showAll: 'Показать все',
+      columnValue: 'Прогноз (чел.)',
+      showAll: 'Выбрать все',
       collapse: 'Свернуть',
       emptyMessage: 'Нет данных за выбранный период',
       loadErrorPrefix: 'Не удалось загрузить прогноз:',
@@ -168,8 +182,8 @@ export const TEXTS = {
       columnRoute: 'Маршрут',
       columnDate: 'Дата',
       columnHour: 'Час',
-      columnValue: 'Факт',
-      showAll: 'Показать все',
+      columnValue: 'Факт. посадки (чел.)',
+      showAll: 'Выбрать все',
       collapse: 'Свернуть',
       emptyMessage: 'Нет исторических данных за выбранный период',
       loadErrorPrefix: 'Не удалось загрузить исторические данные:',
@@ -184,6 +198,8 @@ export const TEXTS = {
   common: {
     /* Shared, neutral Russian phrases (no domain-specific terminology). */
     minutesShort: 'мин',
+    /* T-231: единица измерения пассажиропотока («754 чел.»). */
+    unitPeople: 'чел.',
     loading: 'Загрузка…',
     errorPrefix: 'Ошибка:',
     retry: 'Повторить',
@@ -205,15 +221,63 @@ export const TEXTS = {
     granularityDay: 'По дням',
     granularityHour: 'По часам',
     granularityMonth: 'По месяцам',
-    historicalChartTitle: 'Исторические данные (boardings)',
+    historicalChartTitle: 'Исторические данные (посадки)',
     predictionsChartTitle: 'Прогноз (с учётом коэффициентов)',
     noData: 'Нет данных за выбранный период',
     downloadCsv: '⬇️ Скачать CSV',
     csvDownloaded: (rows: number) => `✅ Скачано ${rows} строк`,
     csvError: 'Не удалось сгенерировать CSV',
     filtersTitle: ' Параметры прогноза',
-    featuresTitle: 'Фичи модели',
-    zerosTitle: 'Обнуление',
+    featuresTitle: 'Факторы прогнозирования',
+    zerosTitle: 'Исключения',
+    coefsTitle: 'Корректирующие коэффициенты',
+    /* T-231: русские подписи/пояснения для feature_toggles из API.
+       Резолв — lib/labels.ts featureName/featureHint (fallback на API-описание). */
+    featureLabels: {
+      usePoi: 'Учитывать объекты (POI)',
+      useTraffic: 'Учитывать трафик',
+      useWeather: 'Учитывать погоду',
+      useEvents: 'Учитывать события',
+      useSeasonal: 'Учитывать сезонность',
+      useLag: 'Учитывать историю',
+    },
+    featureHints: {
+      usePoi: 'Объекты рядом с остановками: школы, торговые центры, парки',
+      useTraffic: 'Загруженность дорог и перекрёстков',
+      useWeather: 'Температура воздуха и осадки',
+      useEvents: 'Календарь событий: открытие инфраструктуры',
+      useSeasonal: 'Праздники и школьные каникулы',
+      useLag: 'История пассажиропотока по маршруту',
+    },
+    /* T-231: русские подписи/пояснения для zero_overrides из API. */
+    zeroLabels: {
+      zeroRoute5: 'Исключить маршрут 5',
+      zeroNightPredCap: 'Ограничить ночной прогноз',
+      zeroWeekend: 'Исключить выходные',
+      zeroHolidays: 'Исключить праздники',
+    },
+    zeroHints: {
+      zeroRoute5: 'Маршрут 5 не учитывается в прогнозе: участок закрыт',
+      zeroNightPredCap: 'Ночные часы обнуляются, если прогноз ниже 55 чел.',
+      zeroWeekend: 'Суббота и воскресенье обнуляются',
+      zeroHolidays: 'Федеральные праздники обнуляются',
+    },
+    /* T-231: человекочитаемые имена моделей (см. lib/labels.ts modelName). */
+    modelLabels: {
+      baselineV1: 'Базовая v1',
+      testSubmissionBaseline: 'Базовый тестовый',
+      routeBaselineV1: 'Базовая по маршрутам v1',
+      xgboostV8Poi: 'XGBoost v8 (POI)',
+    },
+    /* T-231: человекочитаемые имена наборов факторов (feature_set). */
+    featureSets: {
+      withAll: 'Все факторы',
+      withPoi: 'С учётом объектов',
+      baseline: 'Базовый набор',
+    },
+    /* T-231: состояние исключений в панели активного прогноза. */
+    zerosOn: 'Исключения: вкл.',
+    zerosOff: 'Исключения: выкл.',
     coefWeather: 'Погода',
     coefEvent: 'События',
     coefSeason: 'Сезон',
@@ -231,29 +295,29 @@ export const TEXTS = {
     /* T-230: наборы прогнозов — генерация, кандидат, эталон */
     howItWorksTitle: 'Как это работает',
     howItWorksStep1:
-      '1. Слева выберите фичи, «обнуления» и коэффициенты — это параметры генерации прогноза.',
+      '1. Слева выберите факторы, исключения и коэффициенты — это параметры генерации прогноза.',
     howItWorksStep2:
       '2. Нажмите «Сгенерировать прогноз»: расчёт идёт на сервере (Celery) и занимает несколько минут. График при этом показывает данные активного набора.',
     howItWorksStep3:
-      '3. Когда расчёт закончится, появится кандидат: имя файла, число строк и WAPE-score (больше — лучше).',
+      '3. Когда расчёт закончится, появится кандидат: имя файла, число строк и точность прогноза (WAPE, больше — лучше).',
     howItWorksStep4:
       '4. «Загрузить и сделать активным» заменит текущие прогнозы в базе на новые; «Оставить эталон» — отменит кандидата.',
     howItWorksStep5:
-      '5. Вернуться к эталону можно в любой момент кнопкой «Вернуть эталон» — старые расчёты не удаляются.',
+      '5. Вернуться к исходному прогнозу можно в любой момент кнопкой «Восстановить исходный прогноз» — старые расчёты не удаляются.',
     howItWorksNote:
       'Прогнозы хранятся наборами: активный набор отдают все экраны (Аналитик, Диспетчер), эталон остаётся как резерв.',
-    activeSetTitle: 'Активный набор',
+    activeSetTitle: 'Активный прогноз',
     activeSetEtalonBadge: 'эталон',
     activeSetGeneratedBadge: 'сгенерирован',
     activeSetRows: 'Строк',
-    activeSetHoldout: 'WAPE-score',
+    activeSetHoldout: 'Точность (WAPE)',
     generateTitle: 'Генерация прогноза',
     generateButton: '▶️ Сгенерировать прогноз',
     generateRunning: '⏳ Считаем… обучение XGBoost занимает несколько минут',
     generateError: 'Не удалось запустить генерацию',
     generateWorkerHint: 'Если статус не меняется — поднимите воркер: make pipeline-up',
     candidateTitle: 'Готов новый прогноз (кандидат)',
-    candidateFile: 'Файл',
+    candidateFile: 'Файл набора',
     candidateRows: 'Строк',
     candidateLoadButton: '✅ Загрузить и сделать активным',
     candidateRejectButton: '🚫 Оставить эталон',
@@ -262,8 +326,8 @@ export const TEXTS = {
     candidateRejected: 'Кандидат отклонён — активен прежний набор',
     candidateFailed: 'Генерация не удалась',
     candidateNeedsFix: 'Файл не прошёл проверку (manifest/строки) — загрузка недоступна',
-    restoreEtalonButton: '↩️ Вернуть эталон',
-    restoreEtalonDone: '✅ Активен эталонный набор',
+    restoreEtalonButton: 'Восстановить исходный прогноз',
+    restoreEtalonDone: 'Активен исходный прогноз',
     restoreEtalonError: 'Не удалось вернуть эталон',
     recommendationReady: '✅ Лучше текущего — можно загружать',
     recommendationWorse: '⚠️ Хуже текущего — вероятно, не стоит',
@@ -277,7 +341,8 @@ export const TEXTS = {
   /* T-226: HistoricalView.tsx — header для страницы /historical */
   historical: {
     viewTitle: 'Исторические данные',
-    viewHint: 'Фактический пассажиропоток за весь период наблюдений (из БД)',
+    /* T-231: убран технический «(из БД)» — пользователю не важен источник. */
+    viewHint: 'Фактический пассажиропоток за весь период наблюдений',
   },
 
   /* T-122/T-227: components/Map — карта маршрутов на дашборде «Диспетчер».

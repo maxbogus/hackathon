@@ -31,7 +31,9 @@ describe('t() — static lookups', () => {
   });
 
   it('returns the passenger-mode heading', () => {
-    expect(t('passenger.modeTitle')).toBe(' Пассажир — нагрузка по линиям');
+    // T-231: раздел переименован из «Пассажир — нагрузка по линиям» (пассажир
+    // не управляет — это экран диспетчера).
+    expect(t('passenger.modeTitle')).toBe(' Пассажиропоток по маршрутам');
   });
 
   it('returns the severity labels', () => {
@@ -78,8 +80,13 @@ describe('tf() — parameterised lookups', () => {
   });
 
   it('interpolates the model footer', () => {
-    expect(tf('passenger.modelFooter', 'baseline_v1')).toBe(
-      'Модель: baseline_v1 · обновлено только что',
+    // T-231: имя модели — человекочитаемое (см. lib/labels.ts), метрика
+    // называется «Точность (WAPE)», а не «WAPE-score».
+    expect(tf('passenger.modelFooter', 'Базовая v1')).toBe(
+      'Модель: Базовая v1 · Обновлено только что',
+    );
+    expect(tf('passenger.activeModelFooter', 'Базовая v1', '0.9272')).toBe(
+      'Модель: Базовая v1 · Точность (WAPE): 0.9272 · Обновлено только что',
     );
   });
 
@@ -193,3 +200,63 @@ describe('TEXTS — locked snapshot', () => {
     expect(typeof card.severityInfo).toBe('string');
   });
 });
+
+/**
+ * T-231: ревизия копирайта под требования Департамента транспорта.
+ * Эти тесты фиксируют глоссарий (см. .clinerules/32-ui-copy-standards.md):
+ * никаких внутренних идентификаторов, англицизмов и разговорного тона.
+ */
+describe('T-231 — department-grade глоссарий', () => {
+  it('единицы измерения там, где раньше был голый жаргон', () => {
+    expect(t('common.unitPeople')).toBe('чел.');
+    expect(t('passenger.predictionsTable.columnValue')).toBe('Прогноз (чел.)');
+    expect(t('passenger.historicalTable.columnValue')).toBe('Факт. посадки (чел.)');
+  });
+
+  it('чекбоксы-фильтры: «Выбрать все» вместо «Показать все»', () => {
+    expect(t('passenger.predictionsTable.showAll')).toBe('Выбрать все');
+    expect(t('passenger.historicalTable.showAll')).toBe('Выбрать все');
+  });
+
+  it('экран диспетчера: строгие термины вместо разговорных', () => {
+    expect(t('passenger.actualsHeader')).toBe('Фактическая нагрузка');
+    expect(t('passenger.predictionsHeader')).toBe('Прогнозируемая нагрузка');
+    expect(t('passenger.modeHint')).not.toMatch(/езжайте/i);
+    expect(t('passenger.modeHint')).toMatch(/Выберите маршрут/);
+  });
+
+  it('легенда и подписи отклонений — полные существительные', () => {
+    expect(t('passenger.side.over')).toBe('Перегрузка');
+    expect(t('passenger.side.under')).toBe('Недогрузка');
+    expect(t('passenger.legend.darkred')).toContain('Перегрузка');
+    expect(t('passenger.legend.lightblue')).toContain('Недогрузка');
+  });
+
+  it('экран аналитика: «факторы»/«исключения» вместо «фичи»/«обнуление»', () => {
+    expect(t('analyst.featuresTitle')).toBe('Факторы прогнозирования');
+    expect(t('analyst.zerosTitle')).toBe('Исключения');
+    expect(t('analyst.activeSetTitle')).toBe('Активный прогноз');
+    expect(t('analyst.activeSetHoldout')).toBe('Точность (WAPE)');
+    expect(t('analyst.historicalChartTitle')).toBe('Исторические данные (посадки)');
+  });
+
+  it('русские подписи и пояснения тогглов/исключений без кодов', () => {
+    expect(t('analyst.featureLabels.useLag')).toBe('Учитывать историю');
+    expect(t('analyst.featureLabels.usePoi')).toBe('Учитывать объекты (POI)');
+    expect(t('analyst.zeroLabels.zeroRoute5')).toBe('Исключить маршрут 5');
+    expect(t('analyst.featureHints.useEvents')).not.toMatch(/T-\d/);
+    expect(t('analyst.zeroHints.zeroHolidays')).not.toMatch(/T-\d/);
+  });
+
+  it('кнопка эталона названа по смыслу действия', () => {
+    expect(t('analyst.restoreEtalonButton')).toBe('Восстановить исходный прогноз');
+  });
+
+  it('«boardings»/«WAPE-score»/«фичи» не встречаются в UI-строках', () => {
+    const flat = JSON.stringify(TEXTS);
+    for (const forbidden of ['boardings', 'WAPE-score', 'Фичи', 'zeros=ON', 'with_all']) {
+      expect(flat).not.toContain(forbidden);
+    }
+  });
+});
+

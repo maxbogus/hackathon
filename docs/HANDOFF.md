@@ -1,7 +1,72 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-27T16:25:00Z
-> Обновлено: Cline (агент) — T-228 (XLSX-кнопка) + T-229 (Celery-параметры) + T-230 (наборы прогнозов: активный/эталон) на дашборде «Аналитик» (D-042, F-107, F-108).
+> Последнее обновление: 2026-09-27T19:17:32Z
+> Обновлено: Cline (агент) — T-231: ревизия текстов интерфейса (4 экрана) по требованиям Департамента транспорта (D-045, F-120, clinerule 32).
+
+## Сессия 2026-09-27T19:17:32Z — T-231: department-grade UI copy (без идентификаторов, официальный тон)
+
+**Контекст:** заказчик провёл ревизию интерфейса и вернул список замечаний:
+(1) убрать код из UI (`use_lag`, `with_all`, `zeros=ON`, `baseline_v1`,
+`test_submission_baseline`, «(из БД)»), (2) русифицировать англицизмы
+(`boardings`, `WAPE-score`, «фичи»), (3) сменить тон на официальный
+(убрать «и езжайте»), (4) единицы измерения и обрезанный заголовок «Мар...».
+
+**Что сделано (RED→GREEN→REFACTOR):**
+- `apps/frontend/src/lib/labels.ts` (new) + `labels.test.ts` (16 тестов, RED
+  зафиксирован падением на отсутствующем модуле): мэппинг backend-имён в
+  `TKey` — `featureName/featureHint/zeroName/zeroHint/modelName/featureSetName/
+  zerosStateText/humanizeIdentifier`. Translator инжектится → pure logic, без
+  импорта `t` и без русских литералов.
+  Fallback: известное имя → реестр; неизвестное → описание из API → raw name;
+  для `model_id` — generic де-снейкинг (`xgboost_v11_base_only` → «XGBoost v11
+  base only»), аббревиатуры в конце — в скобках (`…v8_poi` → «…v8 (POI)»).
+- `lib/i18n/ru-RU.ts`: новые ключи `analyst.{featureLabels,featureHints,
+  zeroLabels,zeroHints,modelLabels,featureSets,zerosOn,zerosOff,coefsTitle}`,
+  `passenger.side.*`, `common.unitPeople`; переписаны `modeTitle` («Пассажиропоток
+  по маршрутам»), `modeHint`, `actualsHeader`/`predictionsHeader`,
+  `legend.*`, `predictionsTable/historicalTable.columnValue` («Прогноз (чел.)»,
+  «Факт. посадки (чел.)»), `showAll` («Выбрать все»), `featuresTitle` («Факторы
+  прогнозирования»), `zerosTitle` («Исключения»), `historicalChartTitle`
+  («Исторические данные (посадки)»), `activeSetHoldout` («Точность (WAPE)»),
+  `restoreEtalonButton` («Восстановить исходный прогноз»), `howItWorksStep{1,3,4,5}`.
+- Компоненты: `FiltersPanel` (подписи/пояснения тогглов из реестра вместо
+  `f.name`/`f.description`, `<h3>Коэффициенты</h3>` → ключ), `GeneratePanel`
+  (имя модели + feature_set + состояние исключений; raw id → `title=`),
+  `PredictionsChart` (заголовок без `(with_all) · zeros=ON`), `RouteLoadCard`
+  (SIDE_TEXT → реестр, «чел.» с точкой, `map.routeLabel` вместо хардкода),
+  `PredictionsTable`/`HistoricalTable` (grid `70px` → `110px` — фикс «Мар…»,
+  aria-label через `tf`), `PredictionsView`/`PassengerMode` (footer: человекочитаемое
+  имя модели + «Точность (WAPE)», `formatWapeScore`).
+- Тесты обновлены под новую копию: `t.test.ts` (+8 тестов глоссария, запрет
+  `boardings`/`WAPE-score`/`Фичи`/`with_all`/`zeros=ON` в словаре),
+  `PassengerMode.test.tsx`, `GeneratePanel.test.tsx`, `App.test.tsx`,
+  `routes/-__root.test.tsx`, обе таблицы (`110px`).
+- Документы: `.clinerules/32-ui-copy-standards.md` (new, + индекс в
+  `00-AGENTS.md`), `.clinerules/31-*` (новые заголовки блоков), `MIGRATION.md`,
+  тикеты T-223/T-224 (копия в acceptance приведена к T-231).
+
+**Метрики:**
+- frontend: `275 passed / 2 failed` (2 фейла pre-existing `routeCsv.test.ts` —
+  не трогали), typecheck — только 2 pre-existing ошибки `routeCsv.ts`,
+  eslint по изменённым файлам — чисто, `make frontend-text-check` — чисто
+  (ноль кириллических литералов вне `lib/i18n/`), prettier применён.
+- backend/ml: без изменений (правки только фронт + docs).
+
+**Как проверить вживую:**
+1. `make up` → `/historical` (заголовки «Маршрут» / «Факт. посадки (чел.)»,
+   «Выбрать все»), `/predictions` («Прогноз (чел.)», footer «Точность (WAPE)»).
+2. `/analyst` → «Факторы прогнозирования» + «Исключения» (русские подписи,
+   без `use_*`/`zero_*`), «Активный прогноз: Базовый тестовый (сгенерирован)»,
+   «Строк: 14640 · Все факторы · Исключения: вкл.».
+3. `/passenger` → «Пассажиропоток по маршрутам», «Фактическая нагрузка» /
+   «Прогнозируемая нагрузка», легенда «Перегрузка/Недогрузка».
+
+**Артефакты:** `apps/frontend/src/lib/labels.{ts,test.ts}`,
+`apps/frontend/src/lib/i18n/{ru-RU.ts,MIGRATION.md}`,
+`.clinerules/32-ui-copy-standards.md`,
+`docs/backlog/tickets/T-231-department-grade-ui-copy-revision.md`.
+
+---
 
 ## Сессия 2026-09-27T16:25:00Z — Аналитик: XLSX, генерация с параметрами, подмена набора + эталон
 
@@ -252,7 +317,7 @@
 - `docs/backlog/tickets/T-225-rename-passenger-tab-to-dispatcher.md` (тикет создан, status: ready → in-progress; пометить done после commit)
 
 **На заметку для следующей сессии:**
-- Заголовок страницы `passenger.modeTitle = ' Пассажир — нагрузка по линиям'` НЕ переименован — это название дашборда, не роль. Если пользователь захочет и его переименовать, см. apps/frontend/src/pages/PassengerMode.tsx:97.
+- Заголовок страницы `passenger.modeTitle` НЕ переименован в T-225 — это название дашборда, не роль. **ОТМЕНЕНО в T-231:** заголовок теперь «Пассажиропоток по маршрутам» (см. раздел T-231 выше).
 - Если понадобится вернуть AlertsPanel в nav — добавить одну запись в ROLES + emoji + i18n ключ.
 - T-204 (XLSX-экспорт), T-221..T-224 (CSV-интеграция) — в работе, см. STATUS.md.
 
