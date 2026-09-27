@@ -6,6 +6,11 @@
  *
  * T-231: в UI не протекают внутренние имена (`use_lag`, `zero_route_5`) —
  * подписи берутся из реестра через `lib/labels.ts` (fallback: описание из API).
+ *
+ * T-233: переключатель маршрута (<RouteSelect>) встроен первым блоком панели —
+ * раньше здесь была статичная строка «Маршрут: 7». Loading/error по
+ * `/api/v1/features` больше не скрывают весь `<aside>`: деградируют только
+ * секции фич и исключений, а маршрут и коэффициенты остаются рабочими.
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -15,6 +20,7 @@ import { t } from '@/lib/i18n/t';
 import { featureHint, featureName, zeroHint, zeroName } from '@/lib/labels';
 
 import { customInstance } from '@/api/customInstance';
+import { RouteSelect } from '@/components/Filters/RouteSelect';
 
 interface FeatureToggle {
   name: string;
@@ -37,6 +43,10 @@ interface FeaturesResponse {
 
 interface FiltersPanelProps {
   routeId: number;
+  /** T-233: список маршрутов для селектора (lib/routeCatalog.ts). */
+  routes: readonly number[];
+  /** T-233: выбор маршрута — состояние живёт в <AnalystDashboard>. */
+  onRouteChange: (routeId: number) => void;
   coefWeather: number;
   coefEvent: number;
   coefSeason: number;
@@ -45,6 +55,8 @@ interface FiltersPanelProps {
 
 export function FiltersPanel({
   routeId,
+  routes,
+  onRouteChange,
   coefWeather,
   coefEvent,
   coefSeason,
@@ -89,63 +101,71 @@ export function FiltersPanel({
   const [localEvent, setLocalEvent] = useState(coefEvent);
   const [localSeason, setLocalSeason] = useState(coefSeason);
 
-  if (isLoading) return <p>{t('common.loading')}</p>;
-  if (isError) return <p>{t('common.errorPrefix')}</p>;
-
   return (
     <aside data-testid="filters-panel" style={{ padding: 16, border: '1px solid #ddd' }}>
       <h2>{t('analyst.filtersTitle')}</h2>
-      <p>
-        {t('analyst.routeLabel')}: <strong>{routeId}</strong>
-      </p>
+
+      {/* T-233: маршрут — параметр прогноза, а не часть ответа /features. */}
+      <RouteSelect routes={routes} value={routeId} onChange={onRouteChange} />
+
+      {/* T-233: сбой /api/v1/features раньше скрывал весь <aside> (ранний return) —
+          вместе с маршрутом и коэффициентами. Теперь деградируют только секции ниже. */}
+      {isLoading && <p data-testid="filters-features-loading">{t('common.loading')}</p>}
+      {isError && <p data-testid="filters-features-error">{t('common.errorPrefix')}</p>}
 
       <section>
         <h3>{t('analyst.featuresTitle')}</h3>
-        {data?.feature_toggles.map((f) => {
-          const hint = featureHint(f.name, t);
-          return (
-            <label key={f.name} style={{ display: 'block', margin: '4px 0' }}>
-              <input
-                type="checkbox"
-                checked={f.enabled}
-                onChange={(e) => toggleFeature.mutate({ name: f.name, enabled: e.target.checked })}
-                data-testid={`feature-${f.name}`}
-              />{' '}
-              {featureName(f.name, f.description, t)}{' '}
-              {f.is_default && <small>({t('analyst.defaultBadge')})</small>}
-              {hint && (
-                <>
-                  <br />
-                  <small style={{ color: '#666' }}>{hint}</small>
-                </>
-              )}
-            </label>
-          );
-        })}
+        {!isLoading &&
+          !isError &&
+          data?.feature_toggles.map((f) => {
+            const hint = featureHint(f.name, t);
+            return (
+              <label key={f.name} style={{ display: 'block', margin: '4px 0' }}>
+                <input
+                  type="checkbox"
+                  checked={f.enabled}
+                  onChange={(e) =>
+                    toggleFeature.mutate({ name: f.name, enabled: e.target.checked })
+                  }
+                  data-testid={`feature-${f.name}`}
+                />{' '}
+                {featureName(f.name, f.description, t)}{' '}
+                {f.is_default && <small>({t('analyst.defaultBadge')})</small>}
+                {hint && (
+                  <>
+                    <br />
+                    <small style={{ color: '#666' }}>{hint}</small>
+                  </>
+                )}
+              </label>
+            );
+          })}
       </section>
 
       <section>
         <h3>{t('analyst.zerosTitle')}</h3>
-        {data?.zero_overrides.map((z) => {
-          const hint = zeroHint(z.name, t);
-          return (
-            <label key={z.name} style={{ display: 'block', margin: '4px 0' }}>
-              <input
-                type="checkbox"
-                checked={z.enabled}
-                onChange={(e) => toggleZero.mutate({ name: z.name, enabled: e.target.checked })}
-                data-testid={`zero-${z.name}`}
-              />{' '}
-              {zeroName(z.name, z.description, t)}
-              {hint && (
-                <>
-                  <br />
-                  <small style={{ color: '#666' }}>{hint}</small>
-                </>
-              )}
-            </label>
-          );
-        })}
+        {!isLoading &&
+          !isError &&
+          data?.zero_overrides.map((z) => {
+            const hint = zeroHint(z.name, t);
+            return (
+              <label key={z.name} style={{ display: 'block', margin: '4px 0' }}>
+                <input
+                  type="checkbox"
+                  checked={z.enabled}
+                  onChange={(e) => toggleZero.mutate({ name: z.name, enabled: e.target.checked })}
+                  data-testid={`zero-${z.name}`}
+                />{' '}
+                {zeroName(z.name, z.description, t)}
+                {hint && (
+                  <>
+                    <br />
+                    <small style={{ color: '#666' }}>{hint}</small>
+                  </>
+                )}
+              </label>
+            );
+          })}
       </section>
 
       <section>

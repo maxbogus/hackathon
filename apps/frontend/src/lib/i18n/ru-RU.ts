@@ -158,7 +158,7 @@ export const TEXTS = {
        T-226 / F-101: searchPlaceholder удалён (поиск работает глючно,
        multi-select маршрутов достаточно для 10 маршрутов). */
     predictionsTable: {
-      title: ' Прогноз — весь период',
+      title: ' ',
       routesFilterLabel: 'Маршруты',
       columnRoute: 'Маршрут',
       columnDate: 'Дата',
@@ -177,7 +177,7 @@ export const TEXTS = {
     /* T-226: HistoricalTable.tsx — TanStack Table v8 + virtual scroll,
        зеркало predictionsTable без поиска (F-101), колонка «Факт». */
     historicalTable: {
-      title: ' Исторические данные — весь период',
+      title: '',
       routesFilterLabel: 'Маршруты',
       columnRoute: 'Маршрут',
       columnDate: 'Дата',
@@ -209,8 +209,10 @@ export const TEXTS = {
 
   analyst: {
     /* T-196: Analyst dashboard — historical + predictions + feature toggles */
-    title: ' Аналитик — данные и прогнозы',
+    title: '',
     routeLabel: 'Маршрут',
+    /* T-233: текст опции селектора маршрута («Маршрут 7»). */
+    routeOption: (routeId: number) => `Маршрут ${routeId}`,
     fromLabel: 'Период с',
     toLabel: 'Период по',
     horizonLabel: 'Горизонт',

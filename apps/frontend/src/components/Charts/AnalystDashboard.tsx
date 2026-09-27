@@ -9,11 +9,19 @@
  *   └──────────────┴──────────────────────────────┘
  *
  *   Кнопка "Download CSV" → downloadPredictionsCsv() (apps/frontend/src/api/downloadCsv.ts)
+ *
+ * T-233: состояние маршрута живёт здесь (как коэффициенты и horizon/granularity).
+ * Список маршрутов — `lib/routeCatalog.ts` (объединение /historical и
+ * /predictions/load с фолбэком на канонические 10). Оба графика принимают
+ * `routeId` пропом и держат его в `queryKey`, поэтому переключение маршрута
+ * автоматически рефетчит и историю, и прогноз.
  */
 
-import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
 
 import { t, tf } from '@/lib/i18n/t';
+import { CANONICAL_ROUTES, fetchRouteCatalog } from '@/lib/routeCatalog';
 
 import { HistoricalChart } from '@/components/Charts/HistoricalChart';
 import { PredictionsChart } from '@/components/Charts/PredictionsChart';
@@ -39,8 +47,11 @@ const DEFAULT_TO = '2025-10-31T00:00:00';
 const SUBMISSION_FROM = '2025-11-01T00:00:00';
 const SUBMISSION_TO = '2025-12-31T23:00:00';
 
+/** T-233: каталог маршрутов меняется только вместе с данными — как у графиков, 5 мин. */
+const ROUTE_CATALOG_STALE_TIME_MS = 5 * 60_000;
+
 export function AnalystDashboard(): JSX.Element {
-  const [routeId] = useState<number>(DEFAULT_ROUTE);
+  const [routeId, setRouteId] = useState<number>(DEFAULT_ROUTE);
   const [coefWeather, setCoefWeather] = useState(1.0);
   const [coefEvent, setCoefEvent] = useState(1.0);
   const [coefSeason, setCoefSeason] = useState(1.0);
@@ -50,6 +61,24 @@ export function AnalystDashboard(): JSX.Element {
   // frontend was just hard-coded to (day, hour) until now.
   const [horizon, setHorizon] = useState<Horizon>('day');
   const [granularity, setGranularity] = useState<Granularity>('hour');
+
+  // T-233: список маршрутов для селектора. `fetchRouteCatalog` не бросает, а
+  // пока запрос идёт — показываем канонические 10 маршрутов, чтобы селект
+  // никогда не был пустым.
+  const catalogQuery = useQuery({
+    queryKey: ['route-catalog'],
+    queryFn: () => fetchRouteCatalog(),
+    staleTime: ROUTE_CATALOG_STALE_TIME_MS,
+  });
+
+  /**
+   * Опции селекта маршрута. Текущий маршрут присутствует всегда: без своей
+   * `<option>` браузер сбросил бы value, и оба графика ушли бы в «нет данных».
+   */
+  const routeOptions = useMemo(() => {
+    const base = catalogQuery.data ?? CANONICAL_ROUTES;
+    return base.includes(routeId) ? base : [routeId, ...base].sort((a, b) => a - b);
+  }, [catalogQuery.data, routeId]);
 
   const [csvStatus, setCsvStatus] = useState<string>('');
   const [xlsxStatus, setXlsxStatus] = useState<string>('');
@@ -106,6 +135,8 @@ export function AnalystDashboard(): JSX.Element {
       <div>
         <FiltersPanel
           routeId={routeId}
+          routes={routeOptions}
+          onRouteChange={setRouteId}
           coefWeather={coefWeather}
           coefEvent={coefEvent}
           coefSeason={coefSeason}
