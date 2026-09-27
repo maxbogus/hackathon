@@ -98,7 +98,7 @@ def main() -> int:
     args = p.parse_args()
 
     model_id = _resolve_model_id(args.model_id)
-    print(f"📊 Evaluating {model_id!r} (holdout_days={args.holdout_days})")
+    print(f" Evaluating {model_id!r} (holdout_days={args.holdout_days})")
 
     ridership_df = _load_holdout_data(args.n_days)
     reg = ModelRegistry()  # default = ml/artifacts/

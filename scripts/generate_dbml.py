@@ -226,7 +226,7 @@ def main() -> int:
     if discovered:
         print(f"📦 Discovered models: {discovered}")
     tables, hints = collect_metadata()
-    print(f"📊 Tables in Base.metadata: {len(tables)}")
+    print(f" Tables in Base.metadata: {len(tables)}")
 
     dbml = render_dbml(tables, hints)
     tables_md = render_tables_md(tables, hints)

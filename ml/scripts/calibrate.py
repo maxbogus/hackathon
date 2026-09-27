@@ -93,7 +93,7 @@ def main() -> int:
     )
 
     print(
-        f"📊 Fitting calibration: strategy={args.strategy}, prior={args.prior}, "
+        f" Fitting calibration: strategy={args.strategy}, prior={args.prior}, "
         f"min_obs={args.min_obs}"
     )
     print(f"   holdout = {holdout_path}")

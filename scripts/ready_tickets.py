@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Показать тикеты из docs/backlog/tickets/ отсортированные по RICE."""
+
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 import re
 import sys
-from pathlib import Path
 
 TICKETS_DIR = Path("docs/backlog/tickets")
 
@@ -32,9 +33,7 @@ def parse_ticket(path: Path) -> dict | None:
                 record[key] = 0
         elif key in ("id", "title", "status", "priority"):
             record[key] = value.strip('"')
-        elif key == "tags":
-            record[key] = [x.strip().strip('"') for x in value.strip("[]").split(",") if x.strip()]
-        elif key == "depends_on":
+        elif key == "tags" or key == "depends_on":
             record[key] = [x.strip().strip('"') for x in value.strip("[]").split(",") if x.strip()]
         else:
             record[key] = value
@@ -67,15 +66,19 @@ def main() -> int:
     tickets.sort(key=lambda r: -r.get("score", 0))
 
     if args.all:
-        print("📋 Все тикеты (sorted by RICE):\n")
+        print(" Все тикеты (sorted by RICE):\n")
         for t in tickets:
-            print(f"  {t['id']:10} score={t.get('score', 0):6.2f} status={t['status']:12} {t['title'][:60]}")
+            print(
+                f"  {t['id']:10} score={t.get('score', 0):6.2f} status={t['status']:12} {t['title'][:60]}"
+            )
         return 0
 
     ready = [t for t in tickets if t.get("status") == "ready"]
     print(f"🔥 Top-{args.top} READY тикетов по RICE:\n")
     for t in ready[: args.top]:
-        print(f"  {t['id']:10} score={t.get('score', 0):6.2f} effort={t.get('effort', '?')}h  {t['title'][:60]}")
+        print(
+            f"  {t['id']:10} score={t.get('score', 0):6.2f} effort={t.get('effort', '?')}h  {t['title'][:60]}"
+        )
     if not ready:
         print("  Нет тикетов со статусом 'ready'.")
     return 0

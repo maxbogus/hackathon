@@ -46,7 +46,7 @@ def main() -> int:
         print("❌ No reports loaded. Check --reports paths.")
         return 1
 
-    print(f"📊 Loaded {len(results)} benchmark results")
+    print(f" Loaded {len(results)} benchmark results")
     write_report(results, args.output)
     print(f"✅ Leaderboard written: {args.output}")
     return 0
