@@ -37,14 +37,10 @@ class TestDockerfileFiltersEditable:
         # - `grep -v '^-e\.' /tmp/requirements.txt > /tmp/req.deps.txt`
         # - `sed -i '/^-e\./d' /tmp/requirements.txt`
         # - `sed '/^-e\./d' /tmp/requirements.txt > /tmp/req.deps.txt`
-        has_grep_filter = (
-            "grep -v" in content
-            and ("'^-e" in content or '"^-e' in content or "^-e" in content)
+        has_grep_filter = "grep -v" in content and (
+            "'^-e" in content or '"^-e' in content or "^-e" in content
         )
-        has_sed_filter = (
-            "sed" in content
-            and ("^-e" in content or "/-e" in content)
-        )
+        has_sed_filter = "sed" in content and ("^-e" in content or "/-e" in content)
         assert has_grep_filter or has_sed_filter, (
             f"apps/{package}/Dockerfile должен отфильтровать editable requirements "
             f"перед `pip install --no-index`. Используй grep -v или sed."
@@ -73,7 +69,8 @@ class TestDockerfileFiltersEditable:
         # (без фильтрации)
         # Найти строку с pip install -r
         pip_install_lines = [
-            line for line in content.splitlines()
+            line
+            for line in content.splitlines()
             if "pip install" in line and "-r" in line
         ]
         assert pip_install_lines, (
@@ -81,8 +78,7 @@ class TestDockerfileFiltersEditable:
         )
         # Каждая строка pip install должна указывать на .deps.txt (НЕ .txt без суффикса)
         uses_deps_file = any(
-            ".deps.txt" in line or "deps.txt" in line
-            for line in pip_install_lines
+            ".deps.txt" in line or "deps.txt" in line for line in pip_install_lines
         )
         uses_raw_file = any(
             "-r /tmp/requirements.txt" in line

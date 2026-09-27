@@ -43,9 +43,7 @@ class TestWheelsDirs:
             path = REPO_ROOT / "apps" / dirname / ".gitignore"
             if path.exists():
                 content = path.read_text()
-                assert "wheels/" in content, (
-                    f"apps/{dirname}/.gitignore должен содержать `wheels/`"
-                )
+                assert "wheels/" in content, f"apps/{dirname}/.gitignore должен содержать `wheels/`"
                 assert "requirements.txt" in content, (
                     f"apps/{dirname}/.gitignore должен содержать `requirements.txt`"
                 )
@@ -66,17 +64,12 @@ class TestDockerignore:
         # (поддерживаем оба варианта имён для ml-pipeline)
         has_backend = "!apps/backend/wheels/" in content
         has_harvester = "!apps/harvester/wheels/" in content
-        has_ml = (
-            "!apps/ml_pipeline/wheels/" in content
-            or "!apps/ml-pipeline/wheels/" in content
-        )
+        has_ml = "!apps/ml_pipeline/wheels/" in content or "!apps/ml-pipeline/wheels/" in content
         assert has_backend, (
             ".dockerignore должен содержать `!apps/backend/wheels/` "
             "(wheels нужны для offline Docker build)"
         )
-        assert has_harvester, (
-            ".dockerignore должен содержать `!apps/harvester/wheels/`"
-        )
+        assert has_harvester, ".dockerignore должен содержать `!apps/harvester/wheels/`"
         assert has_ml, (
             ".dockerignore должен содержать `!apps/ml_pipeline/wheels/` "
             "или `!apps/ml-pipeline/wheels/`"
@@ -88,9 +81,7 @@ class TestDistributionDoc:
 
     def test_distribution_md_exists(self) -> None:
         path = REPO_ROOT / "docs" / "DISTRIBUTION.md"
-        assert path.exists(), (
-            "docs/DISTRIBUTION.md должен существовать (workflow для жюри)"
-        )
+        assert path.exists(), "docs/DISTRIBUTION.md должен существовать (workflow для жюри)"
 
     def test_distribution_md_has_jury_section(self) -> None:
         path = REPO_ROOT / "docs" / "DISTRIBUTION.md"
@@ -110,9 +101,9 @@ class TestDistributionDoc:
         if not path.exists():
             pytest.skip("docs/DISTRIBUTION.md не существует")
         content = path.read_text().lower()
-        assert (
-            "организатор" in content or "organizer" in content
-        ), "docs/DISTRIBUTION.md должен иметь секцию для организаторов"
+        assert "организатор" in content or "organizer" in content, (
+            "docs/DISTRIBUTION.md должен иметь секцию для организаторов"
+        )
         assert "export-images" in content or "docker save" in content, (
             "docs/DISTRIBUTION.md должен описывать export-images / docker save"
         )
@@ -132,9 +123,9 @@ class TestDistributionDoc:
             pytest.skip("docs/DISTRIBUTION.md не существует")
         content = path.read_text().lower()
         # Архитектурная диаграмма (ASCII art или mermaid)
-        assert (
-            "архитектур" in content or "architecture" in content
-        ), "docs/DISTRIBUTION.md должен иметь архитектурную диаграмму"
+        assert "архитектур" in content or "architecture" in content, (
+            "docs/DISTRIBUTION.md должен иметь архитектурную диаграмму"
+        )
         # Должна быть визуальная схема (таблица, ASCII art, mermaid)
         assert (
             "|" in content  # таблица
@@ -149,9 +140,7 @@ class TestDistributionDoc:
         content = path.read_text().lower()
         # Описание 5 экранов
         for screen in ["passenger", "dispatcher", "analyst", "planner"]:
-            assert screen in content, (
-                f"docs/DISTRIBUTION.md должен описывать экран {screen}"
-            )
+            assert screen in content, f"docs/DISTRIBUTION.md должен описывать экран {screen}"
 
 
 class TestDockerfilesOffline:
@@ -191,9 +180,7 @@ class TestDockerfilesOffline:
                 break
         assert path, f"apps/{package}/Dockerfile не найден"
         content = path.read_text()
-        assert "wheels" in content.lower(), (
-            f"apps/{package}/Dockerfile должен упоминать wheels/"
-        )
+        assert "wheels" in content.lower(), f"apps/{package}/Dockerfile должен упоминать wheels/"
 
     @pytest.mark.parametrize(
         "package",
@@ -215,7 +202,8 @@ class TestDockerfilesOffline:
             # Должен быть `uv sync --offline` (НЕ ходит в PyPI)
             # Или вообще не должно быть `uv sync` (комментарии игнорируем)
             uv_sync_lines = [
-                line for line in runtime_section.splitlines()
+                line
+                for line in runtime_section.splitlines()
                 if "uv sync" in line
                 and "--offline" not in line
                 and not line.strip().startswith("#")

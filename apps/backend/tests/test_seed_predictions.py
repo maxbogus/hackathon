@@ -30,6 +30,7 @@ from app.scripts.seed_predictions import (
 
 # === Парсеры (unit) ===
 
+
 class TestParseRouteId:
     """Парсит поле ngpt_route из train.csv ("25 трамвай" → 25)."""
 
@@ -91,15 +92,26 @@ class TestParseFloat:
 
 # === aggregate_actuals_csv (integration с tmp файлами) ===
 
+
 class TestAggregateActualsCsv:
     """Читает train.csv chunked → {(route_id, hour_start): count}."""
 
     def _write_csv(self, tmp_path: Path, rows: list[dict]) -> Path:
         path = tmp_path / "train.csv"
         cols = [
-            "tran_no", "device_no", "tran_date_time", "begin_date_time",
-            "input_date_time", "crd_hashcode", "validation_result", "tran_type_id",
-            "place_id", "good_type", "pass_route", "ngpt_route", "bus_exit_no",
+            "tran_no",
+            "device_no",
+            "tran_date_time",
+            "begin_date_time",
+            "input_date_time",
+            "crd_hashcode",
+            "validation_result",
+            "tran_type_id",
+            "place_id",
+            "good_type",
+            "pass_route",
+            "ngpt_route",
+            "bus_exit_no",
             "garage_number",
         ]
         with path.open("w", encoding="utf-8", newline="") as f:
@@ -111,24 +123,36 @@ class TestAggregateActualsCsv:
     def test_basic_aggregation(self, tmp_path: Path) -> None:
         rows = [
             {
-                "tran_no": "1", "device_no": "1",
+                "tran_no": "1",
+                "device_no": "1",
                 "tran_date_time": "2025-01-01 08:00:00",
                 "begin_date_time": "2025-01-01 08:00:00",
                 "input_date_time": "2025-01-01 08:00:00",
-                "crd_hashcode": "a", "validation_result": "1",
-                "tran_type_id": "52", "place_id": "1",
-                "good_type": "30 дней", "pass_route": "НГПТ",
-                "ngpt_route": "7 трамвай", "bus_exit_no": "1", "garage_number": "1",
+                "crd_hashcode": "a",
+                "validation_result": "1",
+                "tran_type_id": "52",
+                "place_id": "1",
+                "good_type": "30 дней",
+                "pass_route": "НГПТ",
+                "ngpt_route": "7 трамвай",
+                "bus_exit_no": "1",
+                "garage_number": "1",
             },
             {
-                "tran_no": "2", "device_no": "1",
+                "tran_no": "2",
+                "device_no": "1",
                 "tran_date_time": "2025-01-01 08:15:00",
                 "begin_date_time": "2025-01-01 08:00:00",
                 "input_date_time": "2025-01-01 08:00:00",
-                "crd_hashcode": "b", "validation_result": "1",
-                "tran_type_id": "52", "place_id": "1",
-                "good_type": "30 дней", "pass_route": "НГПТ",
-                "ngpt_route": "7 трамвай", "bus_exit_no": "1", "garage_number": "1",
+                "crd_hashcode": "b",
+                "validation_result": "1",
+                "tran_type_id": "52",
+                "place_id": "1",
+                "good_type": "30 дней",
+                "pass_route": "НГПТ",
+                "ngpt_route": "7 трамвай",
+                "bus_exit_no": "1",
+                "garage_number": "1",
             },
         ]
         path = self._write_csv(tmp_path, rows)
@@ -139,14 +163,20 @@ class TestAggregateActualsCsv:
     def test_skip_invalid_validation(self, tmp_path: Path) -> None:
         rows = [
             {
-                "tran_no": "1", "device_no": "1",
+                "tran_no": "1",
+                "device_no": "1",
                 "tran_date_time": "2025-01-01 08:00:00",
                 "begin_date_time": "2025-01-01 08:00:00",
                 "input_date_time": "2025-01-01 08:00:00",
-                "crd_hashcode": "a", "validation_result": "0",  # FAILED validation
-                "tran_type_id": "52", "place_id": "1",
-                "good_type": "30 дней", "pass_route": "НГПТ",
-                "ngpt_route": "7 трамвай", "bus_exit_no": "1", "garage_number": "1",
+                "crd_hashcode": "a",
+                "validation_result": "0",  # FAILED validation
+                "tran_type_id": "52",
+                "place_id": "1",
+                "good_type": "30 дней",
+                "pass_route": "НГПТ",
+                "ngpt_route": "7 трамвай",
+                "bus_exit_no": "1",
+                "garage_number": "1",
             },
         ]
         path = self._write_csv(tmp_path, rows)
@@ -155,14 +185,20 @@ class TestAggregateActualsCsv:
     def test_skip_non_ngpt(self, tmp_path: Path) -> None:
         rows = [
             {
-                "tran_no": "1", "device_no": "1",
+                "tran_no": "1",
+                "device_no": "1",
                 "tran_date_time": "2025-01-01 08:00:00",
                 "begin_date_time": "2025-01-01 08:00:00",
                 "input_date_time": "2025-01-01 08:00:00",
-                "crd_hashcode": "a", "validation_result": "1",
-                "tran_type_id": "52", "place_id": "1",
-                "good_type": "30 дней", "pass_route": "МЦК",  # Not НГПТ
-                "ngpt_route": "7 трамвай", "bus_exit_no": "1", "garage_number": "1",
+                "crd_hashcode": "a",
+                "validation_result": "1",
+                "tran_type_id": "52",
+                "place_id": "1",
+                "good_type": "30 дней",
+                "pass_route": "МЦК",  # Not НГПТ
+                "ngpt_route": "7 трамвай",
+                "bus_exit_no": "1",
+                "garage_number": "1",
             },
         ]
         path = self._write_csv(tmp_path, rows)
@@ -171,15 +207,20 @@ class TestAggregateActualsCsv:
     def test_skip_unparseable_route(self, tmp_path: Path) -> None:
         rows = [
             {
-                "tran_no": "1", "device_no": "1",
+                "tran_no": "1",
+                "device_no": "1",
                 "tran_date_time": "2025-01-01 08:00:00",
                 "begin_date_time": "2025-01-01 08:00:00",
                 "input_date_time": "2025-01-01 08:00:00",
-                "crd_hashcode": "a", "validation_result": "1",
-                "tran_type_id": "52", "place_id": "1",
-                "good_type": "30 дней", "pass_route": "НГПТ",
+                "crd_hashcode": "a",
+                "validation_result": "1",
+                "tran_type_id": "52",
+                "place_id": "1",
+                "good_type": "30 дней",
+                "pass_route": "НГПТ",
                 "ngpt_route": "трамвай",  # No digits!
-                "bus_exit_no": "1", "garage_number": "1",
+                "bus_exit_no": "1",
+                "garage_number": "1",
             },
         ]
         path = self._write_csv(tmp_path, rows)
@@ -189,16 +230,24 @@ class TestAggregateActualsCsv:
         # 08:15 и 08:45 → один bucket [08:00, 09:00)
         rows = []
         for minute in [15, 45]:
-            rows.append({
-                "tran_no": str(minute), "device_no": "1",
-                "tran_date_time": f"2025-01-01 08:{minute}:00",
-                "begin_date_time": "2025-01-01 08:00:00",
-                "input_date_time": "2025-01-01 08:00:00",
-                "crd_hashcode": "a", "validation_result": "1",
-                "tran_type_id": "52", "place_id": "1",
-                "good_type": "30 дней", "pass_route": "НГПТ",
-                "ngpt_route": "7 трамвай", "bus_exit_no": "1", "garage_number": "1",
-            })
+            rows.append(
+                {
+                    "tran_no": str(minute),
+                    "device_no": "1",
+                    "tran_date_time": f"2025-01-01 08:{minute}:00",
+                    "begin_date_time": "2025-01-01 08:00:00",
+                    "input_date_time": "2025-01-01 08:00:00",
+                    "crd_hashcode": "a",
+                    "validation_result": "1",
+                    "tran_type_id": "52",
+                    "place_id": "1",
+                    "good_type": "30 дней",
+                    "pass_route": "НГПТ",
+                    "ngpt_route": "7 трамвай",
+                    "bus_exit_no": "1",
+                    "garage_number": "1",
+                }
+            )
         path = self._write_csv(tmp_path, rows)
         result = aggregate_actuals_csv(path)
         ts = datetime(2025, 1, 1, 8, 0, 0)
@@ -209,6 +258,7 @@ class TestAggregateActualsCsv:
 
 
 # === load_predictions_csv (test_submission формат) ===
+
 
 class TestLoadPredictionsCsv:
     """Читает test_submission.csv (separator=";", route 5 = 0 cold start)."""
@@ -274,6 +324,7 @@ class TestLoadPredictionsCsv:
 
 # === Идемпотентность (mock session) ===
 
+
 class TestSeedIdempotency:
     """Проверяет что seed skip если таблица уже заполнена."""
 
@@ -302,5 +353,7 @@ class TestSeedIdempotency:
         mock_session.execute = AsyncMock(
             return_value=MagicMock(scalar=MagicMock(return_value=14640))
         )
-        result = await _seed_predictions(mock_session, Path("/nonexistent"), dry_run=True)
+        result = await _seed_predictions(
+            mock_session, Path("/nonexistent"), dry_run=True
+        )
         assert result == 0

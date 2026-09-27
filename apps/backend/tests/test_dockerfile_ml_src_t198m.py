@@ -33,8 +33,7 @@ class TestDockerfileCopiesTransitAiSource:
         assert path, f"apps/{package}/Dockerfile не найден"
         content = path.read_text()
         # Должен быть COPY ml/transit_ai (исходный код workspace)
-        assert ("ml/transit_ai" in content
-                and "COPY" in content), (
+        assert "ml/transit_ai" in content and "COPY" in content, (
             f"apps/{package}/Dockerfile должен COPY ml/transit_ai "
             f"(исходный код workspace, без него нет модуля transit_ai)"
         )

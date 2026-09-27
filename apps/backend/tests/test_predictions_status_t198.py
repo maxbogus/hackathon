@@ -45,7 +45,9 @@ class TestPredictionsStatusEndpoint:
             distinct_result.scalars = MagicMock(
                 return_value=MagicMock(all=MagicMock(return_value=[]))
             )
-            session.execute = AsyncMock(side_effect=[count_result, count_result, distinct_result])
+            session.execute = AsyncMock(
+                side_effect=[count_result, count_result, distinct_result]
+            )
             yield session
 
         # Mock redis
@@ -58,7 +60,9 @@ class TestPredictionsStatusEndpoint:
         app.dependency_overrides[_get_redis] = mock_redis
         try:
             transport = ASGITransport(app=app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
+            async with AsyncClient(
+                transport=transport, base_url="http://test"
+            ) as client:
                 r = await client.get("/api/v1/predictions/status")
                 assert r.status_code == 200
                 data = r.json()
@@ -84,7 +88,9 @@ class TestPredictionsStatusEndpoint:
             distinct_result.scalars = MagicMock(
                 return_value=MagicMock(all=MagicMock(return_value=[]))
             )
-            session.execute = AsyncMock(side_effect=[count_result, count_result, distinct_result])
+            session.execute = AsyncMock(
+                side_effect=[count_result, count_result, distinct_result]
+            )
             yield session
 
         async def mock_redis():
@@ -96,7 +102,9 @@ class TestPredictionsStatusEndpoint:
         app.dependency_overrides[_get_redis] = mock_redis
         try:
             transport = ASGITransport(app=app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
+            async with AsyncClient(
+                transport=transport, base_url="http://test"
+            ) as client:
                 r = await client.get("/api/v1/predictions/status")
                 data = r.json()
                 assert data["has_predictions"] is False
@@ -119,9 +127,13 @@ class TestPredictionsStatusEndpoint:
             count_act.scalar = MagicMock(return_value=68801)
             distinct_result = MagicMock()
             distinct_result.scalars = MagicMock(
-                return_value=MagicMock(all=MagicMock(return_value=["test_submission_baseline"]))
+                return_value=MagicMock(
+                    all=MagicMock(return_value=["test_submission_baseline"])
+                )
             )
-            session.execute = AsyncMock(side_effect=[count_pred, count_act, distinct_result])
+            session.execute = AsyncMock(
+                side_effect=[count_pred, count_act, distinct_result]
+            )
             yield session
 
         async def mock_redis():
@@ -133,7 +145,9 @@ class TestPredictionsStatusEndpoint:
         app.dependency_overrides[_get_redis] = mock_redis
         try:
             transport = ASGITransport(app=app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
+            async with AsyncClient(
+                transport=transport, base_url="http://test"
+            ) as client:
                 r = await client.get("/api/v1/predictions/status")
                 data = r.json()
                 assert data["has_predictions"] is True
@@ -157,7 +171,9 @@ class TestPredictionsStatusEndpoint:
             distinct_result.scalars = MagicMock(
                 return_value=MagicMock(all=MagicMock(return_value=[]))
             )
-            session.execute = AsyncMock(side_effect=[count_result, count_result, distinct_result])
+            session.execute = AsyncMock(
+                side_effect=[count_result, count_result, distinct_result]
+            )
             yield session
 
         async def mock_redis_with_tasks():
@@ -172,7 +188,9 @@ class TestPredictionsStatusEndpoint:
         app.dependency_overrides[_get_redis] = mock_redis_with_tasks
         try:
             transport = ASGITransport(app=app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
+            async with AsyncClient(
+                transport=transport, base_url="http://test"
+            ) as client:
                 r = await client.get("/api/v1/predictions/status")
                 data = r.json()
                 assert data["running_pipeline"] is True
@@ -193,7 +211,9 @@ class TestPredictionsStatusEndpoint:
             distinct_result.scalars = MagicMock(
                 return_value=MagicMock(all=MagicMock(return_value=[]))
             )
-            session.execute = AsyncMock(side_effect=[count_result, count_result, distinct_result])
+            session.execute = AsyncMock(
+                side_effect=[count_result, count_result, distinct_result]
+            )
             yield session
 
         async def mock_redis_fail():
@@ -205,7 +225,9 @@ class TestPredictionsStatusEndpoint:
         app.dependency_overrides[_get_redis] = mock_redis_fail
         try:
             transport = ASGITransport(app=app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
+            async with AsyncClient(
+                transport=transport, base_url="http://test"
+            ) as client:
                 r = await client.get("/api/v1/predictions/status")
                 # Не должно вернуть 500
                 assert r.status_code == 200

@@ -87,9 +87,7 @@ class TestComposeStack:
         )
         assert backend_section
         section = backend_section.group(0)
-        assert "SEED_DATA_DIR" in section, (
-            "backend должен иметь SEED_DATA_DIR env var"
-        )
+        assert "SEED_DATA_DIR" in section, "backend должен иметь SEED_DATA_DIR env var"
 
     def test_backend_mounts_data_volume(self, compose_content: str) -> None:
         """Backend должен mount ./data:/app/data (для чтения CSV при seed)."""
@@ -100,9 +98,7 @@ class TestComposeStack:
         )
         assert backend_section
         section = backend_section.group(0)
-        assert "/app/data" in section, (
-            "backend должен mount data в /app/data для seed"
-        )
+        assert "/app/data" in section, "backend должен mount data в /app/data для seed"
 
     def test_backend_mounts_ml_and_predictions(self, compose_content: str) -> None:
         """Backend должен mount ml/ и predictions/ (для Celery tasks)."""

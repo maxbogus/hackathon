@@ -85,7 +85,9 @@ def aggregate_actuals_csv(
 
             ts_raw = row.get("tran_date_time") or ""
             try:
-                ts = datetime.fromisoformat(ts_raw).replace(minute=0, second=0, microsecond=0)
+                ts = datetime.fromisoformat(ts_raw).replace(
+                    minute=0, second=0, microsecond=0
+                )
             except ValueError:
                 continue
 
@@ -152,12 +154,14 @@ def load_predictions_csv(csv_path: Path) -> list[dict]:
 
 async def _count_actuals(session: AsyncSession) -> int:
     from sqlalchemy import func
+
     res = await session.execute(select(func.count(Actual.id)))
     return int(res.scalar() or 0)
 
 
 async def _count_predictions(session: AsyncSession) -> int:
     from sqlalchemy import func
+
     res = await session.execute(select(func.count(Prediction.id)))
     return int(res.scalar() or 0)
 
@@ -339,6 +343,7 @@ async def amain() -> int:
 
 def main() -> int:
     import asyncio
+
     return asyncio.run(amain())
 
 

@@ -37,9 +37,7 @@ class TestDockerfileCmdPaths:
         absolute_marker = '["/app/apps/backend/scripts/entrypoint.sh"'
         has_absolute_path = absolute_marker in content
         has_workdir = "WORKDIR /app" in content
-        has_relative_path = (
-            'CMD ["apps/backend/scripts/entrypoint.sh"]' in content
-        )
+        has_relative_path = 'CMD ["apps/backend/scripts/entrypoint.sh"]' in content
         assert has_absolute_path or (has_workdir and not has_relative_path), (
             "apps/backend/Dockerfile: нужен абсолютный путь к entrypoint.sh "
             "или WORKDIR /app. Относительный путь ломает запуск."
@@ -52,8 +50,7 @@ class TestDockerfileCmdPaths:
         assert path, f"apps/{package}/Dockerfile не найден"
         content = path.read_text()
         cmd_lines = [
-            line for line in content.splitlines()
-            if line.strip().startswith("CMD")
+            line for line in content.splitlines() if line.strip().startswith("CMD")
         ]
         assert cmd_lines, f"apps/{package}/Dockerfile не имеет CMD"
         for line in cmd_lines:

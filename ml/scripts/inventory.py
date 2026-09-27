@@ -13,6 +13,7 @@ Usage:
 Output:
     data/validation_reports/inventory.json (R8 deliverable)
 """
+
 from __future__ import annotations
 
 import argparse
@@ -30,7 +31,18 @@ REPO_ROOT = ROOT.parent
 DEFAULT_LABELS_DIR = REPO_ROOT / "data" / "real" / "labels"
 DEFAULT_OUT = REPO_ROOT / "data" / "validation_reports" / "inventory.json"
 
-EXPECTED_ROUTES = {1, 5, 7, 11, 12, 17, 25, 26, 28, 50}  # F-045: 10 routes including route 5
+EXPECTED_ROUTES = {
+    1,
+    5,
+    7,
+    11,
+    12,
+    17,
+    25,
+    26,
+    28,
+    50,
+}  # F-045: 10 routes including route 5
 EXPECTED_HOURS = set(range(24))
 
 
@@ -132,7 +144,7 @@ def main():
             "max": str(full["date"].max().date()),
         },
         "totals": {
-            "rows": int(len(full)),
+            "rows": len(full),
             "total_boardings": int(full["boardings"].sum()),
             "mean_boardings_per_hour": float(full["boardings"].mean()),
             "median_boardings_per_hour": float(full["boardings"].median()),
@@ -158,7 +170,11 @@ def main():
 
     notes = inventory["sanity_checks"]["notes"]
     if missing_routes:
-        notes.append("Missing routes: " + str(missing_routes) + " (cold-start candidates: zero prediction).")
+        notes.append(
+            "Missing routes: "
+            + str(missing_routes)
+            + " (cold-start candidates: zero prediction)."
+        )
     if missing_hours:
         notes.append("Missing hours: " + str(missing_hours))
     if not inventory["sanity_checks"]["no_nulls"]:
@@ -166,13 +182,19 @@ def main():
     if not inventory["sanity_checks"]["all_boardings_non_negative"]:
         notes.append("Negative boardings detected (data corruption?).")
 
-    out_path.write_text(json.dumps(inventory, ensure_ascii=False, indent=2), encoding="utf-8")
+    out_path.write_text(
+        json.dumps(inventory, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     print("[inventory] OK: " + str(out_path), file=sys.stderr)
     print(
-        "[inventory] rows=" + str(inventory["totals"]["rows"])
-        + ", routes=" + str(len(routes_seen))
-        + ", hours=" + str(len(hours_seen))
-        + ", missing_routes=" + str(missing_routes),
+        "[inventory] rows="
+        + str(inventory["totals"]["rows"])
+        + ", routes="
+        + str(len(routes_seen))
+        + ", hours="
+        + str(len(hours_seen))
+        + ", missing_routes="
+        + str(missing_routes),
         file=sys.stderr,
     )
     return 0

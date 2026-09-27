@@ -83,7 +83,9 @@ def create_app() -> FastAPI:
     app.include_router(alerts_router)
     app.include_router(features_router)  # T-195: /features, /zeros/toggle
     app.include_router(predictions_status_router)  # T-198: /predictions/status
-    app.include_router(pipeline_router)  # T-198: /pipeline/full, /pipeline/status/{task_id}
+    app.include_router(
+        pipeline_router
+    )  # T-198: /pipeline/full, /pipeline/status/{task_id}
 
     @app.get("/", tags=["meta"])
     def root() -> dict[str, str]:

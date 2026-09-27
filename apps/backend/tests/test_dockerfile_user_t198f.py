@@ -36,7 +36,9 @@ class TestDockerfileUsesAdduser:
         has_groupadd = "groupadd" in content
         has_useradd = "useradd" in content
         # T-198h: допускается ручное создание через /etc/passwd (без утилит)
-        has_manual = ("echo 'app:x:1000" in content) or ("/etc/passwd" in content and "app:x" in content)
+        has_manual = ("echo 'app:x:1000" in content) or (
+            "/etc/passwd" in content and "app:x" in content
+        )
         assert has_adduser or (has_groupadd and has_useradd) or has_manual, (
             f"apps/{package}/Dockerfile должен создать пользователя app "
             f"через adduser, groupadd+useradd, или /etc/passwd (ручной fallback)"

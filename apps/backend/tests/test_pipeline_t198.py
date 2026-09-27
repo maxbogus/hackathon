@@ -33,7 +33,9 @@ class TestPipelineTrigger:
             mock_get.return_value = mock_celery
 
             transport = ASGITransport(app=app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
+            async with AsyncClient(
+                transport=transport, base_url="http://test"
+            ) as client:
                 r = await client.post("/api/v1/pipeline/full")
                 assert r.status_code == 200
                 data = r.json()
@@ -52,7 +54,9 @@ class TestPipelineTrigger:
             mock_get.return_value = mock_celery
 
             transport = ASGITransport(app=app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
+            async with AsyncClient(
+                transport=transport, base_url="http://test"
+            ) as client:
                 await client.post("/api/v1/pipeline/full")
 
             mock_celery.send_task.assert_called_once()
@@ -76,7 +80,9 @@ class TestPipelineStatus:
             mock_get.return_value = mock_celery
 
             transport = ASGITransport(app=app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
+            async with AsyncClient(
+                transport=transport, base_url="http://test"
+            ) as client:
                 r = await client.get("/api/v1/pipeline/status/abc-123")
                 assert r.status_code == 200
                 data = r.json()
@@ -95,7 +101,9 @@ class TestPipelineStatus:
             mock_get.return_value = mock_celery
 
             transport = ASGITransport(app=app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
+            async with AsyncClient(
+                transport=transport, base_url="http://test"
+            ) as client:
                 r = await client.get("/api/v1/pipeline/status/abc-123")
                 data = r.json()
                 assert data["status"] == "SUCCESS"
@@ -113,7 +121,9 @@ class TestPipelineStatus:
             mock_get.return_value = mock_celery
 
             transport = ASGITransport(app=app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
+            async with AsyncClient(
+                transport=transport, base_url="http://test"
+            ) as client:
                 r = await client.get("/api/v1/pipeline/status/abc-123")
                 data = r.json()
                 assert data["status"] == "FAILURE"

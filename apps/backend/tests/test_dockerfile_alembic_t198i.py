@@ -29,7 +29,9 @@ class TestBackendDockerfileCopiesAlembic:
         path = REPO_ROOT / "apps" / "backend" / "Dockerfile"
         content = path.read_text()
         # Ищем COPY с alembic (как директория)
-        assert "apps/backend/alembic " in content or "apps/backend/alembic/" in content, (
+        assert (
+            "apps/backend/alembic " in content or "apps/backend/alembic/" in content
+        ), (
             "apps/backend/Dockerfile должен COPY apps/backend/alembic/ "
             "(директория с versions/)"
         )

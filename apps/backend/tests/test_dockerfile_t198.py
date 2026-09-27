@@ -77,7 +77,8 @@ class TestDockerfileEntrypoint:
         if len(runtime_section) > 1:
             runtime_part = runtime_section[1]
             copy_lines = [
-                line for line in runtime_part.splitlines()
+                line
+                for line in runtime_part.splitlines()
                 if line.strip().startswith("COPY")
             ]
             for line in copy_lines:
@@ -95,9 +96,7 @@ class TestDockerfileEntrypoint:
         has_user = bool(
             re.search(r"USER\s+(app|1000)(?::(?:app|1000))?", dockerfile_content)
         )
-        assert has_user, (
-            "USER app или USER app:app не найден — non-root requirement"
-        )
+        assert has_user, "USER app или USER app:app не найден — non-root requirement"
 
     def test_exposes_port_8000(self, dockerfile_content: str) -> None:
         """EXPOSE 8000 для FastAPI."""

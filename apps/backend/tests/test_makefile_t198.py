@@ -148,9 +148,7 @@ class TestMakefileBuildTargets:
         )
 
         has_uv_run_pip = "uv run pip download" in body
-        has_pip_download = bool(
-            re.search(r"(?<![/a-z-])pip download", body)
-        )
+        has_pip_download = bool(re.search(r"(?<![/a-z-])pip download", body))
         assert has_uv_run_pip or has_pip_download, (
             "build-backend должен использовать `uv run pip download` или `pip download` "
             "для offline cache."
@@ -199,9 +197,7 @@ class TestMakefileDistributionTargets:
         )
         assert match, "export-images target не найден"
         body = match.group(0)
-        assert "docker save" in body, (
-            "export-images должен использовать `docker save`"
-        )
+        assert "docker save" in body, "export-images должен использовать `docker save`"
 
     def test_import_images_target_exists(self, makefile_content: str) -> None:
         """make import-images TAR=path.tar загружает через docker load."""
@@ -218,12 +214,8 @@ class TestMakefileDistributionTargets:
         )
         assert match, "import-images target не найден"
         body = match.group(0)
-        assert "docker load" in body, (
-            "import-images должен использовать `docker load`"
-        )
-        assert "$(TAR)" in body, (
-            "import-images должен принимать TAR=path.tar аргумент"
-        )
+        assert "docker load" in body, "import-images должен использовать `docker load`"
+        assert "$(TAR)" in body, "import-images должен принимать TAR=path.tar аргумент"
 
 
 class TestMakefileUpDependsOnBuild:

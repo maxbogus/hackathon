@@ -59,15 +59,11 @@ async def get_status(
     pred_count = (
         await session.execute(select(func.count(Prediction.id)))
     ).scalar() or 0
-    actual_count = (
-        await session.execute(select(func.count(Actual.id)))
-    ).scalar() or 0
+    actual_count = (await session.execute(select(func.count(Actual.id)))).scalar() or 0
 
     # Unique model_ids
     model_ids = (
-        (await session.execute(select(distinct(Prediction.model_id))))
-        .scalars()
-        .all()
+        (await session.execute(select(distinct(Prediction.model_id)))).scalars().all()
     )
 
     # Active Celery tasks (best-effort)

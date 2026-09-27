@@ -24,19 +24,19 @@ USAGE:
     - GIGACHAT_API_PERS — лимит ~1000 RPM. Скрипт спит 1.5s между запросами.
     - Чанки <= --max-chars (default 6000). Каждый чанк = 1 запрос.
 """
+
 from __future__ import annotations
 
 import argparse
 import ast
+from collections.abc import Iterable
 import datetime as dt
-import json
 import os
+from pathlib import Path
 import re
 import sys
 import time
 import uuid
-from pathlib import Path
-from typing import Iterable
 
 import httpx  # available via apps/backend workspace dep
 
@@ -56,8 +56,17 @@ SLEEP_BETWEEN_REQUESTS = 1.5  # секунд (R6 этикет)
 
 # ---------- Excluded paths (не отправляем в LLM) ------------------------------
 EXCLUDE_DIRS = {
-    ".venv", "node_modules", ".git", "__pycache__", "dist", "build",
-    ".pytest_cache", ".mypy_cache", ".ruff_cache", ".pyscn", "htmlcov_audit",
+    ".venv",
+    "node_modules",
+    ".git",
+    "__pycache__",
+    "dist",
+    "build",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".pyscn",
+    "htmlcov_audit",
     "artifacts",  # ml/artifacts (модели)
     "src/generated",  # apps/frontend/src/generated (Orval output)
 }
@@ -106,6 +115,7 @@ SYSTEM_PROMPT = """Ты — старший технический аудитор
 """
 
 # ---------- Collector helpers ------------------------------------------------
+
 
 def _should_skip(path: Path) -> bool:
     parts = set(path.parts)
@@ -203,14 +213,24 @@ def _iter_reports(repo_root: Path) -> Iterable[tuple[Path, str]]:
         if _should_skip(f):
             continue
         name = f.name.lower()
-        if not any(k in name for k in ("submission", "metrics", "inventory", "decision", "finding", "manifest")):
+        if not any(
+            k in name
+            for k in ("submission", "metrics", "inventory", "decision", "finding", "manifest")
+        ):
             continue
         try:
             text = f.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
         if len(text) > 30_000:
-            text = text[:30_000] + chr(10) + chr(10) + "... [truncated, " + str(len(text)) + " chars total] ..."
+            text = (
+                text[:30_000]
+                + chr(10)
+                + chr(10)
+                + "... [truncated, "
+                + str(len(text))
+                + " chars total] ..."
+            )
         yield f, text
 
 
@@ -269,13 +289,16 @@ def collect(category: str, repo_root: Path = ROOT) -> list[tuple[str, str]]:
 
 # ---------- GigaChat client --------------------------------------------------
 
+
 def _get_credentials() -> str:
     creds = os.environ.get("GIGACHAT_CREDENTIALS")
     if not creds:
         raise RuntimeError(
-            "GIGACHAT_CREDENTIALS не установлен. Экспортируйте ключ:" + chr(10) +
-            "  export GIGACHAT_CREDENTIALS=<base64_client_id_colon_secret>" + chr(10) +
-            "(см. lawcopilot/.env.example)"
+            "GIGACHAT_CREDENTIALS не установлен. Экспортируйте ключ:"
+            + chr(10)
+            + "  export GIGACHAT_CREDENTIALS=<base64_client_id_colon_secret>"
+            + chr(10)
+            + "(см. lawcopilot/.env.example)"
         )
     return creds.strip()
 
@@ -321,18 +344,19 @@ def _chat(token: str, model: str, user_msg: str, max_tokens: int = 1500) -> str:
                     json=payload,
                 )
                 if r.status_code in (429, 500, 502, 503, 504):
-                    time.sleep(2 ** attempt + 1)
+                    time.sleep(2**attempt + 1)
                     continue
                 r.raise_for_status()
                 data = r.json()
                 return str(data["choices"][0]["message"]["content"])
         except httpx.HTTPError as exc:
             last_exc = exc
-            time.sleep(2 ** attempt + 1)
+            time.sleep(2**attempt + 1)
     raise RuntimeError("GigaChat failed after retries: " + repr(last_exc))
 
 
 # ---------- Chunking ---------------------------------------------------------
+
 
 def chunk_text(label: str, text: str, max_chars: int) -> list[str]:
     """Делит текст на чанки <= max_chars. Сохраняет контекст label в каждом."""
@@ -343,35 +367,48 @@ def chunk_text(label: str, text: str, max_chars: int) -> list[str]:
     chunks = []
     step = max_chars - overhead
     for i in range(0, len(text), step):
-        chunk = text[i:i + step]
+        chunk = text[i : i + step]
         chunks.append(header + chunk)
     return chunks
 
 
 # ---------- Main -------------------------------------------------------------
 
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split(chr(10), 1)[0])
     parser.add_argument(
-        "--category", "-c",
+        "--category",
+        "-c",
         action="append",
         choices=["comments", "docs_md", "interfaces", "reports_jsonl", "user_found"],
         help="Категория текстов (можно несколько раз). Default: все.",
     )
     parser.add_argument("--max-chars", type=int, default=DEFAULT_MAX_CHARS)
-    parser.add_argument("--model", default=DEFAULT_MODEL,
-                        help="GigaChat model: GigaChat-2 или GigaChat-2-Max")
+    parser.add_argument(
+        "--model", default=DEFAULT_MODEL, help="GigaChat model: GigaChat-2 или GigaChat-2-Max"
+    )
     parser.add_argument("--scope", default=os.environ.get("GIGACHAT_SCOPE", DEFAULT_SCOPE))
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Только собрать и показать план, без запросов к API.")
-    parser.add_argument("--output", "-o", type=Path,
-                        help="Путь к отчёту (default: docs/audit/gigachat_audit_<ts>.md")
-    parser.add_argument("--limit", type=int, default=0,
-                        help="Лимит чанков (0 = без лимита). Для отладки.")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Только собрать и показать план, без запросов к API."
+    )
+    parser.add_argument(
+        "--output",
+        "-o",
+        type=Path,
+        help="Путь к отчёту (default: docs/audit/gigachat_audit_<ts>.md",
+    )
+    parser.add_argument(
+        "--limit", type=int, default=0, help="Лимит чанков (0 = без лимита). Для отладки."
+    )
     args = parser.parse_args(argv)
 
     categories = args.category or [
-        "comments", "docs_md", "interfaces", "reports_jsonl", "user_found",
+        "comments",
+        "docs_md",
+        "interfaces",
+        "reports_jsonl",
+        "user_found",
     ]
 
     # 1. Collect
@@ -389,9 +426,15 @@ def main(argv=None):
         for ch in chunk_text(label, text, args.max_chars):
             all_chunks.append((cat, label, ch))
     if args.limit:
-        all_chunks = all_chunks[:args.limit]
-    print("[chunk] total " + str(len(all_chunks)) + " чанков (max " +
-          str(args.max_chars) + " chars each)", file=sys.stderr)
+        all_chunks = all_chunks[: args.limit]
+    print(
+        "[chunk] total "
+        + str(len(all_chunks))
+        + " чанков (max "
+        + str(args.max_chars)
+        + " chars each)",
+        file=sys.stderr,
+    )
 
     if args.dry_run:
         print("[dry-run] STOP. Collected sizes:", file=sys.stderr)
@@ -406,7 +449,7 @@ def main(argv=None):
     print("[auth] OK, token len=" + str(len(token)), file=sys.stderr)
 
     # 4. Output file
-    ts = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    ts = dt.datetime.now(dt.UTC).strftime("%Y%m%dT%H%M%SZ")
     out_path = args.output or AUDIT_DIR / ("gigachat_audit_" + ts + ".md")
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -426,8 +469,20 @@ def main(argv=None):
     lines.append("")
 
     for i, (cat, label, chunk) in enumerate(all_chunks, 1):
-        print("[" + str(i) + "/" + str(len(all_chunks)) + "] " + cat + "/" + label +
-              " (" + str(len(chunk)) + " chars)...", file=sys.stderr)
+        print(
+            "["
+            + str(i)
+            + "/"
+            + str(len(all_chunks))
+            + "] "
+            + cat
+            + "/"
+            + label
+            + " ("
+            + str(len(chunk))
+            + " chars)...",
+            file=sys.stderr,
+        )
         try:
             response = _chat(token, args.model, chunk)
         except Exception as exc:
@@ -438,7 +493,9 @@ def main(argv=None):
         lines.append("### Отправлено (фрагмент):")
         lines.append("<details><summary>click to expand</summary>")
         lines.append("```")
-        snippet = chunk[:3000] + (chr(10) + "... [truncated in report]" if len(chunk) > 3000 else "")
+        snippet = chunk[:3000] + (
+            chr(10) + "... [truncated in report]" if len(chunk) > 3000 else ""
+        )
         lines.append(snippet)
         lines.append("```")
         lines.append("</details>")
