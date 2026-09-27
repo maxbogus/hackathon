@@ -1,51 +1,56 @@
 # syntax=docker/dockerfile:1
-# Transit-AI Harvester — Celery worker (T-193).
-# R3 reproducible: pinned base + uv 0.5.7.
-# Build context: репо-корень (для uv workspace).
+# Transit-AI harvester — offline build через pre-built wheels (T-198b, T-198h).
+# R3 reproducible: pinned base + uv export lockfile.
+#
+# T-198h: БЕЗ passwd пакета (apt-get install фейлит в закрытой сети).
+#         Создаём пользователя app вручную через /etc/passwd + /etc/group.
 
-# ─── Stage 1: builder — deps через uv ─────────────────────────────────
-FROM python:3.12-slim-bookworm AS builder
-
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
-    UV_LINK_MODE=copy
-
-RUN pip install --no-cache-dir uv==0.5.7
-
-WORKDIR /app
-
-# Копируем манифесты для deps-слоя
-COPY pyproject.toml uv.lock* ./
-COPY apps/harvester/pyproject.toml ./apps/harvester/
-
-# --frozen даёт reproducible (R3); fallback без lockfile для dev
-RUN uv sync --frozen --no-dev --package transit-ai-harvester 2>/dev/null \
- || uv sync --no-dev --package transit-ai-harvester
-
-# ─── Stage 2: runtime ──────────────────────────────────────────────────
 FROM python:3.12-slim-bookworm AS runtime
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    UV_LINK_MODE=copy \
-    PATH="/app/.venv/bin:$PATH"
+    PATH="/usr/local/bin:/usr/bin:/bin"
 
-RUN pip install --no-cache-dir uv==0.5.7
-RUN groupadd --system --gid 1000 app && \
-    useradd --system --uid 1000 --gid app --shell /bin/bash --create-home app
-
-COPY --from=builder --chown=app:app /app/.venv /app/.venv
 WORKDIR /app
-COPY --from=builder --chown=app:app /app/apps/harvester ./apps/harvester
 
-# data dir mount
-VOLUME ["/app/data/external"]
+# uv нужен для export requirements (но НЕ sync)
+RUN pip install --no-cache-dir uv==0.5.7
 
-USER app:app
+# T-198h: non-root user через /etc/passwd (без useradd/groupadd).
+# UID 1000, GID 1000 для совместимости с volumes на хосте.
+RUN echo 'app:x:1000:1000:app user:/app:/bin/sh' >> /etc/passwd \
+ && echo 'app:x:1000:' >> /etc/group \
+ && mkdir -p /app /home/app \
+ && chown -R 1000:1000 /app /home/app
 
-# Default: celery worker (override в docker-compose)
-CMD ["uv", "run", "--package", "transit-ai-harvester", \
-     "celery", "-A", "app.celery_app:celery_app", \
-     "worker", "--loglevel=info", "--concurrency=2"]
+# Pre-built wheels
+COPY --chown=1000:1000 apps/harvester/requirements.txt /tmp/
+
+# T-198c: фильтруем editable
+RUN grep -v '^-e \.' /tmp/requirements.txt > /tmp/requirements.deps.txt \
+ && rm /tmp/requirements.txt
+
+COPY --chown=1000:1000 apps/harvester/wheels /tmp/wheels
+
+# T-198e: pip install в system Python
+RUN pip install --no-index --find-links=/tmp/wheels/ -r /tmp/requirements.deps.txt \
+ && rm -rf /tmp/wheels /tmp/requirements.deps.txt
+
+# Workspace sources (owned by user 1000)
+COPY --chown=1000:1000 pyproject.toml uv.lock* README.md ./
+COPY --chown=1000:1000 ml/pyproject.toml ml/README.md ./ml/
+# T-198m: копируем исходный код transit_ai (workspace package)
+COPY --chown=1000:1000 ml/transit_ai /app/ml/transit_ai
+COPY --chown=1000:1000 ml/configs /app/ml/configs
+COPY --chown=1000:1000 ml/scripts /app/ml/scripts
+COPY --chown=1000:1000 apps/harvester/pyproject.toml ./apps/harvester/
+COPY --chown=1000:1000 apps/harvester /app/apps/harvester
+
+
+# T-198l: PYTHONPATH=/app/ml для transit_ai.* import
+ENV PYTHONPATH=/app/ml
+# Switch to non-root user
+USER 1000:1000
+
+CMD ["/bin/sh", "-c", "cd /app/apps/harvester && exec celery -A app.celery_app:celery_app worker --loglevel=info --concurrency=2"]

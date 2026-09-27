@@ -26,8 +26,10 @@ from app.api.features import router as features_router
 from app.api.health import router as health_router
 from app.api.historical import router as historical_router
 from app.api.models import router as models_router
+from app.api.pipeline import router as pipeline_router
 from app.api.predictions import router as predictions_router
 from app.api.predictions_db import router as predictions_db_router
+from app.api.predictions_status import router as predictions_status_router
 from app.config import settings
 
 
@@ -80,6 +82,8 @@ def create_app() -> FastAPI:
     app.include_router(models_router)
     app.include_router(alerts_router)
     app.include_router(features_router)  # T-195: /features, /zeros/toggle
+    app.include_router(predictions_status_router)  # T-198: /predictions/status
+    app.include_router(pipeline_router)  # T-198: /pipeline/full, /pipeline/status/{task_id}
 
     @app.get("/", tags=["meta"])
     def root() -> dict[str, str]:

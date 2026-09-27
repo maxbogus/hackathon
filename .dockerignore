@@ -54,3 +54,11 @@ ml/artifacts/
 Dockerfile*
 docker-compose*.yml
 .dockerignore
+# T-198b: allow wheels для offline build
+!apps/backend/wheels/
+!apps/harvester/wheels/
+!apps/ml_pipeline/wheels/
+!apps/backend/requirements.txt
+!apps/harvester/requirements.txt
+!apps/ml_pipeline/requirements.txt
+!apps/ml-pipeline/wheels/

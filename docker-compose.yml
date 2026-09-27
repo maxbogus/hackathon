@@ -1,15 +1,17 @@
 # ============================================================================
-# Transit-AI — docker-compose для dev-окружения
+# Transit-AI — docker-compose для dev-окружения (T-198: полный стек по make up)
 # ----------------------------------------------------------------------------
 # R3 reproducible: все сервисы имеют resource limits (см. T-163).
 # R6 time limits: обучение не в Docker (см. clinerule 10).
 #
-# Сервисы:
-#   postgres  — PostgreSQL 16 + TimescaleDB (гипертаблицы для predictions)
-#   redis     — кэш для API responses
-#   backend   — FastAPI :8000 (uvicorn)
-#   frontend  — Vite build → nginx :80 → проксирует /api/* на backend:8000
-#   k6        — load tester (профиль loadtest, T-160)
+# Сервисы (все поднимаются по `make up` без дополнительных профилей):
+#   postgres     — PostgreSQL 16 + TimescaleDB (гипертаблицы для predictions)
+#   redis        — кэш для API responses + Celery broker
+#   backend      — FastAPI :8000 (uvicorn через entrypoint.sh: alembic → seed → uvicorn)
+#   frontend     — Vite build → nginx :80 → проксирует /api/* на backend:8000
+#   harvester    — Celery worker: качает/нормализует data/external (R4 hackathon-rules)
+#   ml-pipeline  — Celery worker: train + predict → INSERT в predictions
+#   k6           — load tester (профиль loadtest, T-160)
 #
 # Resource limits используют top-level формат (mem_limit, cpus, pids_limit)
 # потому что docker compose v2 deploy.resources работает только в swarm mode.
@@ -17,10 +19,10 @@
 # ML artefacts + data монтируются read-only из хоста (не в Docker — clinerule 10).
 #
 # Usage:
-#   make up            # docker compose up -d
-#   make up-loadtest   # docker compose --profile loadtest up -d
-#   make loadtest-smoke
-#   make down
+#   make up            # поднять ВСЁ: postgres + redis + backend + frontend + harvester + ml-pipeline
+#   make up-minimal    # только postgres + redis + backend + frontend (без Celery)
+#   make up-loadtest   # + k6 контейнер для load testing
+#   make down          # остановить
 # ============================================================================
 
 name: transit-ai
@@ -37,6 +39,8 @@ services:
       POSTGRES_DB: transit_dev
       POSTGRES_USER: transit
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-transit_dev_only}
+    ports:
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -53,6 +57,8 @@ services:
     mem_limit: 256m
     mem_reservation: 128m
     cpus: "0.25"
+    ports:
+      - "${REDIS_HOST_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -63,6 +69,9 @@ services:
     networks:
       - transit-net
 
+  # === Backend (T-198) — FastAPI :8000 в compose-сети ===
+  # Поднимается по умолчанию через `make up`. entrypoint.sh делает:
+  #   alembic upgrade head → seed predictions → uvicorn.
   backend:
     build:
       context: .
@@ -74,30 +83,39 @@ services:
       redis:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql+asyncpg://transit:${POSTGRES_PASSWORD:-transit_dev_only}@postgres:5432/transit_dev
-      REDIS_URL: redis://redis:6379/0
-      ML_ARTIFACTS_DIR: /app/ml/artifacts
-      ML_DATA_DIR: /app/data
-      ENV: dev
-      DEBUG: "true"
-      WEB_CONCURRENCY: "2"  # 2 uvicorn workers (не больше, RAM лимит 512MB)
+      # async URL для приложения (FastAPI через asyncpg)
+      TRANSIT_AI_DATABASE_URL: postgresql+asyncpg://transit:${POSTGRES_PASSWORD:-transit_dev_only}@postgres:5432/transit_dev
+      # sync URL для alembic (psycopg2 — entrypoint.sh auto-derive)
+      ALEMBIC_SYNC_DATABASE_URL: postgresql+psycopg2://transit:${POSTGRES_PASSWORD:-transit_dev_only}@postgres:5432/transit_dev
+      TRANSIT_AI_REDIS_URL: redis://redis:6379/0
+      TRANSIT_AI_APP_ENV: dev
+      # T-198: seed скрипт читает из /app/data (mount volume)
+      SEED_DATA_DIR: /app/data
+      # По умолчанию делаем seed; SEED_SKIP=1 — пропустить
+      SEED_SKIP: ${SEED_SKIP:-0}
+      PYTHONPATH: /app
     volumes:
-      # ML artefacts + data с хоста (ML обучается скриптами, см. clinerule 10)
-      - ./ml/artifacts:/app/ml/artifacts:rw
-      - ./data:/app/data:rw
-      # alembic directory для будущих миграций (T-015+)
-      - ./apps/backend/alembic:/app/apps/backend/alembic:ro
+      # data: ro — только чтение CSV при seed
+      - ./data:/app/data:ro
+      # ml: rw — Celery tasks пишут артефакты (ml_pipeline)
+      - ./ml:/app/ml:rw
+      # predictions: rw — Celery tasks пишут submission.csv
+      - ./predictions:/app/predictions:rw
     networks:
       - transit-net
-    # Прямой доступ к API через localhost:8000 (dev-mode).
-    # В проде — за reverse proxy.
-    ports:
-      - "${BACKEND_HOST_PORT:-8000}:8000"
-    # R3 reproducible + R6 SLA: жёсткие лимиты для предсказуемой latency
-    mem_limit: 512m       # 256MB/worker × 2 workers (T-164)
+    # Backend в compose: не пробрасываем порт наружу (frontend ходит через transit-net)
+    # Если нужен прямой доступ — раскомментируйте:
+    # ports:
+    #   - "${BACKEND_HOST_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/api/v1/healthz').raise_for_status()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s  # alembic + seed могут занять время
+    mem_limit: 768m
     mem_reservation: 256m
-    cpus: "1.0"
-    pids_limit: 200       # защита от fork-бомб
+    cpus: "0.5"
 
   frontend:
     build:
@@ -165,10 +183,9 @@ services:
     mem_limit: 256m
     mem_reservation: 128m
     cpus: "0.5"
-    profiles: ["pipeline"]   # вкл. через --profile pipeline
 
   # === ML Pipeline (T-193) — Celery worker: train + predict ===
-  # Поднимается вместе с harvester через profile `pipeline`.
+  # Поднимается по умолчанию через `make up` (T-198).
   ml-pipeline:
     build:
       context: .
@@ -197,7 +214,6 @@ services:
     mem_limit: 1g
     mem_reservation: 512m
     cpus: "1.0"
-    profiles: ["pipeline"]
 
 volumes:
   postgres_data:

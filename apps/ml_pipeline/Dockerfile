@@ -1,49 +1,56 @@
 # syntax=docker/dockerfile:1
-# Transit-AI ML Pipeline — Celery worker (T-193).
-# R6 hackathon-rules: обучение ≤ 60 мин, поэтому увеличенный timeout.
-# Build context: репо-корень (для uv workspace с ml/).
-
-FROM python:3.12-slim-bookworm AS builder
-
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
-    UV_LINK_MODE=copy
-
-RUN pip install --no-cache-dir uv==0.5.7
-
-WORKDIR /app
-
-COPY pyproject.toml uv.lock* ./
-COPY ml/pyproject.toml ./ml/
-COPY apps/backend/pyproject.toml ./apps/backend/
-COPY apps/ml_pipeline/pyproject.toml ./apps/ml_pipeline/
-
-RUN uv sync --frozen --no-dev --package transit-ai-ml-pipeline 2>/dev/null \
- || uv sync --no-dev --package transit-ai-ml-pipeline
+# Transit-AI ml-pipeline — offline build через pre-built wheels (T-198b, T-198h).
+# R3 reproducible: pinned base + uv export lockfile.
+#
+# T-198h: БЕЗ passwd пакета (apt-get install фейлит в закрытой сети).
+#         Создаём пользователя app вручную через /etc/passwd + /etc/group.
 
 FROM python:3.12-slim-bookworm AS runtime
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    UV_LINK_MODE=copy \
-    PATH="/app/.venv/bin:$PATH"
+    PATH="/usr/local/bin:/usr/bin:/bin"
 
-RUN pip install --no-cache-dir uv==0.5.7
-RUN groupadd --system --gid 1000 app && \
-    useradd --system --uid 1000 --gid app --shell /bin/bash --create-home app
-
-COPY --from=builder --chown=app:app /app/.venv /app/.venv
 WORKDIR /app
-COPY --from=builder --chown=app:app /app/ml ./ml
-COPY --from=builder --chown=app:app /app/apps/ml_pipeline ./apps/ml_pipeline
 
-# ML artefacts + predictions mount (read-write)
-VOLUME ["/app/ml/artifacts", "/app/predictions", "/app/data"]
+# uv нужен для export requirements (но НЕ sync)
+RUN pip install --no-cache-dir uv==0.5.7
 
-USER app:app
+# T-198h: non-root user через /etc/passwd (без useradd/groupadd).
+# UID 1000, GID 1000 для совместимости с volumes на хосте.
+RUN echo 'app:x:1000:1000:app user:/app:/bin/sh' >> /etc/passwd \
+ && echo 'app:x:1000:' >> /etc/group \
+ && mkdir -p /app /home/app \
+ && chown -R 1000:1000 /app /home/app
 
-CMD ["uv", "run", "--package", "transit-ai-ml-pipeline", \
-     "celery", "-A", "app.celery_app:celery_app", \
-     "worker", "--loglevel=info", "--concurrency=1"]
+# Pre-built wheels
+COPY --chown=1000:1000 apps/ml_pipeline/requirements.txt /tmp/
+
+# T-198c: фильтруем editable
+RUN grep -v '^-e \.' /tmp/requirements.txt > /tmp/requirements.deps.txt \
+ && rm /tmp/requirements.txt
+
+COPY --chown=1000:1000 apps/ml_pipeline/wheels /tmp/wheels
+
+# T-198e: pip install в system Python
+RUN pip install --no-index --find-links=/tmp/wheels/ -r /tmp/requirements.deps.txt \
+ && rm -rf /tmp/wheels /tmp/requirements.deps.txt
+
+# Workspace sources (owned by user 1000)
+COPY --chown=1000:1000 pyproject.toml uv.lock* README.md ./
+COPY --chown=1000:1000 ml/pyproject.toml ml/README.md ./ml/
+# T-198m: копируем исходный код transit_ai (workspace package)
+COPY --chown=1000:1000 ml/transit_ai /app/ml/transit_ai
+COPY --chown=1000:1000 ml/configs /app/ml/configs
+COPY --chown=1000:1000 ml/scripts /app/ml/scripts
+COPY --chown=1000:1000 apps/ml_pipeline/pyproject.toml ./apps/ml_pipeline/
+COPY --chown=1000:1000 apps/ml_pipeline /app/apps/ml_pipeline
+
+
+# T-198l: PYTHONPATH=/app/ml для transit_ai.* import
+ENV PYTHONPATH=/app/ml
+# Switch to non-root user
+USER 1000:1000
+
+CMD ["/bin/sh", "-c", "cd /app/apps/ml_pipeline && exec celery -A app.celery_app:celery_app worker --loglevel=info --concurrency=1"]

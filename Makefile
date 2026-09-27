@@ -28,7 +28,9 @@ DC      ?= docker compose
 MACHINE ?= rtx5060    # rtx5060 | rtx4070_12gb
 REPO_ROOT := $(shell pwd)
 
-.PHONY: help install hooks-install up down \
+.PHONY: help install hooks-install up up-minimal up-status up-loadtest down \
+        build-backend build-harvester build-ml-pipeline build-all \
+        export-images import-images \
         lint format typecheck test test-unit test-int test-pipeline test-root check-all \
         seed inventory inspect-real train-baseline train-xgboost train-gru train-hybrid train-all \
         predict calibrate evaluate submission sweep mc-scenario \
@@ -36,8 +38,8 @@ REPO_ROOT := $(shell pwd)
         assistant-test assistant-reasoning mcp-run \
         ledger-add ledger-list ledger-check ledger-export \
         note-from-finding promote handoff handoff-update \
-        backlog-ready backlog-list ticket docs         pyscn pyscn-compare pyscn-baseline         arch-dbml arch-dbml-check         benchmark-baseline benchmark-all benchmark-compare         run-benchmark         loadtest-smoke loadtest-baseline loadtest-stress loadtest-spike loadtest-soak loadtest-all loadtest-check up-loadtest check-training-time \
-        pipeline-up pipeline-down pipeline-logs pipeline-fetch pipeline-train pipeline-predict pipeline-full pipeline-test \
+        backlog-ready backlog-list ticket docs         pyscn pyscn-compare pyscn-baseline         arch-dbml arch-dbml-check         benchmark-baseline benchmark-all benchmark-compare         run-benchmark         loadtest-smoke loadtest-baseline loadtest-stress loadtest-spike loadtest-soak loadtest-all loadtest-check check-training-time \
+        pipeline-up pipeline-down pipeline-logs pipeline-fetch pipeline-train pipeline-predict pipeline-full pipeline-status pipeline-test \
         db-upgrade db-downgrade db-revision db-current db-history
 
 # ---------------------------------------------------------------------------
@@ -75,10 +77,124 @@ hooks-install: ## Install git hooks from .githooks/
 # ---------------------------------------------------------------------------
 # DOCKER STACK
 # ---------------------------------------------------------------------------
+# T-198b: offline-capable build через pre-built wheels. Docker НЕ делает
+# uv sync (нет интернета) — wheels копируются с хоста и устанавливаются
+# через `pip install --no-index --find-links=/tmp/wheels`.
+#
+# Workflow для разработчика:
+#   make build-all  # генерит apps/{backend,harvester,ml-pipeline}/wheels/
+#   make up         # docker compose up -d --build (offline!)
+#   make up-status  # проверка что всё 200
+#
+# Workflow для жюри (offline):
+#   make import-images TAR=transit-ai-stack-*.tar
+#   make up
+#   make up-status
 
-up: ## Start docker stack (backend, postgres+timescale, redis, frontend)
-	$(DC) up -d
-	@printf "\033[32m✓ Stack up. Backend: http://localhost:8000 | Frontend: http://localhost:5173\033[0m\n"
+# === Pre-build wheels (offline dependency cache) ===
+
+build-backend: ## Pre-build Python wheels для backend (offline cache) [T-198b]
+	@mkdir -p apps/backend/wheels
+	$(UV) export --no-dev --no-hashes --frozen \
+		--package transit-ai-backend -o apps/backend/requirements.txt
+	# Отфильтровать editable (-e ./*) — pip download не может их обработать.
+	# Эти пакеты собираются из исходников через `uv sync` в runtime stage.
+	grep -v '^-e \.' apps/backend/requirements.txt > apps/backend/requirements.deps.txt
+	# БЕЗ --platform: скачиваем wheels для текущей платформы (Linux x86_64).
+	# Это работает потому что Docker собирается на той же платформе,
+	# и жюри проверяет на той же. (--platform manylinux2014_x86_64 ломается
+	# на asyncpg — нет wheel под этот marker для текущего Python.)
+	$(UV) run --with "pip>=23.0" pip download --dest apps/backend/wheels/ \
+		--python-version 3.12 \
+		--only-binary=:all: \
+		-r apps/backend/requirements.deps.txt
+	@rm -f apps/backend/requirements.deps.txt
+	@du -sh apps/backend/wheels/ | awk '{printf "✓ Backend wheels: %s\n", $$1}'
+
+build-harvester: ## Pre-build Python wheels для harvester (offline cache) [T-198b]
+	@mkdir -p apps/harvester/wheels
+	$(UV) export --no-dev --no-hashes --frozen \
+		--package transit-ai-harvester -o apps/harvester/requirements.txt
+	grep -v '^-e \.' apps/harvester/requirements.txt > apps/harvester/requirements.deps.txt
+	$(UV) run --with "pip>=23.0" pip download --dest apps/harvester/wheels/ \
+		--python-version 3.12 \
+		--only-binary=:all: \
+		-r apps/harvester/requirements.deps.txt
+	@rm -f apps/harvester/requirements.deps.txt
+	@du -sh apps/harvester/wheels/ | awk '{printf "✓ Harvester wheels: %s\n", $$1}'
+
+build-ml-pipeline: ## Pre-build Python wheels для ml-pipeline (offline cache) [T-198b]
+	@mkdir -p apps/ml_pipeline/wheels
+	$(UV) export --no-dev --no-hashes --frozen \
+		--package transit-ai-ml-pipeline -o apps/ml_pipeline/requirements.txt
+	grep -v '^-e \.' apps/ml_pipeline/requirements.txt > apps/ml_pipeline/requirements.deps.txt
+	$(UV) run --with "pip>=23.0" pip download --dest apps/ml_pipeline/wheels/ \
+		--python-version 3.12 \
+		--only-binary=:all: \
+		-r apps/ml_pipeline/requirements.deps.txt
+	@rm -f apps/ml_pipeline/requirements.deps.txt
+	@du -sh apps/ml_pipeline/wheels/ | awk '{printf "✓ ML-pipeline wheels: %s\n", $$1}'
+
+build-all: build-backend build-harvester build-ml-pipeline ## Pre-build все wheels (offline cache) [T-198b]
+	@printf "\n\033[32m✓ All wheels готовы для offline build (~430 MB).\033[0m\n"
+	@printf "\033[33m→ Следующий шаг: make up (Docker build будет offline)\033[0m\n"
+
+# === Main up target (зависит от build-all) ===
+
+up: build-all ## [T-198b] Pre-build wheels → docker compose up -d --build (offline)
+	$(DC) up -d --build
+	@$(MAKE) up-status
+
+up-minimal: build-backend ## [T-198] Pre-build backend wheels → docker compose up -d (no Celery) [T-198b]
+	$(DC) up -d postgres redis backend frontend
+	@printf "\n\033[32m✓ Minimal stack up (без harvester/ml-pipeline workers).\033[0m\n"
+	@printf "Frontend: \033[36mhttp://localhost:5173\033[0m\n"
+	@printf "\033[33m→ Запустить Celery: make up (или docker compose --profile pipeline up -d)\033[0m\n"
+
+up-status: ## Healthcheck всех сервисов стека (T-198)
+	@printf "\n\033[36m=== Stack health ===\033[0m\n"
+	@printf "Backend healthz:  "
+	@curl -sf -o /dev/null -w "%{http_code}\n" http://localhost:8000/api/v1/healthz || echo "DOWN"
+	@printf "Backend readyz:   "
+	@curl -sf -o /dev/null -w "%{http_code}\n" http://localhost:8000/api/v1/readyz || echo "DOWN"
+	@printf "Frontend:         "
+	@curl -sf -o /dev/null -w "%{http_code}\n" http://localhost:5173/ || echo "DOWN"
+	@printf "Backend /api/v1/predictions/status:\n"
+	@curl -sf http://localhost:8000/api/v1/predictions/status | (which jq > /dev/null && jq . || cat) 2>/dev/null || echo "DOWN"
+	@printf "\n\033[36m=== Container status ===\033[0m\n"
+	@$(DC) ps --format "table {{.Service}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || true
+
+# === Distribution через .tar (Яндекс.Диск) ===
+
+export-images: ## [T-198b] Export всех images в .tar для раздачи через Яндекс.Диск
+	@mkdir -p dist/
+	@TIMESTAMP=$$(date +%Y%m%d-%H%M); \
+		docker save -o dist/transit-ai-stack-$$TIMESTAMP.tar \
+			transit-ai-backend:latest \
+			transit-ai-frontend:latest \
+			transit-ai-harvester:latest \
+			transit-ai-ml-pipeline:latest; \
+		echo ""; \
+		echo "✓ Exported:"; \
+		ls -lah dist/transit-ai-stack-$$TIMESTAMP.tar; \
+		echo ""; \
+		printf "\033[33m→ Залить на Яндекс.Диск: https://disk.yandex.ru/\033[0m\n"; \
+		printf "\033[33m→ Расшарить ссылку жюри\033[0m\n"; \
+		printf "\033[33m→ Жюри: make import-images TAR=dist/transit-ai-stack-*.tar && make up\033[0m\n"
+
+import-images: ## [T-198b] Import .tar для жюри: make import-images TAR=dist/transit-ai-stack-*.tar
+	@if [ -z "$(TAR)" ]; then \
+		echo "ERROR: укажите TAR=<path>"; \
+		echo "  make import-images TAR=dist/transit-ai-stack-YYYYMMDD-HHMM.tar"; \
+		exit 1; \
+	fi
+	@if [ ! -f "$(TAR)" ]; then \
+		echo "ERROR: файл $(TAR) не найден"; \
+		exit 1; \
+	fi
+	docker load -i $(TAR)
+	@printf "\n\033[32m✓ Images загружены.\033[0m\n"
+	@printf "\033[33m→ Следующий шаг: make up\033[0m\n"
 
 down: ## Stop docker stack
 	$(DC) down
@@ -95,8 +211,8 @@ seed: ## Generate synthetic data → data/synthetic/  [WIP: T-019]
 	@echo "WIP: pending T-019 (synthetic generator). Skipped."
 
 # WIP: data profiling script not yet implemented
-inventory: ## Profile data (numbers, not hearsay) → reports/inventory.json  [WIP]
-	@echo "WIP: pending inventory script. Skipped."
+inventory: ## Profile data (numbers, not hearsay) → data/validation_reports/inventory.json (R8)
+	$(UV) --directory ml run python scripts/inventory.py
 
 train-baseline: ## Train baseline (mean by hour/day/route)
 	$(UV) --directory ml run python scripts/train_baseline.py
@@ -466,8 +582,11 @@ pipeline-train: ## Trigger ml_pipeline.train_xgboost via broker
 pipeline-predict: ## Trigger ml_pipeline.predict_window with default params
 	$(UV) run python -c "from apps.ml_pipeline.app.celery_app import celery_app; r = celery_app.send_task('ml_pipeline.predict_window', kwargs={'model_id':'xgboost_v_default'}); print('Task:', r.id); print('Result:', r.get(timeout=600))"
 
-pipeline-full: ## Trigger full_pipeline (train → predict)
-	$(UV) run python -c "from apps.ml_pipeline.app.celery_app import celery_app; r = celery_app.send_task('ml_pipeline.full_pipeline'); print('Task:', r.id); print('Result:', r.get(timeout=1800))"
+pipeline-full: ## Trigger full_pipeline (train → predict) via Celery broker  [T-198]
+	$(UV) run python -c "from apps.ml_pipeline.app.celery_app import celery_app; r = celery_app.send_task('ml_pipeline.full_pipeline'); print('Task ID:', r.id); print('Waiting for result (timeout=1800s)...'); print('Result:', r.get(timeout=1800))"
+
+pipeline-status: ## Show active Celery tasks (ml-pipeline worker status)  [T-198]
+	@$(DC) exec ml-pipeline celery -A app.celery_app:celery_app inspect active 2>/dev/null || echo "ml-pipeline worker not running"
 
 pipeline-test: ## Run unit tests for harvester + ml_pipeline
 	$(UV) --directory apps/harvester run pytest tests/ -v --no-cov
@@ -494,3 +613,34 @@ db-current: ## Show current alembic revision
 
 db-history: ## Show alembic migration history
 	cd apps/backend && $(UV) run alembic history --verbose
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# GigaChat PROJECT AUDIT (T-AUDIT) — собирает тексты проекта и шлёт в GigaChat-2
+# ────────────────────────────────────────────────────────────────────────────
+# Требует GIGACHAT_CREDENTIALS в env (base64 client_id:client_secret).
+# Без ключа работает только --dry-run (сборка без API-вызовов).
+# Output: docs/audit/gigachat_audit_<ts>.md
+
+audit-gigachat: ## Собрать тексты проекта + аудит через GigaChat-2 → docs/audit/  [WIP: T-AUDIT]
+	@if [ -z "$$GIGACHAT_CREDENTIALS" ]; then \
+		echo "WARN: GIGACHAT_CREDENTIALS не установлен. Запускаю --dry-run."; \
+		$(PYTHON) scripts/gigachat_audit.py --dry-run; \
+	else \
+		$(PYTHON) scripts/gigachat_audit.py --max-chars 4000 --limit 80; \
+	fi
+
+audit-gigachat-smoke: ## Smoke test (1 чанк по user_found) — проверить OAuth+chat pipeline
+	@if [ -z "$$GIGACHAT_CREDENTIALS" ]; then \
+		echo "ERROR: GIGACHAT_CREDENTIALS не установлен. Экспортируйте ключ:"; \
+		echo "  export GIGACHAT_CREDENTIALS=\$$(grep GIGACHAT_CREDENTIALS ~/Repositories/lawcopilot/.env | cut -d= -f2)"; \
+		exit 1; \
+	fi
+	$(PYTHON) scripts/gigachat_audit.py --limit 1 --category user_found --output /tmp/gigachat_smoke.md
+	@echo "OK: /tmp/gigachat_smoke.md"
+
+audit-gigachat-full: ## Полный аудит без лимита (418 чанков, ~14 мин) — для глубокого pre-submission review
+	@if [ -z "$$GIGACHAT_CREDENTIALS" ]; then \
+		echo "ERROR: GIGACHAT_CREDENTIALS не установлен"; exit 1; \
+	fi
+	$(PYTHON) scripts/gigachat_audit.py --max-chars 4000

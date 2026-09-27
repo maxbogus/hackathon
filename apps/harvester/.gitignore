@@ -1,0 +1,3 @@
+# T-198b: pre-built wheels для offline build
+wheels/
+requirements.txt

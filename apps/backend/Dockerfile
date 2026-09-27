@@ -1,73 +1,63 @@
 # syntax=docker/dockerfile:1
-# Transit-AI backend — FastAPI на uvicorn (T-164: hardened).
-# R3 reproducible: pinned base image (python:3.12-slim-bookworm).
-# Security: runs as non-root user (UID 1000).
-# Build context: репо-корень (для uv workspace).
+# Transit-AI backend — offline build через pre-built wheels (T-198b, T-198h).
+# R3 reproducible: pinned base + uv export lockfile.
+#
+# T-198h: БЕЗ passwd пакета (apt-get install фейлит в закрытой сети).
+#         Создаём пользователя app вручную через /etc/passwd + /etc/group.
 
-# ─── Stage 1: builder — deps через uv + создание non-root user ──────────────
-FROM python:3.12-slim-bookworm AS builder
-
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
-    UV_LINK_MODE=copy
-
-# Install uv (один раз через pip — далее всё через uv)
-RUN pip install --no-cache-dir uv==0.5.7
-
-WORKDIR /app
-
-# Копируем только манифесты для кэширования слоя deps
-COPY pyproject.toml uv.lock* ./
-COPY apps/backend/pyproject.toml ./apps/backend/
-
-# Устанавливаем зависимости через uv (lockfile-aware, R3 reproducible)
-RUN uv sync --frozen --no-dev --package transit-ai-backend 2>/dev/null || \
-    uv sync --no-dev --package transit-ai-backend
-
-# Создаём системного пользователя app (UID 1000, GID 1000)
-RUN groupadd --system --gid 1000 app && \
-    useradd --system --uid 1000 --gid app --shell /bin/bash --create-home app
-
-# ─── Stage 2: runtime — только .venv + код, без pip/uv cache ───────────────
 FROM python:3.12-slim-bookworm AS runtime
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    UV_LINK_MODE=copy \
-    PATH="/app/.venv/bin:$PATH" \
-    WEB_CONCURRENCY=2
+    PATH="/usr/local/bin:/usr/bin:/bin"
 
-# uv нужен для CMD (один binary, ~30MB)
+WORKDIR /app
+
+# uv нужен для export requirements (но НЕ sync)
 RUN pip install --no-cache-dir uv==0.5.7
 
-# Создаём non-root пользователя app (UID 1000) в runtime stage
-RUN groupadd --system --gid 1000 app && \
-    useradd --system --uid 1000 --gid app --shell /bin/bash --create-home app
+# T-198h: non-root user через /etc/passwd (без useradd/groupadd).
+# UID 1000, GID 1000 для совместимости с volumes на хосте.
+RUN echo 'app:x:1000:1000:app user:/app:/bin/sh' >> /etc/passwd \
+ && echo 'app:x:1000:' >> /etc/group \
+ && mkdir -p /app /home/app \
+ && chown -R 1000:1000 /app /home/app
 
-# Копируем .venv из builder (зависимости)
-COPY --from=builder --chown=app:app /app/.venv /app/.venv
+# Pre-built wheels
+COPY --chown=1000:1000 apps/backend/requirements.txt /tmp/
 
-# Копируем исходники backend (с правильным ownership)
-WORKDIR /app
-COPY --from=builder --chown=app:app /app/apps/backend ./apps/backend
+# T-198c: фильтруем editable
+RUN grep -v '^-e \.' /tmp/requirements.txt > /tmp/requirements.deps.txt \
+ && rm /tmp/requirements.txt
 
-# Переключаемся на non-root пользователя ОБЯЗАТЕЛЬНО до CMD
-USER app:app
+COPY --chown=1000:1000 apps/backend/wheels /tmp/wheels
 
-# Volume для ML artefacts + data (read-only mount из docker-compose)
-VOLUME ["/app/ml/artifacts", "/app/data"]
+# T-198e: pip install в system Python
+RUN pip install --no-index --find-links=/tmp/wheels/ -r /tmp/requirements.deps.txt \
+ && rm -rf /tmp/wheels /tmp/requirements.deps.txt
+
+# Workspace sources (owned by user 1000)
+COPY --chown=1000:1000 pyproject.toml uv.lock* README.md ./
+COPY --chown=1000:1000 ml/pyproject.toml ml/README.md ./ml/
+# T-198m: копируем исходный код transit_ai (workspace package)
+COPY --chown=1000:1000 ml/transit_ai /app/ml/transit_ai
+COPY --chown=1000:1000 ml/configs /app/ml/configs
+COPY --chown=1000:1000 ml/scripts /app/ml/scripts
+COPY --chown=1000:1000 apps/backend/pyproject.toml ./apps/backend/
+COPY --chown=1000:1000 apps/backend/app /app/apps/backend/app
+COPY --chown=1000:1000 apps/backend/scripts /app/apps/backend/scripts
+
+COPY --chown=1000:1000 apps/backend/alembic.ini /app/apps/backend/alembic.ini
+COPY --chown=1000:1000 apps/backend/alembic /app/apps/backend/alembic
+
+# T-198l: PYTHONPATH=/app/ml для transit_ai.* import
+ENV PYTHONPATH=/app/ml
+# Switch to non-root user
+USER 1000:1000
 
 EXPOSE 8000
-
-# Healthcheck (production-friendly: 30s интервал, 5s timeout, 3 retries, 15s start_period)
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=15s \
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=90s \
     CMD python -c "import httpx; httpx.get('http://localhost:8000/api/v1/healthz').raise_for_status()" || exit 1
 
-# Запуск через uvicorn (2 workers для production)
-CMD ["uv", "run", "--package", "transit-ai-backend", \
-     "uvicorn", "app.main:app", \
-     "--host", "0.0.0.0", "--port", "8000", \
-     "--workers", "2", "--log-level", "info"]
-
+CMD ["/app/apps/backend/scripts/entrypoint.sh"]
