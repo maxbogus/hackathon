@@ -1,7 +1,77 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-27T15:30:00Z
-> Обновлено: Cline (агент) — T-122 done + T-227 (backend geo routes): карта маршрутов на дашборде «Диспетчер» (D-041, F-102..F-105).
+> Последнее обновление: 2026-09-27T16:25:00Z
+> Обновлено: Cline (агент) — T-228 (XLSX-кнопка) + T-229 (Celery-параметры) + T-230 (наборы прогнозов: активный/эталон) на дашборде «Аналитик» (D-042, F-107, F-108).
+
+## Сессия 2026-09-27T16:25:00Z — Аналитик: XLSX, генерация с параметрами, подмена набора + эталон
+
+**Контекст:** пользователь попросил (1) кнопку «Скачать XLSX» (эндпоинт уже был),
+(2) подключить Celery-эндпоинт с передачей параметров генерации, (3) грузить новые
+прогнозы в БД и подменять текущие, сохранив возможность вернуть «эталон»,
+(4) добавить на экран описание «как это всё работает, чтобы не конфьюзило».
+
+**Что сделано (RED→GREEN→REFACTOR):**
+
+*T-228 — XLSX-экспорт:*
+- `api/customInstance.ts` — `responseType: 'blob'` (+ Accept `*/*`, `response.blob()`).
+- `api/downloadXlsx.ts` — `downloadPredictionsXlsx()` + `triggerBlobDownload()`;
+  `downloadCsv.ts` — общий `buildExportQuery()` (DRY для CSV/XLSX).
+- `AnalystDashboard.tsx` — вторая кнопка `download-xlsx-button` + статус `xlsx-status`.
+
+*T-229 — Celery с параметрами генерации:*
+- `apps/ml_pipeline/app/ml_cli.py` (new) — маппинг: тогглы → `flags.yaml` (`--flags-file`),
+  `zero_overrides` → `--zero-route/--pred-cap/--cap-hours/--zero-weekends/--zero-holidays`,
+  сборка argv для `make_submission.py`.
+- `apps/ml_pipeline/app/tasks.py` — `predict_window_task` принимает
+  `feature_flags`/`zero_overrides`/`model_kind`, пишет `ml/tmp/flags_<submission>.yaml`,
+  возвращает `csv_path`/`manifest_path`; заглушка `_persist_predictions_to_db` удалена.
+- `apps/backend/app/api/pipeline.py` — `POST /pipeline/full` принимает тело `PipelineFullBody`.
+
+*T-230 — наборы прогнозов (активный/эталон):*
+- Alembic `20260927_1600_t230` — `predictions.is_active/is_etalon` (+индекс, backfill эталона),
+  `prediction_runs.{pipeline_kind,row_count,recommendation,error,is_etalon,activated_at}`,
+  etalon-run (holdout 0.8751).
+- `apps/backend/app/predictions_active.py` (new) — `active_params`, `activate`,
+  `restore_etalon`, `validate_candidate` (clinerule 23 R4), `ingest_candidate`,
+  `build_recommendation` (clinerule 24 R3), `feature_state`; `app/predictions_csv.py` (new —
+  общий парсер CSV/manifest, seed теперь импортирует его).
+- `apps/backend/app/api/predictions_runs.py` (new) — `/predictions/regenerate`,
+  `/runs`, `/runs/{id}`, `/runs/{id}/ingest`, `/runs/{id}/reject`,
+  `/restore-etalon`, `/active`; `main.py` — регистрация роутера.
+- Чтения (`predictions_db.py`, `load.py`) — фильтр `is_active` + дефолты из активного
+  набора + `prefer_active=true` (фолбэк графика).
+- `app/scripts/predictions_admin.py` (new) + Makefile: `predictions-list`,
+  `predictions-activate SUBMISSION_ID=…`, `predictions-restore-etalon`,
+  `predictions-ingest-csv CSV=…`.
+- Frontend: `lib/predictionRuns.ts`, `components/Analyst/{GeneratePanel,HowItWorks}.tsx`,
+  `PredictionsChart` — фолбэк на активный набор + жёлтая подпись; `AnalystDashboard`
+  больше не рендерит вложенный `<main>` (был невалидный `<main><main>`).
+
+**Метрики:**
+- backend: `281 passed` (было 255 → +26 новых T-230); ml_pipeline: `17 passed`;
+  `make api-gen` → 31 paths, `make api-check` — in sync.
+- frontend: `251 passed / 2 failed` (2 фейла pre-existing в `routeCsv.test.ts`);
+  typecheck — только 2 pre-existing ошибки `routeCsv.ts`; lint — только
+  pre-existing (6 `downloadCsv.ts` eqeqeq + 2 warnings `HorizonToggle.tsx`);
+  `make frontend-text-check` — чисто.
+
+**Как проверить вживую:**
+1. `make up` (worker `ml-pipeline` поднимается по умолчанию).
+2. Открыть `/analyst` → блок «Как это работает» + панель «Генерация прогноза».
+3. «▶️ Сгенерировать прогноз» → статус «считаем» (3с polling) → кандидат
+   (файл/строки/WAPE-score/вердикт) → «✅ Загрузить и сделать активным».
+4. «↩️ Вернуть эталон» — в любой момент; `make predictions-list` покажет историю.
+5. CLI-путь без Celery: `make predictions-ingest-csv CSV=predictions/submission_x.csv`.
+
+**Артефакты:** `apps/backend/app/{predictions_active.py,predictions_csv.py}`,
+`apps/backend/app/api/predictions_runs.py`, `apps/backend/alembic/versions/20260927_1600_t230_*.py`,
+`apps/backend/app/scripts/predictions_admin.py`, `apps/ml_pipeline/app/ml_cli.py`,
+`apps/frontend/src/lib/predictionRuns.ts`, `apps/frontend/src/components/Analyst/*`,
+`apps/frontend/src/api/downloadXlsx.ts`, `docs/backlog/archive/T-228..T-230`.
+
+**Не делать (в этой части):** не удалять наборы строк из `predictions` (только флаги),
+не использовать `full_pipeline` для генерации с тогглами (F-107),
+не запускать `make submission` с `--output predictions/submission.csv` (F-039).
 
 ## Мини-сессия 2026-09-27T15:30:00Z — T-122 карта маршрутов + T-227 backend гео-контракт
 
