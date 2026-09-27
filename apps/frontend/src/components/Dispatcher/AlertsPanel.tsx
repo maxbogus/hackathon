@@ -5,6 +5,10 @@
  * working dashboards (passenger, dispatcher, analyst). The placeholder
  * `PlaceholderPanel` is gone.
  *
+ * T-200 (новая редакция): вместо хардкода DEFAULT_WINDOW_MIN = 30 минут
+ * пользовательский <HorizonToggle> с 3 кнопками (1 день / 3 месяца / 1 год).
+ * Дефолт = '1d' (1 день = 1440 минут).
+ *
  * Polling: TanStack Query's `refetchInterval` does the same job as the
  * `streamlit-autorefresh` snippet in the original AC.
  *
@@ -14,22 +18,26 @@
  * text. No Russian literal leaks into this file.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 
 import { t, tf } from '@/lib/i18n/t';
 
 import { useGetOverloadAlertsApiV1InsightsAlertsGet } from '@/generated/api';
 
 import { AlertCard } from './AlertCard';
+import { HorizonToggle, windowMinFor, type HorizonKey } from './HorizonToggle';
 import type { OverloadAlert } from '@/generated/api.schemas';
 
 const REFETCH_INTERVAL_MS = 60_000;
-const DEFAULT_WINDOW_MIN = 30;
+const DEFAULT_HORIZON: HorizonKey = '1d';
 
 export function AlertsPanel(): JSX.Element {
+  const [horizon, setHorizon] = useState<HorizonKey>(DEFAULT_HORIZON);
+  const windowMin = windowMinFor(horizon);
+
   const { data, isLoading, isError, error, refetch, isFetching } =
     useGetOverloadAlertsApiV1InsightsAlertsGet(
-      { window_min: DEFAULT_WINDOW_MIN },
+      { window_min: windowMin },
       { query: { refetchInterval: REFETCH_INTERVAL_MS } },
     );
 
@@ -42,25 +50,35 @@ export function AlertsPanel(): JSX.Element {
   }, []);
 
   if (isLoading) {
-    return <p data-testid="alerts-loading">{t('dispatcher.alerts.loading')}</p>;
+    return (
+      <section style={{ padding: '16px 24px' }}>
+        <HorizonToggle value={horizon} onChange={setHorizon} />
+        <p data-testid="alerts-loading" style={{ marginTop: 12 }}>
+          {t('dispatcher.alerts.loading')}
+        </p>
+      </section>
+    );
   }
 
   if (isError) {
     return (
-      <section data-testid="alerts-error" role="alert">
-        <p>
-          {t('dispatcher.alerts.errorPrefix')} {String(error)}
-        </p>
-        <button type="button" onClick={() => refetch()}>
-          {t('dispatcher.alerts.retry')}
-        </button>
+      <section style={{ padding: '16px 24px' }}>
+        <HorizonToggle value={horizon} onChange={setHorizon} />
+        <section data-testid="alerts-error" role="alert" style={{ marginTop: 12 }}>
+          <p>
+            {t('dispatcher.alerts.errorPrefix')} {String(error)}
+          </p>
+          <button type="button" onClick={() => refetch()}>
+            {t('dispatcher.alerts.retry')}
+          </button>
+        </section>
       </section>
     );
   }
 
   const alerts = data?.alerts ?? [];
   const generatedAt = data?.generated_at ? new Date(data.generated_at) : null;
-  const windowMin = data?.window_min ?? DEFAULT_WINDOW_MIN;
+  const responseWindowMin = data?.window_min ?? windowMin;
   const generatedAtLabel = generatedAt?.toLocaleTimeString() ?? t('dispatcher.alerts.unknownTime');
   const updatedText = isFetching
     ? t('dispatcher.alerts.fetching')
@@ -68,19 +86,24 @@ export function AlertsPanel(): JSX.Element {
 
   return (
     <section style={{ padding: '16px 24px' }}>
-      <header
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 12,
-        }}
-      >
+      <header style={{ marginBottom: 12 }}>
         <h2 style={{ margin: 0 }}>{t('dispatcher.alerts.title')}</h2>
-        <span style={{ fontSize: 12, color: '#6b7280' }}>
-          {updatedText}
-          {tf('dispatcher.alerts.windowSuffix', windowMin)}
-        </span>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginTop: 8,
+            flexWrap: 'wrap',
+            gap: 12,
+          }}
+        >
+          <HorizonToggle value={horizon} onChange={setHorizon} />
+          <span style={{ fontSize: 12, color: '#6b7280' }}>
+            {updatedText}
+            {tf('dispatcher.alerts.windowSuffix', responseWindowMin)}
+          </span>
+        </div>
       </header>
 
       {alerts.length === 0 ? (
@@ -94,7 +117,7 @@ export function AlertsPanel(): JSX.Element {
             color: '#065f46',
           }}
         >
-          {tf('dispatcher.alerts.emptyState', windowMin)}
+          {tf('dispatcher.alerts.emptyState', responseWindowMin)}
         </p>
       ) : (
         <div data-testid="alerts-list">

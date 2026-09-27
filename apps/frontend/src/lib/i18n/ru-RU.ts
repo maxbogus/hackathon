@@ -55,6 +55,11 @@ export const TEXTS = {
       windowSuffix: (min: number) => ` · горизонт ${min} мин`,
       unknownTime: '—',
       emptyState: (min: number) => `✅ Всё в норме на ближайшие ${min} мин.`,
+      /* T-200 (новая редакция): 3 горизонта вместо 30 мин */
+      horizonGroupLabel: 'Горизонт прогноза',
+      horizon1Day: '1 день',
+      horizon3Months: '3 месяца',
+      horizon1Year: '1 год',
       card: {
         routeLabel: (name: string) => `🚋 Маршрут ${name}`,
         stopPrefix: 'Остановка',
