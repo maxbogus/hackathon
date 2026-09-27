@@ -29,6 +29,9 @@ import {
   triggerBrowserDownload,
   type DownloadCsvParams,
 } from '@/api/downloadCsv';
+import { downloadPredictionsXlsx, triggerBlobDownload } from '@/api/downloadXlsx';
+import { GeneratePanel } from '@/components/Analyst/GeneratePanel';
+import { HowItWorks } from '@/components/Analyst/HowItWorks';
 
 const DEFAULT_ROUTE = 7;
 const DEFAULT_FROM = '2025-09-01T00:00:00';
@@ -49,6 +52,7 @@ export function AnalystDashboard(): JSX.Element {
   const [granularity, setGranularity] = useState<Granularity>('hour');
 
   const [csvStatus, setCsvStatus] = useState<string>('');
+  const [xlsxStatus, setXlsxStatus] = useState<string>('');
 
   const handleCoefChange = (w: number, e: number, s: number) => {
     setCoefWeather(w);
@@ -56,18 +60,20 @@ export function AnalystDashboard(): JSX.Element {
     setCoefSeason(s);
   };
 
+  /** Общие параметры экспорта для CSV и XLSX (T-228). */
+  const exportParams = (): DownloadCsvParams => ({
+    from: SUBMISSION_FROM,
+    to: SUBMISSION_TO,
+    coefWeather,
+    coefEvent,
+    coefSeason,
+    // modelId / featureSet / zerosApplied = null → defaults (активный набор, T-230)
+  });
+
   const handleDownloadCsv = async () => {
     setCsvStatus(t('common.loading'));
     try {
-      const params: DownloadCsvParams = {
-        from: SUBMISSION_FROM,
-        to: SUBMISSION_TO,
-        coefWeather,
-        coefEvent,
-        coefSeason,
-        // modelId / featureSet / zerosApplied = null → defaults from DB (best F-083)
-      };
-      const result = await downloadPredictionsCsv(params);
+      const result = await downloadPredictionsCsv(exportParams());
       triggerBrowserDownload(result);
       setCsvStatus(tf('analyst.csvDownloaded', result.rowCount));
     } catch (err) {
@@ -75,8 +81,20 @@ export function AnalystDashboard(): JSX.Element {
     }
   };
 
+  /** T-228: XLSX-экспорт (бэкенд /predictions/export.xlsx, T-206). */
+  const handleDownloadXlsx = async () => {
+    setXlsxStatus(t('common.loading'));
+    try {
+      const result = await downloadPredictionsXlsx(exportParams());
+      triggerBlobDownload(result);
+      setXlsxStatus(tf('analyst.xlsxDownloaded', result.rowCount));
+    } catch (err) {
+      setXlsxStatus(`${t('analyst.xlsxError')}: ${String(err)}`);
+    }
+  };
+
   return (
-    <main
+    <div
       data-testid="analyst-dashboard"
       style={{
         display: 'grid',
@@ -85,13 +103,17 @@ export function AnalystDashboard(): JSX.Element {
         padding: 16,
       }}
     >
-      <FiltersPanel
-        routeId={routeId}
-        coefWeather={coefWeather}
-        coefEvent={coefEvent}
-        coefSeason={coefSeason}
-        onCoefChange={handleCoefChange}
-      />
+      <div>
+        <FiltersPanel
+          routeId={routeId}
+          coefWeather={coefWeather}
+          coefEvent={coefEvent}
+          coefSeason={coefSeason}
+          onCoefChange={handleCoefChange}
+        />
+        {/* T-230: генерация набора, активный набор, возврат эталона */}
+        <GeneratePanel coefWeather={coefWeather} coefEvent={coefEvent} coefSeason={coefSeason} />
+      </div>
 
       <section>
         <header
@@ -103,26 +125,53 @@ export function AnalystDashboard(): JSX.Element {
           }}
         >
           <h1>{t('analyst.title')}</h1>
-          <button
-            type="button"
-            onClick={handleDownloadCsv}
-            data-testid="download-csv-button"
-            style={{
-              padding: '8px 16px',
-              background: '#4f46e5',
-              color: 'white',
-              border: 'none',
-              borderRadius: 4,
-              cursor: 'pointer',
-            }}
-          >
-            {t('analyst.downloadCsv')}
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              type="button"
+              onClick={handleDownloadCsv}
+              data-testid="download-csv-button"
+              style={{
+                padding: '8px 16px',
+                background: '#4f46e5',
+                color: 'white',
+                border: 'none',
+                borderRadius: 4,
+                cursor: 'pointer',
+              }}
+            >
+              {t('analyst.downloadCsv')}
+            </button>
+            {/* T-228: XLSX-экспорт (тот же набор параметров, что у CSV) */}
+            <button
+              type="button"
+              onClick={handleDownloadXlsx}
+              data-testid="download-xlsx-button"
+              style={{
+                padding: '8px 16px',
+                background: 'white',
+                color: '#4f46e5',
+                border: '1px solid #4f46e5',
+                borderRadius: 4,
+                cursor: 'pointer',
+              }}
+            >
+              {t('analyst.downloadXlsx')}
+            </button>
+          </div>
         </header>
+
+        {/* T-230: объясняем флоу, чтобы генерация не «конфьюзила» */}
+        <HowItWorks />
 
         {csvStatus && (
           <p data-testid="csv-status" style={{ marginBottom: 8 }}>
             {csvStatus}
+          </p>
+        )}
+
+        {xlsxStatus && (
+          <p data-testid="xlsx-status" style={{ marginBottom: 8 }}>
+            {xlsxStatus}
           </p>
         )}
 
@@ -150,6 +199,6 @@ export function AnalystDashboard(): JSX.Element {
           coefSeason={coefSeason}
         />
       </section>
-    </main>
+    </div>
   );
 }

@@ -222,6 +222,56 @@ export const TEXTS = {
     summaryPredicted: (n: number) => `Прогнозов: ${n}`,
     summaryActual: (n: number) => `Фактов: ${n}`,
     summaryPeriod: (from: string, to: string) => `${from} → ${to}`,
+
+    /* T-228: XLSX-экспорт (бэкенд /predictions/export.xlsx, T-206) */
+    downloadXlsx: '⬇️ Скачать XLSX',
+    xlsxDownloaded: (rows: number) => `✅ Скачано ${rows} строк (XLSX)`,
+    xlsxError: 'Не удалось сгенерировать XLSX',
+
+    /* T-230: наборы прогнозов — генерация, кандидат, эталон */
+    howItWorksTitle: 'Как это работает',
+    howItWorksStep1:
+      '1. Слева выберите фичи, «обнуления» и коэффициенты — это параметры генерации прогноза.',
+    howItWorksStep2:
+      '2. Нажмите «Сгенерировать прогноз»: расчёт идёт на сервере (Celery) и занимает несколько минут. График при этом показывает данные активного набора.',
+    howItWorksStep3:
+      '3. Когда расчёт закончится, появится кандидат: имя файла, число строк и WAPE-score (больше — лучше).',
+    howItWorksStep4:
+      '4. «Загрузить и сделать активным» заменит текущие прогнозы в базе на новые; «Оставить эталон» — отменит кандидата.',
+    howItWorksStep5:
+      '5. Вернуться к эталону можно в любой момент кнопкой «Вернуть эталон» — старые расчёты не удаляются.',
+    howItWorksNote:
+      'Прогнозы хранятся наборами: активный набор отдают все экраны (Аналитик, Диспетчер), эталон остаётся как резерв.',
+    activeSetTitle: 'Активный набор',
+    activeSetEtalonBadge: 'эталон',
+    activeSetGeneratedBadge: 'сгенерирован',
+    activeSetRows: 'Строк',
+    activeSetHoldout: 'WAPE-score',
+    generateTitle: 'Генерация прогноза',
+    generateButton: '▶️ Сгенерировать прогноз',
+    generateRunning: '⏳ Считаем… обучение XGBoost занимает несколько минут',
+    generateError: 'Не удалось запустить генерацию',
+    generateWorkerHint: 'Если статус не меняется — поднимите воркер: make pipeline-up',
+    candidateTitle: 'Готов новый прогноз (кандидат)',
+    candidateFile: 'Файл',
+    candidateRows: 'Строк',
+    candidateLoadButton: '✅ Загрузить и сделать активным',
+    candidateRejectButton: '🚫 Оставить эталон',
+    candidateLoadError: 'Не удалось загрузить кандидата',
+    candidateLoaded: (rows: number) => `✅ Активным стал новый набор (${rows} строк)`,
+    candidateRejected: 'Кандидат отклонён — активен прежний набор',
+    candidateFailed: 'Генерация не удалась',
+    candidateNeedsFix: 'Файл не прошёл проверку (manifest/строки) — загрузка недоступна',
+    restoreEtalonButton: '↩️ Вернуть эталон',
+    restoreEtalonDone: '✅ Активен эталонный набор',
+    restoreEtalonError: 'Не удалось вернуть эталон',
+    recommendationReady: '✅ Лучше текущего — можно загружать',
+    recommendationWorse: '⚠️ Хуже текущего — вероятно, не стоит',
+    recommendationIdentical: '≈ Такой же, как текущий',
+    recommendationNeedsFix: '⛔ Файл невалиден (NEEDS_FIX)',
+    chartFallbackNote:
+      'Показан активный набор: для текущих коэффициентов прогноз ещё не сгенерирован',
+    runStatusLabel: (status: string) => `статус: ${status}`,
   },
 
   /* T-226: HistoricalView.tsx — header для страницы /historical */

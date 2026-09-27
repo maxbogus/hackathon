@@ -47,17 +47,27 @@ interface PredictionsChartProps {
   coefSeason: number;
 }
 
-export function PredictionsChart({
-  routeId,
-  fromDate,
-  toDate,
-  horizon,
-  granularity,
-  coefWeather,
-  coefEvent,
-  coefSeason,
-}: PredictionsChartProps) {
-  const { data, isLoading, isError, error } = useQuery({
+/**
+ * buildPredictionsUrl — URL для /predictions/db/{route_id} (T-230).
+ *
+ * preferActive=true → backend берёт параметры активного набора (фолбэк,
+ * когда по текущим коэффициентам прогноз не сгенерирован).
+ */
+function buildPredictionsUrl(props: PredictionsChartProps, preferActive: boolean): string {
+  const base =
+    `/api/v1/predictions/db/${props.routeId}?from=${props.fromDate}&to=${props.toDate}` +
+    `&horizon=${props.horizon}&granularity=${props.granularity}`;
+  return preferActive
+    ? `${base}&prefer_active=true`
+    : `${base}&coef_weather=${props.coefWeather}` +
+        `&coef_event=${props.coefEvent}&coef_season=${props.coefSeason}`;
+}
+
+export function PredictionsChart(props: PredictionsChartProps): JSX.Element {
+  const { routeId, fromDate, toDate, horizon, granularity } = props;
+  const { coefWeather, coefEvent, coefSeason } = props;
+
+  const slidersQuery = useQuery({
     queryKey: [
       'predictions-db',
       routeId,
@@ -69,27 +79,38 @@ export function PredictionsChart({
       coefEvent,
       coefSeason,
     ],
-    queryFn: async () => {
-      const data = await customInstance<PredictionsResponse>({
-        url:
-          `/api/v1/predictions/db/${routeId}?from=${fromDate}&to=${toDate}` +
-          `&horizon=${horizon}&granularity=${granularity}` +
-          `&coef_weather=${coefWeather}&coef_event=${coefEvent}&coef_season=${coefSeason}`,
+    queryFn: () =>
+      customInstance<PredictionsResponse>({
+        url: buildPredictionsUrl(props, false),
         method: 'GET',
-      });
-      return data;
-    },
+      }),
     refetchInterval: 5 * 60_000,
   });
 
-  if (isLoading) return <p>{t('common.loading')}</p>;
-  if (isError)
+  const slidersEmpty = (slidersQuery.data?.points.length ?? 0) === 0;
+
+  // T-230 (вариант 3): фолбэк на активный набор + жёлтая подпись.
+  const activeQuery = useQuery({
+    queryKey: ['predictions-db-active', routeId, fromDate, toDate, horizon, granularity],
+    queryFn: () =>
+      customInstance<PredictionsResponse>({
+        url: buildPredictionsUrl(props, true),
+        method: 'GET',
+      }),
+    enabled: slidersEmpty,
+    refetchInterval: 5 * 60_000,
+  });
+
+  if (slidersQuery.isLoading) return <p>{t('common.loading')}</p>;
+  if (slidersQuery.isError)
     return (
       <p role="alert">
-        {t('common.errorPrefix')} {String(error)}
+        {t('common.errorPrefix')} {String(slidersQuery.error)}
       </p>
     );
 
+  const usingFallback = slidersEmpty && (activeQuery.data?.points.length ?? 0) > 0;
+  const data = usingFallback ? activeQuery.data : slidersQuery.data;
   const points = data?.points ?? [];
   if (points.length === 0) return <p data-testid="predictions-empty">{t('analyst.noData')}</p>;
 
@@ -105,6 +126,14 @@ export function PredictionsChart({
         {data?.feature_set ? ` (${data.feature_set})` : ''}
         {data?.zeros_applied ? ' · zeros=ON' : ''}
       </h3>
+      {usingFallback && (
+        <p
+          data-testid="predictions-fallback-note"
+          style={{ fontSize: 13, color: '#92400e', margin: '4px 0' }}
+        >
+          {t('analyst.chartFallbackNote')}
+        </p>
+      )}
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" />

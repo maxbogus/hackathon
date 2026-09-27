@@ -26,7 +26,11 @@ export interface DownloadCsvResult {
   content: string;
 }
 
-function buildQuery(p: DownloadCsvParams): string {
+/**
+ * Построитель query-строки для export-эндпоинтов (/predictions/export.csv|xlsx).
+ * T-228: вынесен в экспорт, чтобы downloadXlsx.ts использовал ту же логику.
+ */
+export function buildExportQuery(p: DownloadCsvParams): string {
   const usp = new URLSearchParams();
   usp.set('from', p.from);
   usp.set('to', p.to);
@@ -49,7 +53,7 @@ function buildQuery(p: DownloadCsvParams): string {
 export async function downloadPredictionsCsv(
   params: DownloadCsvParams,
 ): Promise<DownloadCsvResult> {
-  const qs = buildQuery(params);
+  const qs = buildExportQuery(params);
   const url = `/api/v1/predictions/export.csv?${qs}`;
 
   // F-097: customInstance теперь возвращает развёрнутый string, headers/status

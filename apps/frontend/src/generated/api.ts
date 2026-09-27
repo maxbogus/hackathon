@@ -25,6 +25,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ActiveSetResponse,
   ETAResponse,
   ExportPredictionsCsvApiV1PredictionsExportCsvGetParams,
   ExportPredictionsXlsxApiV1PredictionsExportXlsxGetParams,
@@ -47,15 +48,23 @@ import type {
   HTTPValidationError,
   HealthzApiV1HealthzGet200,
   HistoricalResponse,
+  IngestBody,
   ListModelsApiV1ModelsGet200,
   ListModelsApiV1ModelsGetParams,
   ListRoutesWithHistoryApiV1HistoricalGet200,
+  ListRunsApiV1PredictionsRunsGetParams,
   OverloadAlertsResponse,
+  PredictionRunListResponse,
+  PredictionRunOut,
   PredictionsDBResponse,
   ReadyzApiV1ReadyzGet200,
+  RegenerateApiV1PredictionsRegeneratePost200,
+  RegenerateRequest,
   RootGet200,
   RouteLoadListResponse,
+  RunActionResponse,
   TriggerPipelineFullApiV1PipelineFullPost200,
+  TriggerPipelineFullApiV1PipelineFullPostBody,
   VersionApiV1VersionGet200,
   ZeroOverrideOut,
   ZeroOverrideUpdate
@@ -2088,26 +2097,28 @@ export function useGetStatusApiV1PredictionsStatusGet<TData = Awaited<ReturnType
 
 
 /**
- * Запускает Celery task full_pipeline (train + predict).
- * @summary Trigger ml_pipeline.full_pipeline (T-198)
+ * Запускает Celery task full_pipeline (train + predict) с параметрами.
+ * @summary Trigger ml_pipeline.full_pipeline (T-198/T-230)
  */
 export const triggerPipelineFullApiV1PipelineFullPost = (
-    
+    triggerPipelineFullApiV1PipelineFullPostBody: TriggerPipelineFullApiV1PipelineFullPostBody,
  signal?: AbortSignal
 ) => {
       
       
       return customInstance<TriggerPipelineFullApiV1PipelineFullPost200>(
-      {url: `/api/v1/pipeline/full`, method: 'POST', signal
+      {url: `/api/v1/pipeline/full`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: triggerPipelineFullApiV1PipelineFullPostBody, signal
     },
       );
     }
   
 
 
-export const getTriggerPipelineFullApiV1PipelineFullPostMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof triggerPipelineFullApiV1PipelineFullPost>>, TError,void, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof triggerPipelineFullApiV1PipelineFullPost>>, TError,void, TContext> => {
+export const getTriggerPipelineFullApiV1PipelineFullPostMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof triggerPipelineFullApiV1PipelineFullPost>>, TError,{data: TriggerPipelineFullApiV1PipelineFullPostBody}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof triggerPipelineFullApiV1PipelineFullPost>>, TError,{data: TriggerPipelineFullApiV1PipelineFullPostBody}, TContext> => {
 
 const mutationKey = ['triggerPipelineFullApiV1PipelineFullPost'];
 const {mutation: mutationOptions} = options ?
@@ -2119,10 +2130,10 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof triggerPipelineFullApiV1PipelineFullPost>>, void> = () => {
-          
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof triggerPipelineFullApiV1PipelineFullPost>>, {data: TriggerPipelineFullApiV1PipelineFullPostBody}> = (props) => {
+          const {data} = props ?? {};
 
-          return  triggerPipelineFullApiV1PipelineFullPost()
+          return  triggerPipelineFullApiV1PipelineFullPost(data,)
         }
 
         
@@ -2131,18 +2142,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type TriggerPipelineFullApiV1PipelineFullPostMutationResult = NonNullable<Awaited<ReturnType<typeof triggerPipelineFullApiV1PipelineFullPost>>>
-    
-    export type TriggerPipelineFullApiV1PipelineFullPostMutationError = unknown
+    export type TriggerPipelineFullApiV1PipelineFullPostMutationBody = TriggerPipelineFullApiV1PipelineFullPostBody
+    export type TriggerPipelineFullApiV1PipelineFullPostMutationError = HTTPValidationError
 
     /**
- * @summary Trigger ml_pipeline.full_pipeline (T-198)
+ * @summary Trigger ml_pipeline.full_pipeline (T-198/T-230)
  */
-export const useTriggerPipelineFullApiV1PipelineFullPost = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof triggerPipelineFullApiV1PipelineFullPost>>, TError,void, TContext>, }
+export const useTriggerPipelineFullApiV1PipelineFullPost = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof triggerPipelineFullApiV1PipelineFullPost>>, TError,{data: TriggerPipelineFullApiV1PipelineFullPostBody}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof triggerPipelineFullApiV1PipelineFullPost>>,
         TError,
-        void,
+        {data: TriggerPipelineFullApiV1PipelineFullPostBody},
         TContext
       > => {
 
@@ -2233,6 +2244,550 @@ export function useGetPipelineStatusApiV1PipelineStatusTaskIdGet<TData = Awaited
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
 
   const queryOptions = getGetPipelineStatusApiV1PipelineStatusTaskIdGetQueryOptions(taskId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
+/**
+ * Запускает Celery-генерацию прогнозов с параметрами из UI/БД.
+ * @summary T-230: сгенерировать новый набор
+ */
+export const regenerateApiV1PredictionsRegeneratePost = (
+    regenerateRequest: RegenerateRequest,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<RegenerateApiV1PredictionsRegeneratePost200>(
+      {url: `/api/v1/predictions/regenerate`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: regenerateRequest, signal
+    },
+      );
+    }
+  
+
+
+export const getRegenerateApiV1PredictionsRegeneratePostMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof regenerateApiV1PredictionsRegeneratePost>>, TError,{data: RegenerateRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof regenerateApiV1PredictionsRegeneratePost>>, TError,{data: RegenerateRequest}, TContext> => {
+
+const mutationKey = ['regenerateApiV1PredictionsRegeneratePost'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof regenerateApiV1PredictionsRegeneratePost>>, {data: RegenerateRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  regenerateApiV1PredictionsRegeneratePost(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RegenerateApiV1PredictionsRegeneratePostMutationResult = NonNullable<Awaited<ReturnType<typeof regenerateApiV1PredictionsRegeneratePost>>>
+    export type RegenerateApiV1PredictionsRegeneratePostMutationBody = RegenerateRequest
+    export type RegenerateApiV1PredictionsRegeneratePostMutationError = HTTPValidationError
+
+    /**
+ * @summary T-230: сгенерировать новый набор
+ */
+export const useRegenerateApiV1PredictionsRegeneratePost = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof regenerateApiV1PredictionsRegeneratePost>>, TError,{data: RegenerateRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof regenerateApiV1PredictionsRegeneratePost>>,
+        TError,
+        {data: RegenerateRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getRegenerateApiV1PredictionsRegeneratePostMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * Последние запуски (новые сверху) + какой submission_id активен.
+ * @summary T-230: список запусков генерации
+ */
+export const listRunsApiV1PredictionsRunsGet = (
+    params?: ListRunsApiV1PredictionsRunsGetParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<PredictionRunListResponse>(
+      {url: `/api/v1/predictions/runs`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getListRunsApiV1PredictionsRunsGetQueryKey = (params?: ListRunsApiV1PredictionsRunsGetParams,) => {
+    return [
+    `/api/v1/predictions/runs`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getListRunsApiV1PredictionsRunsGetQueryOptions = <TData = Awaited<ReturnType<typeof listRunsApiV1PredictionsRunsGet>>, TError = HTTPValidationError>(params?: ListRunsApiV1PredictionsRunsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRunsApiV1PredictionsRunsGet>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListRunsApiV1PredictionsRunsGetQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRunsApiV1PredictionsRunsGet>>> = ({ signal }) => listRunsApiV1PredictionsRunsGet(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listRunsApiV1PredictionsRunsGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
+}
+
+export type ListRunsApiV1PredictionsRunsGetQueryResult = NonNullable<Awaited<ReturnType<typeof listRunsApiV1PredictionsRunsGet>>>
+export type ListRunsApiV1PredictionsRunsGetQueryError = HTTPValidationError
+
+
+export function useListRunsApiV1PredictionsRunsGet<TData = Awaited<ReturnType<typeof listRunsApiV1PredictionsRunsGet>>, TError = HTTPValidationError>(
+ params: undefined |  ListRunsApiV1PredictionsRunsGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRunsApiV1PredictionsRunsGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listRunsApiV1PredictionsRunsGet>>,
+          TError,
+          Awaited<ReturnType<typeof listRunsApiV1PredictionsRunsGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+export function useListRunsApiV1PredictionsRunsGet<TData = Awaited<ReturnType<typeof listRunsApiV1PredictionsRunsGet>>, TError = HTTPValidationError>(
+ params?: ListRunsApiV1PredictionsRunsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRunsApiV1PredictionsRunsGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listRunsApiV1PredictionsRunsGet>>,
+          TError,
+          Awaited<ReturnType<typeof listRunsApiV1PredictionsRunsGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+export function useListRunsApiV1PredictionsRunsGet<TData = Awaited<ReturnType<typeof listRunsApiV1PredictionsRunsGet>>, TError = HTTPValidationError>(
+ params?: ListRunsApiV1PredictionsRunsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRunsApiV1PredictionsRunsGet>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+/**
+ * @summary T-230: список запусков генерации
+ */
+
+export function useListRunsApiV1PredictionsRunsGet<TData = Awaited<ReturnType<typeof listRunsApiV1PredictionsRunsGet>>, TError = HTTPValidationError>(
+ params?: ListRunsApiV1PredictionsRunsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRunsApiV1PredictionsRunsGet>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+
+  const queryOptions = getListRunsApiV1PredictionsRunsGetQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
+/**
+ * Статус запуска. Пока Celery работает — опрашиваем; при SUCCESS ищем CSV.
+ * @summary T-230: статус запуска + кандидат (при Celery SUCCESS)
+ */
+export const getRunApiV1PredictionsRunsRunIdGet = (
+    runId: number,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<PredictionRunOut>(
+      {url: `/api/v1/predictions/runs/${runId}`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getGetRunApiV1PredictionsRunsRunIdGetQueryKey = (runId?: number,) => {
+    return [
+    `/api/v1/predictions/runs/${runId}`
+    ] as const;
+    }
+
+    
+export const getGetRunApiV1PredictionsRunsRunIdGetQueryOptions = <TData = Awaited<ReturnType<typeof getRunApiV1PredictionsRunsRunIdGet>>, TError = HTTPValidationError>(runId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRunApiV1PredictionsRunsRunIdGet>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRunApiV1PredictionsRunsRunIdGetQueryKey(runId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRunApiV1PredictionsRunsRunIdGet>>> = ({ signal }) => getRunApiV1PredictionsRunsRunIdGet(runId, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(runId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRunApiV1PredictionsRunsRunIdGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
+}
+
+export type GetRunApiV1PredictionsRunsRunIdGetQueryResult = NonNullable<Awaited<ReturnType<typeof getRunApiV1PredictionsRunsRunIdGet>>>
+export type GetRunApiV1PredictionsRunsRunIdGetQueryError = HTTPValidationError
+
+
+export function useGetRunApiV1PredictionsRunsRunIdGet<TData = Awaited<ReturnType<typeof getRunApiV1PredictionsRunsRunIdGet>>, TError = HTTPValidationError>(
+ runId: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRunApiV1PredictionsRunsRunIdGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getRunApiV1PredictionsRunsRunIdGet>>,
+          TError,
+          Awaited<ReturnType<typeof getRunApiV1PredictionsRunsRunIdGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+export function useGetRunApiV1PredictionsRunsRunIdGet<TData = Awaited<ReturnType<typeof getRunApiV1PredictionsRunsRunIdGet>>, TError = HTTPValidationError>(
+ runId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRunApiV1PredictionsRunsRunIdGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getRunApiV1PredictionsRunsRunIdGet>>,
+          TError,
+          Awaited<ReturnType<typeof getRunApiV1PredictionsRunsRunIdGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+export function useGetRunApiV1PredictionsRunsRunIdGet<TData = Awaited<ReturnType<typeof getRunApiV1PredictionsRunsRunIdGet>>, TError = HTTPValidationError>(
+ runId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRunApiV1PredictionsRunsRunIdGet>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+/**
+ * @summary T-230: статус запуска + кандидат (при Celery SUCCESS)
+ */
+
+export function useGetRunApiV1PredictionsRunsRunIdGet<TData = Awaited<ReturnType<typeof getRunApiV1PredictionsRunsRunIdGet>>, TError = HTTPValidationError>(
+ runId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRunApiV1PredictionsRunsRunIdGet>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+
+  const queryOptions = getGetRunApiV1PredictionsRunsRunIdGetQueryOptions(runId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
+/**
+ * INSERT кандидата в `predictions`. Идемпотентность: повторный ingest → 409.
+ * @summary T-230: загрузить CSV кандидата в БД (и опционально активировать)
+ */
+export const ingestRunApiV1PredictionsRunsRunIdIngestPost = (
+    runId: number,
+    ingestBody: IngestBody,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<RunActionResponse>(
+      {url: `/api/v1/predictions/runs/${runId}/ingest`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: ingestBody, signal
+    },
+      );
+    }
+  
+
+
+export const getIngestRunApiV1PredictionsRunsRunIdIngestPostMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestRunApiV1PredictionsRunsRunIdIngestPost>>, TError,{runId: number;data: IngestBody}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof ingestRunApiV1PredictionsRunsRunIdIngestPost>>, TError,{runId: number;data: IngestBody}, TContext> => {
+
+const mutationKey = ['ingestRunApiV1PredictionsRunsRunIdIngestPost'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ingestRunApiV1PredictionsRunsRunIdIngestPost>>, {runId: number;data: IngestBody}> = (props) => {
+          const {runId,data} = props ?? {};
+
+          return  ingestRunApiV1PredictionsRunsRunIdIngestPost(runId,data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type IngestRunApiV1PredictionsRunsRunIdIngestPostMutationResult = NonNullable<Awaited<ReturnType<typeof ingestRunApiV1PredictionsRunsRunIdIngestPost>>>
+    export type IngestRunApiV1PredictionsRunsRunIdIngestPostMutationBody = IngestBody
+    export type IngestRunApiV1PredictionsRunsRunIdIngestPostMutationError = HTTPValidationError
+
+    /**
+ * @summary T-230: загрузить CSV кандидата в БД (и опционально активировать)
+ */
+export const useIngestRunApiV1PredictionsRunsRunIdIngestPost = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestRunApiV1PredictionsRunsRunIdIngestPost>>, TError,{runId: number;data: IngestBody}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof ingestRunApiV1PredictionsRunsRunIdIngestPost>>,
+        TError,
+        {runId: number;data: IngestBody},
+        TContext
+      > => {
+
+      const mutationOptions = getIngestRunApiV1PredictionsRunsRunIdIngestPostMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * Помечает кандидата `rejected`. Активный набор НЕ меняется.
+ * @summary T-230: отклонить кандидата (оставить эталон/текущий набор)
+ */
+export const rejectRunApiV1PredictionsRunsRunIdRejectPost = (
+    runId: number,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<RunActionResponse>(
+      {url: `/api/v1/predictions/runs/${runId}/reject`, method: 'POST', signal
+    },
+      );
+    }
+  
+
+
+export const getRejectRunApiV1PredictionsRunsRunIdRejectPostMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectRunApiV1PredictionsRunsRunIdRejectPost>>, TError,{runId: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof rejectRunApiV1PredictionsRunsRunIdRejectPost>>, TError,{runId: number}, TContext> => {
+
+const mutationKey = ['rejectRunApiV1PredictionsRunsRunIdRejectPost'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rejectRunApiV1PredictionsRunsRunIdRejectPost>>, {runId: number}> = (props) => {
+          const {runId} = props ?? {};
+
+          return  rejectRunApiV1PredictionsRunsRunIdRejectPost(runId,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RejectRunApiV1PredictionsRunsRunIdRejectPostMutationResult = NonNullable<Awaited<ReturnType<typeof rejectRunApiV1PredictionsRunsRunIdRejectPost>>>
+    
+    export type RejectRunApiV1PredictionsRunsRunIdRejectPostMutationError = HTTPValidationError
+
+    /**
+ * @summary T-230: отклонить кандидата (оставить эталон/текущий набор)
+ */
+export const useRejectRunApiV1PredictionsRunsRunIdRejectPost = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectRunApiV1PredictionsRunsRunIdRejectPost>>, TError,{runId: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof rejectRunApiV1PredictionsRunsRunIdRejectPost>>,
+        TError,
+        {runId: number},
+        TContext
+      > => {
+
+      const mutationOptions = getRejectRunApiV1PredictionsRunsRunIdRejectPostMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * `UPDATE predictions SET is_active = is_etalon` (строки не удаляются).
+ * @summary T-230: вернуть эталонный набор как активный
+ */
+export const restoreEtalonEndpointApiV1PredictionsRestoreEtalonPost = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<RunActionResponse>(
+      {url: `/api/v1/predictions/restore-etalon`, method: 'POST', signal
+    },
+      );
+    }
+  
+
+
+export const getRestoreEtalonEndpointApiV1PredictionsRestoreEtalonPostMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreEtalonEndpointApiV1PredictionsRestoreEtalonPost>>, TError,void, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof restoreEtalonEndpointApiV1PredictionsRestoreEtalonPost>>, TError,void, TContext> => {
+
+const mutationKey = ['restoreEtalonEndpointApiV1PredictionsRestoreEtalonPost'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreEtalonEndpointApiV1PredictionsRestoreEtalonPost>>, void> = () => {
+          
+
+          return  restoreEtalonEndpointApiV1PredictionsRestoreEtalonPost()
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestoreEtalonEndpointApiV1PredictionsRestoreEtalonPostMutationResult = NonNullable<Awaited<ReturnType<typeof restoreEtalonEndpointApiV1PredictionsRestoreEtalonPost>>>
+    
+    export type RestoreEtalonEndpointApiV1PredictionsRestoreEtalonPostMutationError = unknown
+
+    /**
+ * @summary T-230: вернуть эталонный набор как активный
+ */
+export const useRestoreEtalonEndpointApiV1PredictionsRestoreEtalonPost = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreEtalonEndpointApiV1PredictionsRestoreEtalonPost>>, TError,void, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof restoreEtalonEndpointApiV1PredictionsRestoreEtalonPost>>,
+        TError,
+        void,
+        TContext
+      > => {
+
+      const mutationOptions = getRestoreEtalonEndpointApiV1PredictionsRestoreEtalonPostMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * Что сейчас отдают чтения: submission_id, модель, фичи, zeros, coefs, строк.
+ * @summary T-230: параметры активного набора (source of truth для UI)
+ */
+export const getActiveSetApiV1PredictionsActiveGet = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ActiveSetResponse>(
+      {url: `/api/v1/predictions/active`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getGetActiveSetApiV1PredictionsActiveGetQueryKey = () => {
+    return [
+    `/api/v1/predictions/active`
+    ] as const;
+    }
+
+    
+export const getGetActiveSetApiV1PredictionsActiveGetQueryOptions = <TData = Awaited<ReturnType<typeof getActiveSetApiV1PredictionsActiveGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getActiveSetApiV1PredictionsActiveGet>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetActiveSetApiV1PredictionsActiveGetQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getActiveSetApiV1PredictionsActiveGet>>> = ({ signal }) => getActiveSetApiV1PredictionsActiveGet(signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getActiveSetApiV1PredictionsActiveGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
+}
+
+export type GetActiveSetApiV1PredictionsActiveGetQueryResult = NonNullable<Awaited<ReturnType<typeof getActiveSetApiV1PredictionsActiveGet>>>
+export type GetActiveSetApiV1PredictionsActiveGetQueryError = unknown
+
+
+export function useGetActiveSetApiV1PredictionsActiveGet<TData = Awaited<ReturnType<typeof getActiveSetApiV1PredictionsActiveGet>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getActiveSetApiV1PredictionsActiveGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getActiveSetApiV1PredictionsActiveGet>>,
+          TError,
+          Awaited<ReturnType<typeof getActiveSetApiV1PredictionsActiveGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+export function useGetActiveSetApiV1PredictionsActiveGet<TData = Awaited<ReturnType<typeof getActiveSetApiV1PredictionsActiveGet>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getActiveSetApiV1PredictionsActiveGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getActiveSetApiV1PredictionsActiveGet>>,
+          TError,
+          Awaited<ReturnType<typeof getActiveSetApiV1PredictionsActiveGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+export function useGetActiveSetApiV1PredictionsActiveGet<TData = Awaited<ReturnType<typeof getActiveSetApiV1PredictionsActiveGet>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getActiveSetApiV1PredictionsActiveGet>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+/**
+ * @summary T-230: параметры активного набора (source of truth для UI)
+ */
+
+export function useGetActiveSetApiV1PredictionsActiveGet<TData = Awaited<ReturnType<typeof getActiveSetApiV1PredictionsActiveGet>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getActiveSetApiV1PredictionsActiveGet>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+
+  const queryOptions = getGetActiveSetApiV1PredictionsActiveGetQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 

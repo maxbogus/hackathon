@@ -5,6 +5,29 @@
  * Прогноз пассажиропотока трамваев Москвы (hackathon Transit-AI).
  * OpenAPI spec version: 0.1.0
  */
+export type ActiveSetResponseSubmissionId = string | null;
+
+export type ActiveSetResponseModelId = string | null;
+
+export type ActiveSetResponseFeatureSet = string | null;
+
+export type ActiveSetResponseZerosApplied = boolean | null;
+
+/**
+ * Параметры активного набора (source of truth для UI-подписи).
+ */
+export interface ActiveSetResponse {
+  submission_id?: ActiveSetResponseSubmissionId;
+  model_id?: ActiveSetResponseModelId;
+  feature_set?: ActiveSetResponseFeatureSet;
+  zeros_applied?: ActiveSetResponseZerosApplied;
+  coef_weather?: number;
+  coef_event?: number;
+  coef_season?: number;
+  row_count?: number;
+  is_etalon?: boolean;
+}
+
 /**
  * Одна точка данных: route × datetime → value.
  */
@@ -134,6 +157,13 @@ export interface HistoricalResponse {
 }
 
 /**
+ * Тело POST /predictions/runs/{id}/ingest.
+ */
+export interface IngestBody {
+  activate?: boolean;
+}
+
+/**
  * Bucketed risk level. info in [75,90), warning in [90,110), critical >=110.
  */
 export type OverloadAlertSeverity = typeof OverloadAlertSeverity[keyof typeof OverloadAlertSeverity];
@@ -190,6 +220,19 @@ export interface OverloadAlertsResponse {
   alerts?: OverloadAlert[];
 }
 
+export type PipelineFullBodySubmissionId = string | null;
+
+/**
+ * T-230: параметры генерации для POST /pipeline/full (все опциональны).
+ */
+export interface PipelineFullBody {
+  submission_id?: PipelineFullBodySubmissionId;
+  coef_weather?: number;
+  coef_event?: number;
+  coef_season?: number;
+  zeros?: boolean;
+}
+
 export type PredictionPointDBLower = number | null;
 
 export type PredictionPointDBUpper = number | null;
@@ -212,6 +255,62 @@ export interface PredictionPointDB {
   coef_season: number;
 }
 
+export type PredictionRunListResponseActiveSubmissionId = string | null;
+
+/**
+ * Список запусков + текущий активный набор.
+ */
+export interface PredictionRunListResponse {
+  runs: PredictionRunOut[];
+  count: number;
+  active_submission_id?: PredictionRunListResponseActiveSubmissionId;
+}
+
+export type PredictionRunOutSubmissionId = string | null;
+
+export type PredictionRunOutModelId = string | null;
+
+export type PredictionRunOutFeatureSet = string | null;
+
+export type PredictionRunOutPipelineKind = string | null;
+
+export type PredictionRunOutRowCount = number | null;
+
+export type PredictionRunOutHoldoutWapeScore = number | null;
+
+export type PredictionRunOutRecommendation = string | null;
+
+export type PredictionRunOutError = string | null;
+
+export type PredictionRunOutCsvFilename = string | null;
+
+export type PredictionRunOutFinishedAt = string | null;
+
+export type PredictionRunOutActivatedAt = string | null;
+
+/**
+ * Один запуск генерации (candidate lifecycle).
+ */
+export interface PredictionRunOut {
+  id: number;
+  celery_task_id: string;
+  status: string;
+  submission_id?: PredictionRunOutSubmissionId;
+  model_id?: PredictionRunOutModelId;
+  feature_set?: PredictionRunOutFeatureSet;
+  pipeline_kind?: PredictionRunOutPipelineKind;
+  row_count?: PredictionRunOutRowCount;
+  holdout_wape_score?: PredictionRunOutHoldoutWapeScore;
+  recommendation?: PredictionRunOutRecommendation;
+  error?: PredictionRunOutError;
+  is_etalon?: boolean;
+  is_active?: boolean;
+  csv_filename?: PredictionRunOutCsvFilename;
+  started_at: string;
+  finished_at?: PredictionRunOutFinishedAt;
+  activated_at?: PredictionRunOutActivatedAt;
+}
+
 export type PredictionsDBResponseModelId = string | null;
 
 export type PredictionsDBResponseFeatureSet = string | null;
@@ -229,6 +328,63 @@ export interface PredictionsDBResponse {
   feature_set?: PredictionsDBResponseFeatureSet;
   zeros_applied?: PredictionsDBResponseZerosApplied;
   points: PredictionPointDB[];
+}
+
+/**
+ * YYYY-MM-DD
+ */
+export type RegenerateRequestStartDate = string | null;
+
+/**
+ * YYYY-MM-DD
+ */
+export type RegenerateRequestEndDate = string | null;
+
+export type RegenerateRequestModelId = string | null;
+
+/**
+ * Если None — выводится из feature_toggles
+ */
+export type RegenerateRequestFeatureSet = string | null;
+
+/**
+ * Если None — выводится из zero_overrides
+ */
+export type RegenerateRequestZerosApplied = boolean | null;
+
+/**
+ * Параметры генерации нового набора прогнозов.
+
+Всё опционально: не заданные поля берутся из БД (feature_toggles /
+zero_overrides) и из `settings` (submission period).
+ */
+export interface RegenerateRequest {
+  /**
+   * @minimum 0
+   * @maximum 3
+   */
+  coef_weather?: number;
+  /**
+   * @minimum 0
+   * @maximum 3
+   */
+  coef_event?: number;
+  /**
+   * @minimum 0
+   * @maximum 3
+   */
+  coef_season?: number;
+  /** YYYY-MM-DD */
+  start_date?: RegenerateRequestStartDate;
+  /** YYYY-MM-DD */
+  end_date?: RegenerateRequestEndDate;
+  model_id?: RegenerateRequestModelId;
+  /** @pattern ^(route_baseline|xgboost_route)$ */
+  model_kind?: string;
+  /** Если None — выводится из feature_toggles */
+  feature_set?: RegenerateRequestFeatureSet;
+  /** Если None — выводится из zero_overrides */
+  zeros_applied?: RegenerateRequestZerosApplied;
 }
 
 export type RouteLoadItemTier = typeof RouteLoadItemTier[keyof typeof RouteLoadItemTier];
@@ -273,6 +429,20 @@ export interface RouteLoadListResponse {
   from_date?: RouteLoadListResponseFromDate;
   to_date?: RouteLoadListResponseToDate;
   used_fallback?: boolean;
+}
+
+export type RunActionResponseRun = PredictionRunOut | null;
+
+export type RunActionResponseActiveSubmissionId = string | null;
+
+/**
+ * Ответ на ingest/reject/restore.
+ */
+export interface RunActionResponse {
+  run?: RunActionResponseRun;
+  rows?: number;
+  active_submission_id?: RunActionResponseActiveSubmissionId;
+  message?: string;
 }
 
 export type ValidationErrorLocItem = string | number;
@@ -345,6 +515,10 @@ to: string;
 model_id?: string | null;
 feature_set?: string | null;
 zeros_applied?: boolean | null;
+/**
+ * T-230: игнорировать coef/feature_set/zeros и взять параметры активного набора (фолбэк фронта, когда по слайдерам нет данных).
+ */
+prefer_active?: boolean;
 horizon?: GetPredictionsDbApiV1PredictionsDbRouteIdGetHorizon;
 granularity?: GetPredictionsDbApiV1PredictionsDbRouteIdGetGranularity;
 /**
@@ -517,9 +691,21 @@ horizon?: string;
 
 export type GetStatusApiV1PredictionsStatusGet200 = { [key: string]: unknown };
 
+export type TriggerPipelineFullApiV1PipelineFullPostBody = PipelineFullBody | null;
+
 export type TriggerPipelineFullApiV1PipelineFullPost200 = {[key: string]: string};
 
 export type GetPipelineStatusApiV1PipelineStatusTaskIdGet200 = { [key: string]: unknown };
+
+export type RegenerateApiV1PredictionsRegeneratePost200 = { [key: string]: unknown };
+
+export type ListRunsApiV1PredictionsRunsGetParams = {
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+};
 
 export type RootGet200 = {[key: string]: string};
 

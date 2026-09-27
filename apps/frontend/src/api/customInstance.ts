@@ -28,8 +28,12 @@ export interface CustomRequestInit extends Omit<RequestInit, 'body'> {
    */
   params?: Record<string, string | number | boolean | null | undefined>;
   body?: unknown;
-  data?: unknown;  // orval генерит data: для POST/PUT bodies
-  responseType?: 'json' | 'text';
+  data?: unknown; // orval генерит data: для POST/PUT bodies
+  /**
+   * T-230: 'blob' добавлен для бинарных экспортов (XLSX).
+   * `lastResponse()` по-прежнему отдаёт headers (Content-Disposition, X-Row-Count).
+   */
+  responseType?: 'json' | 'text' | 'blob';
 }
 
 /**
@@ -73,10 +77,12 @@ export const customInstance = async <T>(config: CustomRequestInit): Promise<T> =
   }
 
   const fullUrlWithBase = `${BASE_URL}${fullUrl}`;
+  const acceptHeader =
+    responseType === 'text' ? 'text/csv' : responseType === 'blob' ? '*/*' : 'application/json';
   const response = await fetch(fullUrlWithBase, {
     method,
     headers: {
-      Accept: responseType === 'text' ? 'text/csv' : 'application/json',
+      Accept: acceptHeader,
       'Content-Type': 'application/json',
       ...headers,
     },
@@ -96,7 +102,9 @@ export const customInstance = async <T>(config: CustomRequestInit): Promise<T> =
   }
 
   let data: T;
-  if (responseType === 'text') {
+  if (responseType === 'blob') {
+    data = (await response.blob()) as unknown as T;
+  } else if (responseType === 'text') {
     data = (await response.text()) as unknown as T;
   } else if (response.status === 204) {
     data = undefined as T;
