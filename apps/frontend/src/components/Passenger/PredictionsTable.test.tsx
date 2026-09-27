@@ -131,4 +131,17 @@ describe('<PredictionsTable>', () => {
     // 1 маршрут × 1000 строк, в default — маршрут 1 выбран.
     expect(footer.textContent).toMatch(/строк: 1000/);
   });
+
+  // T-222 follow-up: после того как заменил <table> на CSS Grid <div role="table">,
+  // header.row и data.row используют общий grid-template-columns → колонки выровнены.
+  // Проверяем что header существует и подхватил GRID_TEMPLATE_COLUMNS через data-атрибут.
+  // (В jsdom virtualizer не рендерит строки без scroll, поэтому проверяем только header —
+  //  data row использует ту же константу по построению, см. virtualRowStyle().)
+  it('header применяет GRID_TEMPLATE_COLUMNS через data-атрибут (общий шаблон с data rows)', () => {
+    render(<PredictionsTable rows={ROWS_ALL} />);
+    const header = screen.getByTestId('predictions-table-header');
+    expect(header).toBeInTheDocument();
+    // Конкретное значение, не just truthy — это контракт между header и data rows.
+    expect(header.getAttribute('data-grid-template-columns')).toBe('70px 120px 60px 1fr');
+  });
 });

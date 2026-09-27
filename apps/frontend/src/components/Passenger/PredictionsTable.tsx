@@ -30,6 +30,25 @@ import type { PredictionRow } from '@/lib/routeCsv';
 const DEFAULT_SELECTED_ROUTES: readonly number[] = [1, 7, 17, 25];
 const VIRTUAL_CONTAINER_HEIGHT_PX = 400;
 
+const ROW_HEIGHT_PX = 32;
+const VIRTUAL_OVERSCAN = 10;
+
+/**
+ * D-038 / T-222 follow-up fix:
+ * Unified column grid shared between header and data rows. Without this,
+ * <th> (native table-layout) and <td> inside absolute-position virtual
+ * rows (display:flex) used two different layout engines and columns
+ * misaligned. CSS Grid shares one template across header and all rows,
+ * including virtualized.
+ *
+ * Empirical column widths (chosen by content):
+ *   route  — '1'..'50', usually 2 digits → 70px
+ *   date   — 'YYYY-MM-DD' (10 chars) → 120px
+ *   hour   — '0'..'23' → 60px
+ *   value  — '1234.56' (7 chars) → 1fr (fills remainder)
+ */
+const GRID_TEMPLATE_COLUMNS = '70px 120px 60px 1fr';
+
 const searchInputStyle = {
   flex: 1,
   minWidth: 200,
@@ -75,49 +94,81 @@ const scrollContainerStyle = {
   position: 'relative' as const,
 } as const;
 
-const theadStyle = {
+/**
+ * T-222 follow-up: <div role="table"> wrapper. CSS Grid shares one
+ * `grid-template-columns = GRID_TEMPLATE_COLUMNS` between header and all
+ * data rows (including virtualized). Solves the column-misalignment bug
+ * that was visible at <thead><th> vs <tbody><tr><td> with display:flex.
+ */
+const tableStyle = {
+  display: 'grid',
+  width: '100%',
+  fontSize: 14,
+} as const;
+
+/**
+ * Sticky header внутри scroll container. position:sticky + top:0
+ * через вложенный row делает header видимым при скролле rows.
+ */
+const headerGroupStyle = {
   position: 'sticky' as const,
   top: 0,
+  zIndex: 2,
   background: '#f3f4f6',
-  zIndex: 1,
+  display: 'grid',
+};
+
+const headerRowStyle = {
+  display: 'grid',
+  gridTemplateColumns: GRID_TEMPLATE_COLUMNS,
+  borderBottom: '2px solid #e5e7eb',
 } as const;
 
 const thStyle = {
   padding: '8px 12px',
   textAlign: 'left' as const,
-  borderBottom: '2px solid #e5e7eb',
   cursor: 'pointer',
   userSelect: 'none' as const,
+  fontWeight: 600,
+  whiteSpace: 'nowrap' as const,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
 } as const;
 
 const tdStyle = {
   padding: '6px 12px',
   borderBottom: '1px solid #f1f5f9',
+  whiteSpace: 'nowrap' as const,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
 } as const;
 
-/** Inline-style для virtualized row: absolute positioning с translateY. */
+/**
+ * Inline-style для virtualized row: absolute positioning с translateY,
+ * внутри — display:grid с тем же GRID_TEMPLATE_COLUMNS, что и header.
+ * Это и есть фикс — общий шаблон выравнивает колонки.
+ */
 function virtualRowStyle(startPx: number): {
   readonly position: 'absolute';
   readonly top: 0;
   readonly transform: string;
-  readonly width: string;
-  readonly display: 'flex';
+  readonly left: 0;
+  readonly right: 0;
+  readonly display: 'grid';
+  readonly gridTemplateColumns: string;
   readonly height: number;
 } {
   return {
     position: 'absolute',
     top: 0,
     transform: `translateY(${startPx}px)`,
-    width: '100%',
-    display: 'flex',
+    left: 0,
+    right: 0,
+    display: 'grid',
+    gridTemplateColumns: GRID_TEMPLATE_COLUMNS,
     height: ROW_HEIGHT_PX,
   };
-}
-
-const ROW_HEIGHT_PX = 32;
-const VIRTUAL_OVERSCAN = 10;
-
-export interface PredictionsTableProps {
+}export interface PredictionsTableProps {
   readonly rows: readonly PredictionRow[];
   readonly isLoading?: boolean;
   readonly error?: string | null;
@@ -311,10 +362,24 @@ return (
         data-testid="predictions-table-scroll"
         style={scrollContainerStyle}
       >
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-          <thead style={theadStyle}>
+        {/*
+          T-222 follow-up: <table>/<thead>/<tbody> заменены на семантический
+          ARIA-эквивалент с CSS Grid. Нативный <table> + display:flex в absolute
+          строках давали рассинхрон колонок; Grid делит один шаблон между
+          header и всеми rows, включая virtualized.
+          ARIA roles сохраняются для screen readers (W3C pattern).
+        */}
+        <div role="table" aria-rowcount={sortedRows.length} style={tableStyle}>
+          {/* ── Header (sticky внутри scroll container) ───────────── */}
+          <div role="rowgroup" style={headerGroupStyle}>
             {table.getHeaderGroups().map((hg) => (
-              <tr key={hg.id}>
+              <div
+                key={hg.id}
+                role="row"
+                data-testid="predictions-table-header"
+                data-grid-template-columns={GRID_TEMPLATE_COLUMNS}
+                style={headerRowStyle}
+              >
                 {hg.headers.map((header) => {
                   const sortDir = header.column.getIsSorted();
                   const sortAttr =
@@ -324,7 +389,7 @@ return (
                         ? t('passenger.predictionsTable.sortDesc')
                         : t('passenger.predictionsTable.sortNone');
                   return (
-                    <th
+                    <div
                       key={header.id}
                       role="columnheader"
                       data-sort={sortAttr}
@@ -333,38 +398,46 @@ return (
                     >
                       {header.isPlaceholder
                         ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
                       {sortDir === 'asc' ? ' ▲' : sortDir === 'desc' ? ' ▼' : ''}
-                    </th>
+                    </div>
                   );
                 })}
-              </tr>
+              </div>
             ))}
-          </thead>
-          <tbody data-testid="predictions-table-body">
-            <tr style={{ height: totalSize }} aria-hidden="true">
-              <td colSpan={4} />
-            </tr>
+          </div>
+
+          {/* ── Body (virtualized) ──────────────────────────────── */}
+          <div
+            role="rowgroup"
+            data-testid="predictions-table-body"
+            style={{ position: 'relative', height: totalSize }}
+          >
             {virtualRows.map((vr) => {
               const row = sortedRows[vr.index];
               if (!row) return null;
               return (
-                <tr
+                <div
                   key={row.id}
                   role="row"
+                  data-testid="predictions-table-row"
                   data-index={vr.index}
+                  data-grid-template-columns={GRID_TEMPLATE_COLUMNS}
                   style={virtualRowStyle(vr.start)}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} style={tdStyle}>
+                    <div role="cell" key={cell.id} style={tdStyle}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
+                    </div>
                   ))}
-                </tr>
+                </div>
               );
             })}
-          </tbody>
-        </table>
+          </div>
+        </div>
       </div>
 
       <p
