@@ -176,6 +176,8 @@ describe('TEXTS — locked snapshot', () => {
       'app',
       'common',
       'dispatcher',
+      // T-226: новая вкладка /historical с TanStack Table v8 (actuals).
+      'historical',
       'passenger',
       // T-222 follow-up: новая вкладка /predictions с TanStack Table v8.
       'predictions',

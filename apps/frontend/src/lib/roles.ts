@@ -27,7 +27,7 @@
  * "coming soon" copy.
  */
 
-export type RoleId = 'passenger' | 'analyst' | 'predictions';
+export type RoleId = 'passenger' | 'analyst' | 'predictions' | 'historical';
 
 export interface RoleDef {
   /** URL slug, used as the route path. */
@@ -38,12 +38,14 @@ export interface RoleDef {
   readonly labelKey:
     | 'app.rolePassenger.label'
     | 'app.roleAnalyst.label'
-    | 'app.rolePredictions.label';
+    | 'app.rolePredictions.label'
+    | 'app.roleHistorical.label';
   /** TKey whose value is the description shown in the placeholder panel. */
   readonly descriptionKey:
     | 'app.rolePassenger.description'
     | 'app.roleAnalyst.description'
-    | 'app.rolePredictions.description';
+    | 'app.rolePredictions.description'
+    | 'app.roleHistorical.description';
   /** Shared "coming soon" body. See file header for rationale. */
   readonly placeholderKey: 'app.rolePassenger.placeholder';
 }
@@ -73,6 +75,15 @@ export const ROLES: ReadonlyArray<RoleDef> = [
     emoji: '📋',
     labelKey: 'app.rolePredictions.label',
     descriptionKey: 'app.rolePredictions.description',
+    placeholderKey: 'app.rolePassenger.placeholder',
+  },
+  {
+    // T-226: новая вкладка с таблицей исторических данных (actuals).
+    // Зеркало PredictionsTable без поиска (F-101), колонка «Факт».
+    id: 'historical',
+    emoji: '🕰️',
+    labelKey: 'app.roleHistorical.label',
+    descriptionKey: 'app.roleHistorical.description',
     placeholderKey: 'app.rolePassenger.placeholder',
   },
 ];

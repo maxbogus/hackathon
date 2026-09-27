@@ -82,14 +82,15 @@ function renderNav(activeRole: 'passenger' | 'analyst'): void {
 }
 
 describe('<RoleSwitcherNav>', () => {
-  it('renders three role links pointing to /passenger (Диспетчер), /analyst (Аналитик) and /predictions (Прогноз · таблица — T-222 follow-up)', async () => {
+  it('renders four role links pointing to /passenger (Диспетчер), /analyst (Аналитик), /predictions (Прогноз · таблица — T-222) and /historical (Исторические данные — T-226)', async () => {
     renderNav('passenger');
     const nav = await screen.findByLabelText(/переключатель ролей/i);
     const links = within(nav).getAllByRole('link');
     // T-225: dispatcher убран из nav (2 было). T-222 follow-up: добавлен /predictions → 3.
-    expect(links).toHaveLength(3);
+    // T-226: добавлен /historical → 4.
+    expect(links).toHaveLength(4);
     const hrefs = links.map((l) => l.getAttribute('href'));
-    expect(hrefs).toEqual(expect.arrayContaining(['/passenger', '/analyst', '/predictions']));
+    expect(hrefs).toEqual(expect.arrayContaining(['/passenger', '/analyst', '/predictions', '/historical']));
     // T-225: /dispatcher не должен быть в nav (orphan-роут).
     expect(hrefs).not.toContain('/dispatcher');
     // Planner был placeholder (T-200 / D-027) — его link тоже не должно быть.

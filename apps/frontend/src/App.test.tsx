@@ -38,20 +38,22 @@ function renderWithProviders(ui: React.ReactElement): void {
 }
 
 describe('<App>', () => {
-  it('renders a role-switcher with three role links (Диспетчер / Аналитик / Прогноз · таблица — T-225 + T-222)', async () => {
+  it('renders a role-switcher with four role links (Диспетчер / Аналитик / Прогноз · таблица / Исторические данные — T-225 + T-222 + T-226)', async () => {
     renderWithProviders(<App />);
     // T-225: /passenger теперь называется «Диспетчер», /dispatcher удалён из nav.
     expect(await screen.findByRole('link', { name: /диспетчер/i })).toBeInTheDocument();
     expect(await screen.findByRole('link', { name: /аналитик/i })).toBeInTheDocument();
     // T-222 follow-up: новая вкладка /predictions с TanStack Table v8.
     expect(await screen.findByRole('link', { name: /прогноз.*таблица/i })).toBeInTheDocument();
+    // T-226: новая вкладка /historical с TanStack Table v8 (actuals).
+    expect(await screen.findByRole('link', { name: /исторические данные/i })).toBeInTheDocument();
     // T-225: «Пассажир» в nav больше нет (был переименован).
     expect(screen.queryByRole('link', { name: /^🧍\s*пассажир$/i })).not.toBeInTheDocument();
     // T-200 / D-027: planner tab was removed.
     expect(screen.queryByRole('link', { name: /планировщик/i })).not.toBeInTheDocument();
-    // Sanity: должно быть ровно 3 ссылки в nav.
+    // Sanity: должно быть ровно 4 ссылки в nav.
     const links = screen.getAllByRole('link');
-    expect(links).toHaveLength(3);
+    expect(links).toHaveLength(4);
   });
 
   it('redirects "/" to /passenger and renders the passenger panel', async () => {

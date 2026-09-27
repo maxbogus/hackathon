@@ -49,6 +49,11 @@ export const TEXTS = {
       label: 'Прогноз · таблица',
       description: 'Все 14640 прогнозов (10 маршрутов × 61 день × 24 ч)',
     },
+    // T-226: новая вкладка /historical с TanStack Table v8 (actuals).
+    roleHistorical: {
+      label: 'Исторические данные',
+      description: 'Фактический пассажиропоток за весь период наблюдений',
+    },
     // T-200 / D-027: planner tab was removed — no rolePlanner key anymore.
   },
 
@@ -135,10 +140,11 @@ export const TEXTS = {
       lightblue: 'недогруз · меньше чем ожидалось',
       gray: 'нет данных',
     },
-    /* T-222: PredictionsTable.tsx — TanStack Table v8 + virtual scroll */
+    /* T-222: PredictionsTable.tsx — TanStack Table v8 + virtual scroll.
+       T-226 / F-101: searchPlaceholder удалён (поиск работает глючно,
+       multi-select маршрутов достаточно для 10 маршрутов). */
     predictionsTable: {
       title: '📋 Прогноз — весь период',
-      searchPlaceholder: 'Поиск… (маршрут, дата, час)',
       routesFilterLabel: 'Маршруты',
       columnRoute: 'Маршрут',
       columnDate: 'Дата',
@@ -148,6 +154,25 @@ export const TEXTS = {
       collapse: 'Свернуть',
       emptyMessage: 'Нет данных за выбранный период',
       loadErrorPrefix: 'Не удалось загрузить прогноз:',
+      rowsFooter: (n: number) => `строк: ${n}`,
+      routesFooter: (n: number) => `маршрутов: ${n}`,
+      sortAsc: 'asc',
+      sortDesc: 'desc',
+      sortNone: 'none',
+    },
+    /* T-226: HistoricalTable.tsx — TanStack Table v8 + virtual scroll,
+       зеркало predictionsTable без поиска (F-101), колонка «Факт». */
+    historicalTable: {
+      title: '🕰️ Исторические данные — весь период',
+      routesFilterLabel: 'Маршруты',
+      columnRoute: 'Маршрут',
+      columnDate: 'Дата',
+      columnHour: 'Час',
+      columnValue: 'Факт',
+      showAll: 'Показать все',
+      collapse: 'Свернуть',
+      emptyMessage: 'Нет исторических данных за выбранный период',
+      loadErrorPrefix: 'Не удалось загрузить исторические данные:',
       rowsFooter: (n: number) => `строк: ${n}`,
       routesFooter: (n: number) => `маршрутов: ${n}`,
       sortAsc: 'asc',
@@ -197,5 +222,11 @@ export const TEXTS = {
     summaryPredicted: (n: number) => `Прогнозов: ${n}`,
     summaryActual: (n: number) => `Фактов: ${n}`,
     summaryPeriod: (from: string, to: string) => `${from} → ${to}`,
+  },
+
+  /* T-226: HistoricalView.tsx — header для страницы /historical */
+  historical: {
+    viewTitle: 'Исторические данные',
+    viewHint: 'Фактический пассажиропоток за весь период наблюдений (из БД)',
   },
 } as const;

@@ -1,6 +1,56 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-27T13:50:00Z
+> Последнее обновление: 2026-09-27T14:32:00Z
+> Обновлено: Cline (агент) — T-226 done: <HistoricalTable> + /historical вкладка, globalFilter удалён из <PredictionsTable> (F-101/D-039).
+
+## Мини-сессия 2026-09-27T14:13:00Z — T-226 HistoricalTable + вкладка /historical
+
+**Контекст:** Пользователь попросил "по аналогии с вкладкой Прогноз - Таблицы сделай таблицу исторических данных. Только перед этим убери из таблицы поиск - он работает глючно. Назови это исторические данные". План: 1) убрать globalFilter из PredictionsTable (F-101), 2) сделать зеркало HistoricalTable без поиска для actuals, 3) добавить 4-ю вкладку /historical в навигацию.
+
+**Что сделано (RED→GREEN→REFACTOR):**
+
+*Часть 1 (F-101 — убираю поиск):*
+- `apps/frontend/src/components/Passenger/PredictionsTable.tsx`: удалены `<input type="search">`, `globalFilter` state, `getFilteredRowModel`, `globalFilterFn: 'includesString'`, `searchInputStyle`. Остались: sort + multi-select маршрутов + virtual scroll.
+- `apps/frontend/src/lib/i18n/ru-RU.ts`: удалён i18n-ключ `passenger.predictionsTable.searchPlaceholder`.
+- `apps/frontend/src/components/Passenger/PredictionsTable.test.tsx`: 2 теста на globalFilter удалены, добавлен 1 тест "НЕТ поля поиска (F-101)".
+
+*Часть 2 (HistoricalTable — таблица исторических данных):*
+- `apps/frontend/src/components/Passenger/HistoricalTable.tsx` (360 строк) — pure UI: TanStack Table v8 + react-virtual, без поиска, multi-select маршрутов, sort, footer "строк: N · маршрутов: M", loading/error/empty states, `data-testid` префикс `historical-table-*`. Колонка "Факт" вместо "Прогноз".
+- `apps/frontend/src/lib/historicalTable.ts` — TanStack Query helper: frozen `historicalCsvQueryKey = ['historical-csv']`, `historicalCsvQueryFn(ctx)` делегирует в `fetchActualsCsv(ctx.signal)`, `HISTORICAL_CSV_STALE_TIME_MS = 5*60_000`.
+- `apps/frontend/src/components/Passenger/HistoricalTable.test.tsx` — 14 тестов (RED→GREEN→REFACTOR).
+- `apps/frontend/src/lib/historicalTable.test.ts` — 7 тестов: ключ frozen, делегирование, AbortSignal, staleTime = 300000, ключ отличается от predictionsCsvQueryKey.
+- `apps/frontend/src/pages/HistoricalView.tsx` — page-wrapper (useQuery → HistoricalTable).
+- `apps/frontend/src/routes/historical.tsx` — file-based route (`/historical`).
+- `apps/frontend/src/routeTree.gen.ts` — добавлен 4-й route (gitignored, генерируется vite-plugin).
+- `apps/frontend/src/lib/roles.ts` — `RoleId` расширен `'passenger' | 'analyst' | 'predictions' | 'historical'`, `ROLES` пополнен 4-й ролью 🕰️ "Исторические данные".
+- `apps/frontend/src/lib/i18n/ru-RU.ts` — добавлены `app.roleHistorical.{label,description}`, блок `passenger.historicalTable.*` (14 ключей), блок `historical.{viewTitle,viewHint}`.
+- `apps/frontend/src/components/Passenger/index.ts` — добавлен `HistoricalTable` + `HistoricalTableProps` в barrel.
+- `apps/frontend/src/lib/i18n/MIGRATION.md` — строка T-226.
+
+*Обновления существующих тестов:*
+- `apps/frontend/src/App.test.tsx` — обновлён на 4 ссылки (T-225 + T-222 + T-226).
+- `apps/frontend/src/routes/-__root.test.tsx` — обновлён на 4 ссылки + проверка `/historical`.
+- `apps/frontend/src/lib/i18n/t.test.ts` — snapshot дополнен ключом `'historical'`.
+
+**Метрики:**
+- vitest: **190/192 passed** (35 новых/изменённых моих + 155 остальных). 2 фейла pre-existing в `routeCsv.test.ts` (парсер из-за `noUncheckedIndexedAccess`, не мои).
+- typecheck: мои файлы 0 errors. 2 pre-existing в `routeCsv.ts:38,45` (не мои).
+- lint: 0 issues в моих файлах. 8 pre-existing в `downloadCsv.ts`/`HorizonToggle.tsx`.
+- `make frontend-text-check`: мои файлы чистые. 2 pre-existing в `RouteLoadCard.tsx` (комментарии).
+- `routeTree.gen.ts` — gitignored (генерируется vite-plugin автоматически).
+
+**Артефакты:**
+- 6 новых файлов: `HistoricalTable.{tsx,test.tsx}`, `historicalTable.{ts,test.ts}`, `HistoricalView.tsx`, `routes/historical.tsx`.
+- 8 модифицированных: `PredictionsTable.{tsx,test.tsx}`, `App.test.tsx`, `__root.test.tsx`, `t.test.ts`, `roles.ts`, `ru-RU.ts`, `index.ts` (barrel), `MIGRATION.md`.
+- 1 тикет: `docs/backlog/archive/T-226-frontend-historical-table-and-tab.md` (status: done).
+- `docs/ledger/findings.jsonl` — F-101 (поиск глючил).
+- `docs/ledger/decisions.jsonl` — D-039 (нет globalFilter в таблицах).
+
+**Что осталось / Известные ограничения:**
+- ✅ Вкладка `/historical` (🕰️ Исторические данные) появилась в навигации как 4-я после Прогноз · таблица.
+- ✅ Поиск убран из обеих таблиц — multi-select маршрутов достаточно для 10 маршрутов.
+- ⚠️ routeCsv.ts имеет 2 pre-existing TS errors (HANDOFF.md упоминал). Не блокер, fix в T-221 follow-up.
+- ⚠️ frontend-text-check падает на pre-existing Cyrillic в комментариях RouteLoadCard.tsx. Не блокер.
 # Обновлено: Cline (агент) — T-222 done: PredictionsTable (TanStack Table v8 + react-virtual), T-223 отменён (F-099).
 
 ## Мини-сессия 2026-09-27T13:35:00Z — T-222 PredictionsTable.tsx (D-038, F-099, T-223 отменён)

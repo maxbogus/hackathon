@@ -1,14 +1,18 @@
 /**
- * T-222: <PredictionsTable> — таблица прогнозов на весь submission-период.
+ * T-226: <HistoricalTable> — таблица исторических данных (actuals) за весь период.
  *
- * Архитектура (D-038 + D-039 / F-101):
+ * Архитектура (D-038 + D-039):
  *  - Pure UI: данные через `rows` prop. Кэш — снаружи через TanStack Query.
  *  - Gentle default: routes {1, 7, 17, 25}, "Show all" button expands.
- *  - Виртуализация (@tanstack/react-virtual) — 14640 строк не лагают.
- *  - 4 колонки: route / date / hour / value, i18n через `t(...)`.
- *  - Сортировка кликом по header. НЕТ globalFilter (F-101: поиск глючил,
- *    multi-select маршрутов достаточно для 10 маршрутов).
+ *  - Виртуализация (@tanstack/react-virtual) — 68801 строк не лагают.
+ *  - 4 колонки: route / date / hour / Факт (НЕ «Прогноз»), i18n через `t(...)`.
+ *  - Сортировка кликом по header. НЕТ globalFilter (F-101: поиск убран).
  *  - Loading / error / empty states.
+ *  - data-testid префикс `historical-table-*` (отличается от PredictionsTable).
+ *
+ * Явное дублирование с PredictionsTable (не выносим общий DataTable) —
+ * таблицы могут разойтись (исторические данные могут получить «Δ к
+ * прогнозу» колонку, predictions — другую).
  */
 
 import { useMemo, useRef, useState } from 'react';
@@ -34,18 +38,8 @@ const ROW_HEIGHT_PX = 32;
 const VIRTUAL_OVERSCAN = 10;
 
 /**
- * D-038 / T-222 follow-up fix:
- * Unified column grid shared between header and data rows. Without this,
- * <th> (native table-layout) and <td> inside absolute-position virtual
- * rows (display:flex) used two different layout engines and columns
- * misaligned. CSS Grid shares one template across header and all rows,
- * including virtualized.
- *
- * Empirical column widths (chosen by content):
- *   route  — '1'..'50', usually 2 digits → 70px
- *   date   — 'YYYY-MM-DD' (10 chars) → 120px
- *   hour   — '0'..'23' → 60px
- *   value  — '1234.56' (7 chars) → 1fr (fills remainder)
+ * T-226: тот же шаблон колонок, что и PredictionsTable (route/date/hour/value).
+ * CSS Grid делит один шаблон между header и всеми data rows, включая virtualized.
  */
 const GRID_TEMPLATE_COLUMNS = '70px 120px 60px 1fr';
 
@@ -87,10 +81,9 @@ const scrollContainerStyle = {
 } as const;
 
 /**
- * T-222 follow-up: <div role="table"> wrapper. CSS Grid shares one
- * `grid-template-columns = GRID_TEMPLATE_COLUMNS` between header and all
- * data rows (including virtualized). Solves the column-misalignment bug
- * that was visible at <thead><th> vs <tbody><tr><td> with display:flex.
+ * T-222 follow-up (применён здесь): <div role="table"> wrapper. CSS Grid
+ * делит один `grid-template-columns = GRID_TEMPLATE_COLUMNS` между header
+ * и всеми data rows (включая virtualized). Решает баг рассинхрона колонок.
  */
 const tableStyle = {
   display: 'grid',
@@ -160,42 +153,46 @@ function virtualRowStyle(startPx: number): {
     gridTemplateColumns: GRID_TEMPLATE_COLUMNS,
     height: ROW_HEIGHT_PX,
   };
-}export interface PredictionsTableProps {
+}
+
+export interface HistoricalTableProps {
   readonly rows: readonly PredictionRow[];
   readonly isLoading?: boolean;
   readonly error?: string | null;
   readonly availableRoutes?: readonly number[];
 }
 
-export function PredictionsTable({
+export function HistoricalTable({
   rows,
   isLoading = false,
   error = null,
   availableRoutes,
-}: PredictionsTableProps): JSX.Element {
+}: HistoricalTableProps): JSX.Element {
   if (isLoading) {
     return (
-      <p data-testid="predictions-table-loading" role="status">
+      <p data-testid="historical-table-loading" role="status">
         {t('common.loading')}
       </p>
     );
   }
   if (error) {
     return (
-      <Alert severity="warning" testId="predictions-table-error">
-        {t('passenger.predictionsTable.loadErrorPrefix')} {error}
+      <Alert severity="warning" testId="historical-table-error">
+        {t('passenger.historicalTable.loadErrorPrefix')} {error}
       </Alert>
     );
   }
   if (rows.length === 0) {
     return (
-      <p data-testid="predictions-table-empty" role="status">
-        {t('passenger.predictionsTable.emptyMessage')}
+      <p data-testid="historical-table-empty" role="status">
+        {t('passenger.historicalTable.emptyMessage')}
       </p>
     );
   }
-  return <PredictionsTableInner rows={rows} availableRoutes={availableRoutes} />;
-function PredictionsTableInner({
+  return <HistoricalTableInner rows={rows} availableRoutes={availableRoutes} />;
+}
+
+function HistoricalTableInner({
   rows,
   availableRoutes,
 }: {
@@ -210,44 +207,39 @@ function PredictionsTableInner({
 
   const allRouteIds = useMemo<readonly number[]>(() => {
     if (availableRoutes && availableRoutes.length > 0) return availableRoutes;
-    const set = new Set<number>();
-    for (const r of rows) set.add(r.routeId);
-    return Array.from(set).sort((a, b) => a - b);
+    return Array.from(new Set(rows.map((r) => r.routeId))).sort((a, b) => a - b);
   }, [rows, availableRoutes]);
 
-  const visibleRoutes = useMemo<readonly number[]>(
-    () =>
-      showAllRoutes
-        ? allRouteIds
-        : allRouteIds.filter((r) => selectedRoutes.has(r)),
-    [allRouteIds, showAllRoutes, selectedRoutes],
-  );
+  const routeFilteredRows = useMemo<readonly PredictionRow[]>(() => {
+    if (showAllRoutes) return rows;
+    return rows.filter((r) => selectedRoutes.has(r.routeId));
+  }, [rows, selectedRoutes, showAllRoutes]);
 
-  const filteredRows = useMemo<PredictionRow[]>(() => {
-    const allowed = new Set(visibleRoutes);
-    return rows.filter((r) => allowed.has(r.routeId));
-  }, [rows, visibleRoutes]);
+  const visibleRoutes = useMemo<readonly number[]>(() => {
+    if (showAllRoutes) return allRouteIds;
+    return allRouteIds.filter((rid) => selectedRoutes.has(rid));
+  }, [allRouteIds, selectedRoutes, showAllRoutes]);
 
   const columns = useMemo<ColumnDef<PredictionRow>[]>(
     () => [
       {
         accessorKey: 'routeId',
-        header: () => t('passenger.predictionsTable.columnRoute'),
+        header: t('passenger.historicalTable.columnRoute'),
         cell: (info) => info.getValue<number>(),
       },
       {
         accessorKey: 'date',
-        header: () => t('passenger.predictionsTable.columnDate'),
+        header: t('passenger.historicalTable.columnDate'),
         cell: (info) => info.getValue<string>(),
       },
       {
         accessorKey: 'hour',
-        header: () => t('passenger.predictionsTable.columnHour'),
+        header: t('passenger.historicalTable.columnHour'),
         cell: (info) => info.getValue<number>(),
       },
       {
         accessorKey: 'value',
-        header: () => t('passenger.predictionsTable.columnValue'),
+        header: t('passenger.historicalTable.columnValue'),
         cell: (info) => info.getValue<number>().toFixed(2),
       },
     ],
@@ -255,7 +247,7 @@ function PredictionsTableInner({
   );
 
   const table = useReactTable<PredictionRow>({
-    data: filteredRows,
+    data: routeFilteredRows as PredictionRow[],
     columns,
     state: { sorting },
     onSortingChange: setSorting,
@@ -283,25 +275,25 @@ function PredictionsTableInner({
     });
   };
 
-return (
+  return (
     <div
-      data-testid="predictions-table"
+      data-testid="historical-table"
       role="region"
-      aria-label={t('passenger.predictionsTable.title')}
+      aria-label={t('passenger.historicalTable.title')}
     >
-      <h2 style={{ marginTop: 0 }}>{t('passenger.predictionsTable.title')}</h2>
+      <h2 style={{ marginTop: 0 }}>{t('passenger.historicalTable.title')}</h2>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
         <fieldset style={fieldsetStyle}>
           <legend style={{ padding: '0 6px', fontSize: 13 }}>
-            {t('passenger.predictionsTable.routesFilterLabel')}
+            {t('passenger.historicalTable.routesFilterLabel')}
           </legend>
           {allRouteIds.map((rid) => {
             const isChecked = showAllRoutes || selectedRoutes.has(rid);
             return (
               <label
                 key={rid}
-                data-testid={`predictions-table-route-${rid}`}
+                data-testid={`historical-table-route-${rid}`}
                 style={checkboxLabelStyle}
               >
                 <input
@@ -319,34 +311,33 @@ return (
             <button
               type="button"
               onClick={() => setShowAllRoutes(false)}
-              data-testid="predictions-table-collapse"
+              data-testid="historical-table-collapse"
               style={buttonStyle}
             >
-              {t('passenger.predictionsTable.collapse')}
+              {t('passenger.historicalTable.collapse')}
             </button>
           ) : (
             <button
               type="button"
               onClick={() => setShowAllRoutes(true)}
-              data-testid="predictions-table-show-all"
+              data-testid="historical-table-show-all"
               style={buttonStyle}
             >
-              {t('passenger.predictionsTable.showAll')}
+              {t('passenger.historicalTable.showAll')}
             </button>
           )}
         </fieldset>
       </div>
 
-<div
+      <div
         ref={parentRef}
-        data-testid="predictions-table-scroll"
+        data-testid="historical-table-scroll"
         style={scrollContainerStyle}
       >
         {/*
-          T-222 follow-up: <table>/<thead>/<tbody> заменены на семантический
-          ARIA-эквивалент с CSS Grid. Нативный <table> + display:flex в absolute
-          строках давали рассинхрон колонок; Grid делит один шаблон между
-          header и всеми rows, включая virtualized.
+          CSS Grid <div role="table"> wrapper. Header и data rows используют
+          общий grid-template-columns → колонки выровнены (включая
+          virtualized rows с absolute positioning).
           ARIA roles сохраняются для screen readers (W3C pattern).
         */}
         <div role="table" aria-rowcount={sortedRows.length} style={tableStyle}>
@@ -356,7 +347,7 @@ return (
               <div
                 key={hg.id}
                 role="row"
-                data-testid="predictions-table-header"
+                data-testid="historical-table-header"
                 data-grid-template-columns={GRID_TEMPLATE_COLUMNS}
                 style={headerRowStyle}
               >
@@ -364,10 +355,10 @@ return (
                   const sortDir = header.column.getIsSorted();
                   const sortAttr =
                     sortDir === 'asc'
-                      ? t('passenger.predictionsTable.sortAsc')
+                      ? t('passenger.historicalTable.sortAsc')
                       : sortDir === 'desc'
-                        ? t('passenger.predictionsTable.sortDesc')
-                        : t('passenger.predictionsTable.sortNone');
+                        ? t('passenger.historicalTable.sortDesc')
+                        : t('passenger.historicalTable.sortNone');
                   return (
                     <div
                       key={header.id}
@@ -393,7 +384,7 @@ return (
           {/* ── Body (virtualized) ──────────────────────────────── */}
           <div
             role="rowgroup"
-            data-testid="predictions-table-body"
+            data-testid="historical-table-body"
             style={{ position: 'relative', height: totalSize }}
           >
             {virtualRows.map((vr) => {
@@ -403,7 +394,7 @@ return (
                 <div
                   key={row.id}
                   role="row"
-                  data-testid="predictions-table-row"
+                  data-testid="historical-table-row"
                   data-index={vr.index}
                   data-grid-template-columns={GRID_TEMPLATE_COLUMNS}
                   style={virtualRowStyle(vr.start)}
@@ -421,16 +412,13 @@ return (
       </div>
 
       <p
-        data-testid="predictions-table-footer"
+        data-testid="historical-table-footer"
         style={{ marginTop: 8, fontSize: 13, color: '#64748b' }}
       >
-        {tf('passenger.predictionsTable.rowsFooter', filteredRows.length)}
+        {tf('passenger.historicalTable.rowsFooter', sortedRows.length)}
         {' · '}
-        {tf('passenger.predictionsTable.routesFooter', visibleRoutes.length)}
+        {tf('passenger.historicalTable.routesFooter', visibleRoutes.length)}
       </p>
     </div>
   );
-}
-
-
 }
