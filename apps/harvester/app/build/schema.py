@@ -49,5 +49,7 @@ def validate_payload(
 
     validator = jsonschema.Draft7Validator(schema)
     errors = sorted(validator.iter_errors(payload), key=lambda e: list(e.absolute_path))
-    return [f"{'/'.join(str(part) for part in error.absolute_path) or '<root>'}: {error.message}"
-            for error in errors]
+    return [
+        f"{'/'.join(str(part) for part in error.absolute_path) or '<root>'}: {error.message}"
+        for error in errors
+    ]

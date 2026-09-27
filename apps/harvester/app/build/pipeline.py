@@ -7,10 +7,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 import json
-import subprocess
 from pathlib import Path
-from typing import Any, Sequence
+import subprocess
+from typing import Any
 
 from app.build import builders
 from app.build.schema import validate_payload
@@ -134,9 +135,7 @@ def verify(out_dir: Path | str | None = None) -> int:
             problems.append(f"{name}: поле source={payload.get('source')!r}")
         rows = payload.get("rows")
         if isinstance(rows, list) and int(payload.get("rows_count", -1)) != len(rows):
-            problems.append(
-                f"{name}: rows_count={payload.get('rows_count')} != {len(rows)}"
-            )
+            problems.append(f"{name}: rows_count={payload.get('rows_count')} != {len(rows)}")
         if not payload.get("inputs"):
             problems.append(f"{name}: пустой список inputs")
         for issue in validate_payload(payload, name):

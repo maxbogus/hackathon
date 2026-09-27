@@ -32,7 +32,9 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="фиксированный generated_at (детерминизм; default: SOURCE_DATE_EPOCH/mtime)",
     )
-    parser.add_argument("--verify", action="store_true", help="проверить артефакты против манифеста")
+    parser.add_argument(
+        "--verify", action="store_true", help="проверить артефакты против манифеста"
+    )
     parser.add_argument("--show", action="store_true", help="показать таблицу источников")
     return parser
 
@@ -52,7 +54,9 @@ def main(argv: list[str] | None = None) -> int:
     sources = None
     if args.source != "all":
         if args.source not in builders.BUILDERS:
-            parser.error(f"unknown --source {args.source!r} (доступно: all, {', '.join(builders.SOURCES)})")
+            parser.error(
+                f"unknown --source {args.source!r} (доступно: all, {', '.join(builders.SOURCES)})"
+            )
         sources = [args.source]
 
     summary = pipeline.build_all(
