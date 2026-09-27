@@ -48,6 +48,7 @@ REPO_ROOT := $(shell pwd)
         dvc-probe dvc-init dvc-add-smoke dvc-add-real dvc-add-artifacts \
         dvc-status dvc-cache-size dvc-test \
         optuna-probe optuna-smoke optuna-run optuna-test \
+        airflow-probe airflow-dags-list airflow-tasks-list airflow-test-task airflow-test \
         dvc-probe dvc-init dvc-add-smoke dvc-add-real dvc-add-artifacts \
         dvc-status dvc-cache-size dvc-test \
         db-upgrade db-downgrade db-revision db-current db-history
@@ -638,6 +639,33 @@ optuna-run: ## 15-trial TPE run (~30 sec on real XGBoost, R6 budget)
 
 optuna-test: ## Optuna tests (storage, determinism, smoke)
 	$(UV) run --with pytest --with pytest-asyncio --with optuna python -m pytest ml/tests/test_optuna_objective.py -q
+
+
+# ---------------------------------------------------------------------------
+# MLOPS LAB: Airflow (DAG orchestration, ephemeral via uv run --with)
+# ---------------------------------------------------------------------------
+# Airflow is NOT in uv.lock: installed ephemerally via uv run --with apache-airflow.
+# AIRFLOW_HOME=mlops/airflow_home (gitignored), DAG bundle = mlops/dags/.
+# Manual trigger only (schedule=None); `airflow tasks test <dag> <task> <date>`
+# for single-task smoke (no scheduler).
+
+AIRFLOW_HOME ?= $(REPO_ROOT)/mlops/airflow_home
+
+airflow-probe: ## Airflow version ephemerally + db migrate
+	@AIRFLOW_HOME=$(AIRFLOW_HOME) $(UV) run --with apache-airflow airflow version
+	@AIRFLOW_HOME=$(AIRFLOW_HOME) $(UV) run --with apache-airflow airflow db migrate 2>&1 | tail -2
+
+airflow-dags-list: ## List DAGs in mlops/dags
+	@AIRFLOW_HOME=$(AIRFLOW_HOME) $(UV) run --with apache-airflow airflow dags list 2>&1 | grep -E "dag_id|transit" | head -10
+
+airflow-tasks-list: ## List tasks in transit_side_car DAG
+	@AIRFLOW_HOME=$(AIRFLOW_HOME) $(UV) run --with apache-airflow airflow tasks list transit_side_car 2>&1 | tail -10
+
+airflow-test-task: ## Test single task: make airflow-test-task TASK=lineage_snapshot
+	@AIRFLOW_HOME=$(AIRFLOW_HOME) $(UV) run --with apache-airflow airflow tasks test transit_side_car $(TASK) 2026-01-01 2>&1 | tail -3
+
+airflow-test: ## Airflow DAG structure tests (DAG loads, 3 tasks, deps)
+	$(UV) run --with pytest --with pytest-asyncio --with apache-airflow python -m pytest ml/tests/test_airflow_dag_structure.py -q
 
 # CI gate (расширенный): все проверки включая структурный анализ
 # ---------------------------------------------------------------------------
