@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """CLI для работы с docs/ledger/{decisions,findings}.jsonl."""
+
 from __future__ import annotations
 
 import argparse
+from datetime import UTC, datetime, timedelta
 import json
-import sys
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
+import sys
 
 LEDGER_DIR = Path("docs/ledger")
 DECISIONS = LEDGER_DIR / "decisions.jsonl"
@@ -35,7 +36,7 @@ def cmd_add(args: argparse.Namespace) -> int:
     kind = "decision" if args.kind == "decision" else "finding"
     target = DECISIONS if kind == "decision" else FINDINGS
     record_id = args.id or next_id(kind, target)
-    ts = datetime.now(timezone.utc).isoformat()
+    ts = datetime.now(UTC).isoformat()
 
     print(f"Добавляем {record_id} в {target.name}")
     record: dict = {"id": record_id, "ts": ts}
@@ -55,9 +56,7 @@ def cmd_add(args: argparse.Namespace) -> int:
     record["tickets"] = [
         x.strip() for x in input("  Tickets (T-NNN,T-NNN): ").split(",") if x.strip()
     ]
-    record["tags"] = [
-        x.strip() for x in input("  Tags (через запятую): ").split(",") if x.strip()
-    ]
+    record["tags"] = [x.strip() for x in input("  Tags (через запятую): ").split(",") if x.strip()]
 
     target.parent.mkdir(parents=True, exist_ok=True)
     with target.open("a", encoding="utf-8") as f:
@@ -71,7 +70,7 @@ def cmd_list(args: argparse.Namespace) -> int:
     if not DECISIONS.exists() and not FINDINGS.exists():
         print("Ledger пуст")
         return 0
-    cutoff = datetime.now(timezone.utc) - timedelta(days=args.days)
+    cutoff = datetime.now(UTC) - timedelta(days=args.days)
     total = 0
     for file, kind in [(DECISIONS, "D"), (FINDINGS, "F")]:
         if not file.exists():
@@ -113,7 +112,7 @@ def cmd_export(args: argparse.Namespace) -> int:
     lines = [
         "# Decision Ledger Export",
         "",
-        f"_Generated: {datetime.now(timezone.utc).isoformat()}_",
+        f"_Generated: {datetime.now(UTC).isoformat()}_",
         "",
     ]
     for file, prefix in [(DECISIONS, "## Decision"), (FINDINGS, "## Finding")]:
