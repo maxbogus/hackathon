@@ -48,7 +48,7 @@ describe('<App>', () => {
     // T-226: новая вкладка /historical с TanStack Table v8 (actuals).
     expect(await screen.findByRole('link', { name: /исторические данные/i })).toBeInTheDocument();
     // T-225: «Пассажир» в nav больше нет (был переименован).
-    expect(screen.queryByRole('link', { name: /^🧍\s*пассажир$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /^\s*пассажир$/i })).not.toBeInTheDocument();
     // T-200 / D-027: planner tab was removed.
     expect(screen.queryByRole('link', { name: /планировщик/i })).not.toBeInTheDocument();
     // Sanity: должно быть ровно 4 ссылки в nav.

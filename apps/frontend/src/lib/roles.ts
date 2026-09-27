@@ -54,16 +54,16 @@ export const ROLES: ReadonlyArray<RoleDef> = [
   {
     id: 'passenger',
     // T-225: «Пассажир» в nav теперь называется «Диспетчер». Emoji тоже
-    // перенесён с 🧍 (passenger) на 🎛️ (dispatcher). Сама страница
+    // перенесён с  (passenger) на 🎛️ (dispatcher). Сама страница
     // PassengerMode (дашборд «нагрузка по линиям») не переименована.
-    emoji: '🎛️',
+    emoji: '',
     labelKey: 'app.rolePassenger.label',
     descriptionKey: 'app.rolePassenger.description',
     placeholderKey: 'app.rolePassenger.placeholder',
   },
   {
     id: 'analyst',
-    emoji: '📊',
+    emoji: '',
     labelKey: 'app.roleAnalyst.label',
     descriptionKey: 'app.roleAnalyst.description',
     placeholderKey: 'app.rolePassenger.placeholder',
@@ -72,7 +72,7 @@ export const ROLES: ReadonlyArray<RoleDef> = [
     // T-222 follow-up: новая вкладка с таблицей прогнозов (D-038).
     // TanStack Table v8 + react-virtual, 14640 строк.
     id: 'predictions',
-    emoji: '📋',
+    emoji: '',
     labelKey: 'app.rolePredictions.label',
     descriptionKey: 'app.rolePredictions.description',
     placeholderKey: 'app.rolePassenger.placeholder',
@@ -81,7 +81,7 @@ export const ROLES: ReadonlyArray<RoleDef> = [
     // T-226: новая вкладка с таблицей исторических данных (actuals).
     // Зеркало PredictionsTable без поиска (F-101), колонка «Факт».
     id: 'historical',
-    emoji: '🕰️',
+    emoji: '',
     labelKey: 'app.roleHistorical.label',
     descriptionKey: 'app.roleHistorical.description',
     placeholderKey: 'app.rolePassenger.placeholder',

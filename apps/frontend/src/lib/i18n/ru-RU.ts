@@ -30,7 +30,7 @@ export const TEXTS = {
     /* App.tsx role-switcher buttons (T-141 replaces 4 hardcoded RoleDef literals) */
     rolePassenger: {
       // T-225 / D-037: «Пассажир» в nav переименован в «Диспетчер» (UX-rename).
-      // Emoji обновлён в lib/roles.ts (🧍 → 🎛️). Сам дашборд PassengerMode
+      // Emoji обновлён в lib/roles.ts ( → 🎛️). Сам дашборд PassengerMode
       // (страница /passenger) сохраняет имя «Пассажир — нагрузка по линиям»
       // в passenger.modeTitle — это название страницы, а не роль в nav.
       label: 'Диспетчер',
@@ -97,7 +97,7 @@ export const TEXTS = {
   },
 
   passenger: {
-    modeTitle: '🧍 Пассажир — нагрузка по линиям',
+    modeTitle: ' Пассажир — нагрузка по линиям',
     modeHint: 'Текущая загрузка каждого маршрута. Выберите свободный — и езжайте.',
     stopsLabel: 'Остановка',
     stopsLoading: 'Загрузка остановок…',

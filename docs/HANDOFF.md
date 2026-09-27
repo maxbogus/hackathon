@@ -225,10 +225,10 @@
 
 ## Мини-сессия 2026-09-27T13:30:00Z — T-225 rename «Пассажир» → «Диспетчер» (F-098, D-037)
 
-**Контекст:** На демо жюри nav содержал «🧍 Пассажир» (/passenger) и «🎛️ Диспетчер» (/dispatcher) — две вкладки с похожей семантикой. На самом деле /passenger — это основной экран диспетчера (нагрузка по линиям + отклонение actual vs prediction по T-218), а /dispatcher (AlertsPanel) — отдельный алерт-экран. Пользователь попросил переименовать /passenger → «Диспетчер», а /dispatcher убрать из nav (orphan-роут сохранить).
+**Контекст:** На демо жюри nav содержал « Пассажир» (/passenger) и «🎛️ Диспетчер» (/dispatcher) — две вкладки с похожей семантикой. На самом деле /passenger — это основной экран диспетчера (нагрузка по линиям + отклонение actual vs prediction по T-218), а /dispatcher (AlertsPanel) — отдельный алерт-экран. Пользователь попросил переименовать /passenger → «Диспетчер», а /dispatcher убрать из nav (orphan-роут сохранить).
 
 **Что сделано:**
-- `apps/frontend/src/lib/roles.ts`: `RoleId` сужен с 3 до 2 (`'passenger' | 'analyst'`), запись `dispatcher` удалена из `ROLES`, emoji 🧍 → 🎛️ у passenger.
+- `apps/frontend/src/lib/roles.ts`: `RoleId` сужен с 3 до 2 (`'passenger' | 'analyst'`), запись `dispatcher` удалена из `ROLES`, emoji  → 🎛️ у passenger.
 - `apps/frontend/src/lib/i18n/ru-RU.ts`: `app.rolePassenger.label` → `'Диспетчер'`, блок `app.roleDispatcher` удалён (orphan), placeholder обновлён под новый текст.
 - `apps/frontend/src/routes/{__root,passenger,dispatcher}.tsx`: обновлены header-комментарии (без функциональных изменений — /dispatcher остался как orphan-роут).
 - 3 теста обновлены: `App.test.tsx` (новое поведение nav), `routes/-__root.test.tsx` (2 ссылки вместо 3, проверка orphan-роута), `lib/i18n/t.test.ts` (snapshot sampleKeys без roleDispatcher).
@@ -252,7 +252,7 @@
 - `docs/backlog/tickets/T-225-rename-passenger-tab-to-dispatcher.md` (тикет создан, status: ready → in-progress; пометить done после commit)
 
 **На заметку для следующей сессии:**
-- Заголовок страницы `passenger.modeTitle = '🧍 Пассажир — нагрузка по линиям'` НЕ переименован — это название дашборда, не роль. Если пользователь захочет и его переименовать, см. apps/frontend/src/pages/PassengerMode.tsx:97.
+- Заголовок страницы `passenger.modeTitle = ' Пассажир — нагрузка по линиям'` НЕ переименован — это название дашборда, не роль. Если пользователь захочет и его переименовать, см. apps/frontend/src/pages/PassengerMode.tsx:97.
 - Если понадобится вернуть AlertsPanel в nav — добавить одну запись в ROLES + emoji + i18n ключ.
 - T-204 (XLSX-экспорт), T-221..T-224 (CSV-интеграция) — в работе, см. STATUS.md.
 

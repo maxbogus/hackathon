@@ -38,7 +38,7 @@ React 18 + TS strict, типизация через Orval из docs/api/openapi.
 
 ## Acceptance Criteria
 
-- [x] В `apps/frontend/src/App.tsx` (или роутере) добавлен role-switcher: «🧍 Пассажир / 🎛️ Диспетчер / 📊 Аналитик / 🔮 Планировщик»
+- [x] В `apps/frontend/src/App.tsx` (или роутере) добавлен role-switcher: « Пассажир / 🎛️ Диспетчер / 📊 Аналитик / 🔮 Планировщик»
 - [x] Компонент `apps/frontend/src/pages/PassengerMode.tsx` (или аналог)
 - [x] selectbox со списком остановок (из `GET /api/v1/stops` — Orval hook)
 - [x] При выборе остановки отображается 3 карточки ближайших рейсов (ETA + прогноз загрузки)

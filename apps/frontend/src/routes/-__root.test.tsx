@@ -112,7 +112,7 @@ describe('<RoleSwitcherNav>', () => {
 describe('router outlet', () => {
   it('renders the passenger panel at /passenger', async () => {
     await renderAt('/passenger');
-    // PassengerMode renders an <h2> with "🧍 Пассажир — нагрузка по линиям"
+    // PassengerMode renders an <h2> with " Пассажир — нагрузка по линиям"
     // (T-200: load-by-route grid replaces old stop selector).
     expect(
       await screen.findByRole('heading', { name: /пассажир.*нагрузка по линиям/i }),
