@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import JSON, DateTime, Float, Integer, String
+from sqlalchemy import JSON, Boolean, DateTime, Float, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -43,6 +43,19 @@ class PredictionRun(Base):
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )
     finished_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # T-230: candidate / activation lifecycle.
+    # status: started | running | ready | loaded | rejected | failed
+    pipeline_kind: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    """predict | full | seed"""
+    row_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    recommendation: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    """READY_TO_UPLOAD | NEEDS_FIX | WORSE_THAN_PREVIOUS | IDENTICAL_TO_PREVIOUS"""
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_etalon: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    activated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 

@@ -40,6 +40,7 @@ REPO_ROOT := $(shell pwd)
         note-from-finding promote handoff handoff-update \
         backlog-ready backlog-list ticket docs         pyscn pyscn-compare pyscn-baseline         arch-dbml arch-dbml-check         benchmark-baseline benchmark-all benchmark-compare         run-benchmark         loadtest-smoke loadtest-baseline loadtest-stress loadtest-spike loadtest-soak loadtest-all loadtest-check check-training-time \
         pipeline-up pipeline-down pipeline-logs pipeline-fetch pipeline-train pipeline-predict pipeline-full pipeline-status pipeline-test \
+        predictions-list predictions-activate predictions-restore-etalon predictions-ingest-csv \
         db-upgrade db-downgrade db-revision db-current db-history
 
 # ---------------------------------------------------------------------------
@@ -244,6 +245,22 @@ inspect-real: ## Print hackathon real dataset summary (T-143)
 # T-145: submission pipeline (WAPE-score = 0.8681 baseline на holdout)
 submission: ## Generate submission.csv for hackathon platform (10 routes × 61 days × 24h) (T-145)
 	$(UV) --directory ml run python scripts/make_submission.py --output $(REPO_ROOT)/predictions/submission.csv
+
+# === T-230: наборы прогнозов (активный набор + эталон) ===
+
+predictions-list: ## Список запусков генерации + активный набор (T-230)
+	cd apps/backend && PYTHONPATH=. $(UV) run python -m app.scripts.predictions_admin list
+
+predictions-activate: ## Сделать набор активным: make predictions-activate SUBMISSION_ID=ui-... (T-230)
+	@if [ -z "$(SUBMISSION_ID)" ]; then echo "ERROR: укажите SUBMISSION_ID=<id>"; exit 1; fi
+	cd apps/backend && PYTHONPATH=. $(UV) run python -m app.scripts.predictions_admin activate --submission-id "$(SUBMISSION_ID)"
+
+predictions-restore-etalon: ## Вернуть эталонный набор активным (T-230)
+	cd apps/backend && PYTHONPATH=. $(UV) run python -m app.scripts.predictions_admin restore-etalon
+
+predictions-ingest-csv: ## Загрузить CSV+manifest с диска: make predictions-ingest-csv CSV=predictions/x.csv (T-230)
+	@if [ -z "$(CSV)" ]; then echo "ERROR: укажите CSV=predictions/submission_....csv"; exit 1; fi
+	cd apps/backend && PYTHONPATH=. $(UV) run python -m app.scripts.predictions_admin ingest-path --csv "$(REPO_ROOT)/$(CSV)"
 
 # T-146: per-route WAPE diagnose
 diagnose: ## Per-route / per-hour / per-weekday WAPE diagnose (T-146)

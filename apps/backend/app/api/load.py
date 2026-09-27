@@ -18,7 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
 from app.load_tier import compute_load_pct, compute_load_tier
-from app.models import Actual, FeatureToggle, Prediction, ZeroOverride
+from app.models import Actual, Prediction
+from app.predictions_active import ActiveParams, active_params, feature_state
 from app.schemas.load import RouteLoadItem, RouteLoadListResponse
 
 router = APIRouter(prefix="/api/v1", tags=["load-summary"])
@@ -29,20 +30,20 @@ SUBMISSION_PERIOD_END = datetime(2025, 12, 31, 23, 59, 59, tzinfo=UTC)
 
 
 async def _default_feature_set(session: AsyncSession) -> str:
-    stmt = select(FeatureToggle).where(FeatureToggle.enabled == True)
-    rows = (await session.execute(stmt)).scalars().all()
-    names = {r.name for r in rows}
-    if {"use_poi", "use_weather", "use_events"}.issubset(names):
-        return "with_all"
-    if "use_poi" in names:
-        return "with_poi"
-    return "baseline"
+    """Дефолтный feature_set (делегирует feature_state, T-230)."""
+    return (await feature_state(session)).feature_set
 
 
 async def _default_zeros_state(session: AsyncSession) -> bool:
-    stmt = select(ZeroOverride).where(ZeroOverride.enabled == True)
-    rows = (await session.execute(stmt)).scalars().all()
-    return len(rows) > 0
+    """zeros_applied по enabled overrides (делегирует feature_state, T-230)."""
+    return (await feature_state(session)).zeros_applied
+
+
+def _active_coefs(active: ActiveParams | None) -> tuple[float, float, float]:
+    """Коэффициенты активного набора (T-230): 1.0 если активного набора нет."""
+    if active is None:
+        return (1.0, 1.0, 1.0)
+    return (active.coef_weather, active.coef_event, active.coef_season)
 
 
 @router.get(
@@ -67,10 +68,22 @@ async def get_predictions_load(
     if resolved_from >= resolved_to:
         resolved_from, resolved_to = SUBMISSION_PERIOD_START, SUBMISSION_PERIOD_END
 
+    active = await active_params(session)  # T-230: дефолты = активный набор
     if feature_set is None:
-        feature_set = await _default_feature_set(session)
+        feature_set = (
+            active.feature_set
+            if active and active.feature_set
+            else await _default_feature_set(session)
+        )
     if zeros_applied is None:
-        zeros_applied = await _default_zeros_state(session)
+        zeros_applied = (
+            active.zeros_applied
+            if active and active.zeros_applied is not None
+            else await _default_zeros_state(session)
+        )
+    if model_id is None and active is not None:
+        model_id = active.model_id
+    coef_weather, coef_event, coef_season = _active_coefs(active)
 
     stmt = (
         select(
@@ -79,13 +92,14 @@ async def get_predictions_load(
             func.count(Prediction.id).label("sample_size"),
         )
         .where(
+            Prediction.is_active.is_(True),  # T-230: только активный набор
             Prediction.horizon == horizon,
             Prediction.granularity == granularity,
             Prediction.period_start >= resolved_from,
             Prediction.period_start <= resolved_to,
-            Prediction.coef_weather == 1.0,
-            Prediction.coef_event == 1.0,
-            Prediction.coef_season == 1.0,
+            Prediction.coef_weather == coef_weather,
+            Prediction.coef_event == coef_event,
+            Prediction.coef_season == coef_season,
             Prediction.feature_set == feature_set,
             Prediction.zeros_applied == zeros_applied,
         )

@@ -71,6 +71,16 @@ class Settings(BaseSettings):
         description="Static reference data root (external catalogs, geo, POI).",
     )
 
+    # --- Predictions artifacts (T-230) ---
+    # Shared volume: ml-pipeline worker пишет submission CSV+manifest сюда,
+    # backend ingest'ит кандидата в БД (docker-compose: ./predictions → /app/predictions).
+    predictions_dir: Path = Field(
+        default=REPO_ROOT / "predictions",
+        description="Directory with generated submission CSV + manifest (shared volume).",
+    )
+    submission_period_start: str = Field(default="2025-11-01")
+    submission_period_end: str = Field(default="2025-12-31")
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

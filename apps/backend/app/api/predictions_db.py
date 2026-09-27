@@ -22,7 +22,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
-from app.models import FeatureToggle, Prediction, ZeroOverride
+from app.models import Prediction
+from app.predictions_active import active_params, feature_state
 from app.schemas.predictions_db import (
     PredictionPointDB,
     PredictionsDBResponse,
@@ -31,23 +32,56 @@ from app.schemas.predictions_db import (
 router = APIRouter(prefix="/api/v1", tags=["predictions-db"])
 
 
+async def _resolve_filters(
+    session: AsyncSession,
+    *,
+    model_id: str | None,
+    feature_set: str | None,
+    zeros_applied: bool | None,
+    prefer_active: bool = False,
+    active_model_id: str | None = None,
+    active_feature_set: str | None = None,
+    active_zeros: bool | None = None,
+) -> tuple[str | None, str | None, bool | None]:
+    """Дефолты чтения (T-230): активный набор → тогглы.
+
+    Если `prefer_active` — параметры берутся ТОЛЬКО из активного набора
+    (для фолбэка фронта, когда запрос по слайдерам вернул 0 точек).
+    """
+    if active_model_id is None and active_feature_set is None and active_zeros is None:
+        active = await active_params(session)
+        if active is not None:
+            active_model_id = active.model_id
+            active_feature_set = active.feature_set
+            active_zeros = active.zeros_applied
+
+    if prefer_active and active_feature_set is not None:
+        return active_model_id, active_feature_set, active_zeros
+
+    if feature_set is None:
+        feature_set = active_feature_set or await _default_feature_set(session)
+    if zeros_applied is None:
+        zeros_applied = (
+            active_zeros
+            if active_zeros is not None
+            else await _default_zeros_state(session)
+        )
+    if model_id is None:
+        model_id = active_model_id
+    return model_id, feature_set, zeros_applied
+
+
 async def _default_zeros_state(session: AsyncSession) -> bool:
-    """zeros_applied=True если хотя бы один zero_override enabled."""
-    stmt = select(ZeroOverride).where(ZeroOverride.enabled == True)
-    rows = (await session.execute(stmt)).scalars().all()
-    return len(rows) > 0
+    """zeros_applied=True если хотя бы один zero_override enabled.
+
+    Делегирует в `feature_state` (T-230: единый источник правды).
+    """
+    return (await feature_state(session)).zeros_applied
 
 
 async def _default_feature_set(session: AsyncSession) -> str:
-    """Дефолтный feature_set на основе enabled toggles."""
-    stmt = select(FeatureToggle).where(FeatureToggle.enabled == True)
-    rows = (await session.execute(stmt)).scalars().all()
-    names = {r.name for r in rows}
-    if {"use_poi", "use_weather", "use_events"}.issubset(names):
-        return "with_all"
-    if "use_poi" in names:
-        return "with_poi"
-    return "baseline"
+    """Дефолтный feature_set на основе enabled toggles (делегирует feature_state)."""
+    return (await feature_state(session)).feature_set
 
 
 @router.get(
@@ -62,6 +96,13 @@ async def get_predictions_db(
     model_id: str | None = Query(default=None),
     feature_set: str | None = Query(default=None),
     zeros_applied: bool | None = Query(default=None),
+    prefer_active: bool = Query(
+        default=False,
+        description=(
+            "T-230: игнорировать coef/feature_set/zeros и взять параметры "
+            "активного набора (фолбэк фронта, когда по слайдерам нет данных)."
+        ),
+    ),
     horizon: Literal["day", "month", "year"] = Query(default="day"),
     granularity: Literal["hour", "day", "month"] = Query(default="hour"),
     coef_weather: float = Query(default=1.0, ge=0, le=3),
@@ -76,12 +117,16 @@ async def get_predictions_db(
     if from_date >= to_date:
         raise HTTPException(status_code=400, detail="from_date must be < to_date")
 
-    if feature_set is None:
-        feature_set = await _default_feature_set(session)
-    if zeros_applied is None:
-        zeros_applied = await _default_zeros_state(session)
+    model_id, feature_set, zeros_applied = await _resolve_filters(
+        session,
+        model_id=model_id,
+        feature_set=feature_set,
+        zeros_applied=zeros_applied,
+        prefer_active=prefer_active,
+    )
 
     stmt = select(Prediction).where(
+        Prediction.is_active.is_(True),  # T-230: только активный набор (без дублей)
         Prediction.route_id == route_id,
         Prediction.horizon == horizon,
         Prediction.granularity == granularity,
@@ -160,12 +205,15 @@ async def export_predictions_csv(
     """
     if from_date >= to_date:
         raise HTTPException(status_code=400, detail="from_date must be < to_date")
-    if feature_set is None:
-        feature_set = await _default_feature_set(session)
-    if zeros_applied is None:
-        zeros_applied = await _default_zeros_state(session)
+    model_id, feature_set, zeros_applied = await _resolve_filters(
+        session,
+        model_id=model_id,
+        feature_set=feature_set,
+        zeros_applied=zeros_applied,
+    )
 
     stmt = select(Prediction).where(
+        Prediction.is_active.is_(True),  # T-230: только активный набор
         Prediction.period_start >= from_date,
         Prediction.period_start <= to_date,
         Prediction.coef_weather == coef_weather,
@@ -174,8 +222,10 @@ async def export_predictions_csv(
     )
     if model_id is not None:
         stmt = stmt.where(Prediction.model_id == model_id)
-    stmt = stmt.where(Prediction.feature_set == feature_set)
-    stmt = stmt.where(Prediction.zeros_applied == zeros_applied)
+    if feature_set is not None:
+        stmt = stmt.where(Prediction.feature_set == feature_set)
+    if zeros_applied is not None:
+        stmt = stmt.where(Prediction.zeros_applied == zeros_applied)
     stmt = stmt.order_by(Prediction.route_id, Prediction.period_start)
 
     rows = (await session.execute(stmt)).scalars().all()
@@ -233,12 +283,15 @@ async def export_predictions_xlsx(
 
     from openpyxl import Workbook
 
-    if feature_set is None:
-        feature_set = await _default_feature_set(session)
-    if zeros_applied is None:
-        zeros_applied = await _default_zeros_state(session)
+    model_id, feature_set, zeros_applied = await _resolve_filters(
+        session,
+        model_id=model_id,
+        feature_set=feature_set,
+        zeros_applied=zeros_applied,
+    )
 
     stmt = select(Prediction).where(
+        Prediction.is_active.is_(True),  # T-230: только активный набор
         Prediction.period_start >= from_date,
         Prediction.period_start <= to_date,
         Prediction.coef_weather == coef_weather,
@@ -247,8 +300,10 @@ async def export_predictions_xlsx(
     )
     if model_id is not None:
         stmt = stmt.where(Prediction.model_id == model_id)
-    stmt = stmt.where(Prediction.feature_set == feature_set)
-    stmt = stmt.where(Prediction.zeros_applied == zeros_applied)
+    if feature_set is not None:
+        stmt = stmt.where(Prediction.feature_set == feature_set)
+    if zeros_applied is not None:
+        stmt = stmt.where(Prediction.zeros_applied == zeros_applied)
     stmt = stmt.order_by(Prediction.route_id, Prediction.period_start)
 
     rows = (await session.execute(stmt)).scalars().all()

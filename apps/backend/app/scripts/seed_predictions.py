@@ -40,9 +40,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.db import _get_sessionmaker
 from app.models import Actual, FeatureToggle, Prediction, ZeroOverride
+from app.predictions_csv import load_predictions_csv
 from app.scripts._parsers import parse_float as _parse_float
 from app.scripts._parsers import parse_int as _parse_int
 from app.scripts._parsers import parse_route_id as _parse_route_id
+
+__all__ = [
+    "_parse_float",
+    "_parse_int",
+    "_parse_route_id",
+    "aggregate_actuals_csv",
+    "load_predictions_csv",
+]
 
 logger = logging.getLogger("seed_predictions")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -112,44 +121,8 @@ def aggregate_actuals_csv(
     return counts
 
 
-def load_predictions_csv(csv_path: Path) -> list[dict]:
-    """Читает test_submission.csv → список dict с ключами для INSERT.
-
-    Ожидаемый формат: route;date;hour;prediction (separator=";").
-    Returns list of dict с полями: route_id, period_start, period_end, value.
-    """
-    rows: list[dict] = []
-    if not csv_path.exists():
-        logger.warning("predictions CSV not found: %s", csv_path)
-        return rows
-
-    with csv_path.open("r", encoding="utf-8", newline="") as f:
-        reader = csv.DictReader(f, delimiter=";")
-        for row in reader:
-            route_id = _parse_int(row.get("route"))
-            hour = _parse_int(row.get("hour"))
-            date_raw = (row.get("date") or "").strip()
-            value = _parse_float(row.get("prediction"))
-            if route_id is None or hour is None or not date_raw or value is None:
-                continue
-            try:
-                date = datetime.fromisoformat(date_raw)
-            except ValueError:
-                continue
-            period_start = date.replace(hour=hour, minute=0, second=0, microsecond=0)
-            if period_start.tzinfo is None:
-                period_start = period_start.replace(tzinfo=UTC)
-            period_end = period_start + timedelta(hours=1)
-            rows.append(
-                {
-                    "route_id": route_id,
-                    "period_start": period_start,
-                    "period_end": period_end,
-                    "value": float(value),
-                }
-            )
-    logger.info("Loaded %d prediction rows from %s", len(rows), csv_path.name)
-    return rows
+# load_predictions_csv — вынесена в app/predictions_csv.py (T-230), чтобы
+# ingest кандидата в API не импортировал модуль с logging.basicConfig().
 
 
 async def _count_actuals(session: AsyncSession) -> int:
@@ -159,10 +132,16 @@ async def _count_actuals(session: AsyncSession) -> int:
     return int(res.scalar() or 0)
 
 
-async def _count_predictions(session: AsyncSession) -> int:
+async def _count_predictions(
+    session: AsyncSession, *, etalon_only: bool = False
+) -> int:
+    """Число predictions (всего или только эталонных, T-230)."""
     from sqlalchemy import func
 
-    res = await session.execute(select(func.count(Prediction.id)))
+    stmt = select(func.count(Prediction.id))
+    if etalon_only:
+        stmt = stmt.where(Prediction.is_etalon.is_(True))
+    res = await session.execute(stmt)
     return int(res.scalar() or 0)
 
 
@@ -223,10 +202,14 @@ async def _seed_actuals(
 async def _seed_predictions(
     session: AsyncSession, data_dir: Path, dry_run: bool
 ) -> int:
-    """INSERT predictions from test_submission.csv. Returns inserted count."""
-    existing = await _count_predictions(session)
+    """INSERT predictions from test_submission.csv. Returns inserted count.
+
+    T-230: skip-условие проверяет наличие ЭТАЛОННЫХ строк (а не любых) —
+    иначе после генерации нового набора эталон бы не досоздался на чистом volume.
+    """
+    existing = await _count_predictions(session, etalon_only=True)
     if existing > 0:
-        logger.info("predictions already has %d rows → skip", existing)
+        logger.info("etalon predictions already has %d rows → skip", existing)
         return 0
 
     sub_csv = data_dir / "real" / "test_submission.csv"
@@ -274,6 +257,10 @@ async def _seed_predictions(
                 coef_season=1.0,
                 submission_id="seed-test-submission",
                 git_commit=None,
+                # T-230: эталон — активен по умолчанию и помечен как etalon,
+                # чтобы restore-etalon мог вернуть его одним UPDATE.
+                is_active=True,
+                is_etalon=True,
             )
         )
         if len(payload) >= BULK:

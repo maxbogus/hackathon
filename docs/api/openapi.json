@@ -324,6 +324,18 @@
             }
           },
           {
+            "name": "prefer_active",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "T-230: игнорировать coef/feature_set/zeros и взять параметры активного набора (фолбэк фронта, когда по слайдерам нет данных).",
+              "default": false,
+              "title": "Prefer Active"
+            },
+            "description": "T-230: игнорировать coef/feature_set/zeros и взять параметры активного набора (фолбэк фронта, когда по слайдерам нет данных)."
+          },
+          {
             "name": "horizon",
             "in": "query",
             "required": false,
@@ -1391,9 +1403,26 @@
         "tags": [
           "pipeline"
         ],
-        "summary": "Trigger ml_pipeline.full_pipeline (T-198)",
-        "description": "Запускает Celery task full_pipeline (train + predict).",
+        "summary": "Trigger ml_pipeline.full_pipeline (T-198/T-230)",
+        "description": "Запускает Celery task full_pipeline (train + predict) с параметрами.",
         "operationId": "trigger_pipeline_full_api_v1_pipeline_full_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PipelineFullBody"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1405,6 +1434,16 @@
                   },
                   "type": "object",
                   "title": "Response Trigger Pipeline Full Api V1 Pipeline Full Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -1457,6 +1496,279 @@
         }
       }
     },
+    "/api/v1/predictions/regenerate": {
+      "post": {
+        "tags": [
+          "predictions-runs"
+        ],
+        "summary": "T-230: сгенерировать новый набор",
+        "description": "Запускает Celery-генерацию прогнозов с параметрами из UI/БД.",
+        "operationId": "regenerate_api_v1_predictions_regenerate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Regenerate Api V1 Predictions Regenerate Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/runs": {
+      "get": {
+        "tags": [
+          "predictions-runs"
+        ],
+        "summary": "T-230: список запусков генерации",
+        "description": "Последние запуски (новые сверху) + какой submission_id активен.",
+        "operationId": "list_runs_api_v1_predictions_runs_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictionRunListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "predictions-runs"
+        ],
+        "summary": "T-230: статус запуска + кандидат (при Celery SUCCESS)",
+        "description": "Статус запуска. Пока Celery работает — опрашиваем; при SUCCESS ищем CSV.",
+        "operationId": "get_run_api_v1_predictions_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictionRunOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/runs/{run_id}/ingest": {
+      "post": {
+        "tags": [
+          "predictions-runs"
+        ],
+        "summary": "T-230: загрузить CSV кандидата в БД (и опционально активировать)",
+        "description": "INSERT кандидата в `predictions`. Идемпотентность: повторный ingest → 409.",
+        "operationId": "ingest_run_api_v1_predictions_runs__run_id__ingest_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunActionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/runs/{run_id}/reject": {
+      "post": {
+        "tags": [
+          "predictions-runs"
+        ],
+        "summary": "T-230: отклонить кандидата (оставить эталон/текущий набор)",
+        "description": "Помечает кандидата `rejected`. Активный набор НЕ меняется.",
+        "operationId": "reject_run_api_v1_predictions_runs__run_id__reject_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunActionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/restore-etalon": {
+      "post": {
+        "tags": [
+          "predictions-runs"
+        ],
+        "summary": "T-230: вернуть эталонный набор как активный",
+        "description": "`UPDATE predictions SET is_active = is_etalon` (строки не удаляются).",
+        "operationId": "restore_etalon_endpoint_api_v1_predictions_restore_etalon_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunActionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/active": {
+      "get": {
+        "tags": [
+          "predictions-runs"
+        ],
+        "summary": "T-230: параметры активного набора (source of truth для UI)",
+        "description": "Что сейчас отдают чтения: submission_id, модель, фичи, zeros, coefs, строк.",
+        "operationId": "get_active_set_api_v1_predictions_active_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActiveSetResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "tags": [
@@ -1485,6 +1797,82 @@
   },
   "components": {
     "schemas": {
+      "ActiveSetResponse": {
+        "properties": {
+          "submission_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submission Id"
+          },
+          "model_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Id"
+          },
+          "feature_set": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feature Set"
+          },
+          "zeros_applied": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zeros Applied"
+          },
+          "coef_weather": {
+            "type": "number",
+            "title": "Coef Weather",
+            "default": 1.0
+          },
+          "coef_event": {
+            "type": "number",
+            "title": "Coef Event",
+            "default": 1.0
+          },
+          "coef_season": {
+            "type": "number",
+            "title": "Coef Season",
+            "default": 1.0
+          },
+          "row_count": {
+            "type": "integer",
+            "title": "Row Count",
+            "default": 0
+          },
+          "is_etalon": {
+            "type": "boolean",
+            "title": "Is Etalon",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "ActiveSetResponse",
+        "description": "Параметры активного набора (source of truth для UI-подписи)."
+      },
       "ActualPoint": {
         "properties": {
           "period_start": {
@@ -1806,6 +2194,18 @@
         "title": "HistoricalResponse",
         "description": "Ответ /historical/{route_id}."
       },
+      "IngestBody": {
+        "properties": {
+          "activate": {
+            "type": "boolean",
+            "title": "Activate",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "IngestBody",
+        "description": "Тело POST /predictions/runs/{id}/ingest."
+      },
       "OverloadAlert": {
         "properties": {
           "stop_id": {
@@ -1900,6 +2300,44 @@
         "title": "OverloadAlertsResponse",
         "description": "Response body for `GET /api/v1/insights/alerts`."
       },
+      "PipelineFullBody": {
+        "properties": {
+          "submission_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submission Id"
+          },
+          "coef_weather": {
+            "type": "number",
+            "title": "Coef Weather",
+            "default": 1.0
+          },
+          "coef_event": {
+            "type": "number",
+            "title": "Coef Event",
+            "default": 1.0
+          },
+          "coef_season": {
+            "type": "number",
+            "title": "Coef Season",
+            "default": 1.0
+          },
+          "zeros": {
+            "type": "boolean",
+            "title": "Zeros",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "PipelineFullBody",
+        "description": "T-230: параметры генерации для POST /pipeline/full (все опциональны)."
+      },
       "PredictionPointDB": {
         "properties": {
           "period_start": {
@@ -1983,6 +2421,202 @@
         "title": "PredictionPointDB",
         "description": "Одна точка прогноза из БД."
       },
+      "PredictionRunListResponse": {
+        "properties": {
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/PredictionRunOut"
+            },
+            "type": "array",
+            "title": "Runs"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "active_submission_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Submission Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "runs",
+          "count"
+        ],
+        "title": "PredictionRunListResponse",
+        "description": "Список запусков + текущий активный набор."
+      },
+      "PredictionRunOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "celery_task_id": {
+            "type": "string",
+            "title": "Celery Task Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "submission_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submission Id"
+          },
+          "model_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Id"
+          },
+          "feature_set": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feature Set"
+          },
+          "pipeline_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pipeline Kind"
+          },
+          "row_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row Count"
+          },
+          "holdout_wape_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Holdout Wape Score"
+          },
+          "recommendation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendation"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "is_etalon": {
+            "type": "boolean",
+            "title": "Is Etalon",
+            "default": false
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": false
+          },
+          "csv_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Csv Filename"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "activated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "celery_task_id",
+          "status",
+          "started_at"
+        ],
+        "title": "PredictionRunOut",
+        "description": "Один запуск генерации (candidate lifecycle)."
+      },
       "PredictionsDBResponse": {
         "properties": {
           "route_id": {
@@ -2049,6 +2683,99 @@
         ],
         "title": "PredictionsDBResponse",
         "description": "Ответ /predictions/db/{route_id}."
+      },
+      "RegenerateRequest": {
+        "properties": {
+          "coef_weather": {
+            "type": "number",
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Coef Weather",
+            "default": 1.0
+          },
+          "coef_event": {
+            "type": "number",
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Coef Event",
+            "default": 1.0
+          },
+          "coef_season": {
+            "type": "number",
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Coef Season",
+            "default": 1.0
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date",
+            "description": "YYYY-MM-DD"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date",
+            "description": "YYYY-MM-DD"
+          },
+          "model_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Id"
+          },
+          "model_kind": {
+            "type": "string",
+            "pattern": "^(route_baseline|xgboost_route)$",
+            "title": "Model Kind",
+            "default": "xgboost_route"
+          },
+          "feature_set": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feature Set",
+            "description": "Если None — выводится из feature_toggles"
+          },
+          "zeros_applied": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zeros Applied",
+            "description": "Если None — выводится из zero_overrides"
+          }
+        },
+        "type": "object",
+        "title": "RegenerateRequest",
+        "description": "Параметры генерации нового набора прогнозов.\n\nВсё опционально: не заданные поля берутся из БД (feature_toggles /\nzero_overrides) и из `settings` (submission period)."
       },
       "RouteLoadItem": {
         "properties": {
@@ -2169,6 +2896,44 @@
         ],
         "title": "RouteLoadListResponse",
         "description": "Ответ /predictions/load и /historical/load."
+      },
+      "RunActionResponse": {
+        "properties": {
+          "run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PredictionRunOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rows": {
+            "type": "integer",
+            "title": "Rows",
+            "default": 0
+          },
+          "active_submission_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Submission Id"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "RunActionResponse",
+        "description": "Ответ на ingest/reject/restore."
       },
       "ValidationError": {
         "properties": {

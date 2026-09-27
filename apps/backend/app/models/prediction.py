@@ -78,6 +78,13 @@ class Prediction(Base):
         String(64), nullable=True, index=True
     )
     git_commit: Mapped[str | None] = mapped_column(String(40), nullable=True)
+
+    # T-230: active/etalon switching.
+    # Строки НИКОГДА не удаляются: «подмена набора» = атомарный UPDATE флага.
+    # is_etalon — эталонный набор (restore-etalon возвращает его как активный).
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    is_etalon: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )
@@ -86,6 +93,7 @@ class Prediction(Base):
         Index("ix_predictions_route_period", "route_id", "period_start"),
         Index("ix_predictions_model_feature", "model_id", "feature_set"),
         Index("ix_predictions_submission", "submission_id"),
+        Index("ix_predictions_active", "is_active"),
     )
 
     def __repr__(self) -> str:

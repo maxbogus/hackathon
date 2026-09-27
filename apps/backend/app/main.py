@@ -31,6 +31,7 @@ from app.api.models import router as models_router
 from app.api.pipeline import router as pipeline_router
 from app.api.predictions import router as predictions_router
 from app.api.predictions_db import router as predictions_db_router
+from app.api.predictions_runs import router as predictions_runs_router
 from app.api.predictions_status import router as predictions_status_router
 from app.config import settings
 
@@ -90,6 +91,9 @@ def create_app() -> FastAPI:
     app.include_router(
         pipeline_router
     )  # T-198: /pipeline/full, /pipeline/status/{task_id}
+    app.include_router(
+        predictions_runs_router
+    )  # T-230: /predictions/regenerate, /runs, /active, /restore-etalon
 
     @app.get("/", tags=["meta"])
     def root() -> dict[str, str]:

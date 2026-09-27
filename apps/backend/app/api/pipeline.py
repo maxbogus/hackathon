@@ -19,8 +19,19 @@ from __future__ import annotations
 from functools import lru_cache
 
 from fastapi import APIRouter
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/v1", tags=["pipeline"])
+
+
+class PipelineFullBody(BaseModel):
+    """T-230: параметры генерации для POST /pipeline/full (все опциональны)."""
+
+    submission_id: str | None = None
+    coef_weather: float = 1.0
+    coef_event: float = 1.0
+    coef_season: float = 1.0
+    zeros: bool = False
 
 
 @lru_cache(maxsize=1)
@@ -36,11 +47,14 @@ def _get_celery_app():
     )
 
 
-@router.post("/pipeline/full", summary="Trigger ml_pipeline.full_pipeline (T-198)")
-async def trigger_pipeline_full() -> dict[str, str]:
-    """Запускает Celery task full_pipeline (train + predict)."""
+@router.post(
+    "/pipeline/full", summary="Trigger ml_pipeline.full_pipeline (T-198/T-230)"
+)
+async def trigger_pipeline_full(body: PipelineFullBody | None = None) -> dict[str, str]:
+    """Запускает Celery task full_pipeline (train + predict) с параметрами."""
+    kwargs = body.model_dump(exclude_none=True) if body is not None else {}
     celery_app = _get_celery_app()
-    result = celery_app.send_task("ml_pipeline.full_pipeline")
+    result = celery_app.send_task("ml_pipeline.full_pipeline", kwargs=kwargs)
     return {"task_id": result.id, "status": "queued"}
 
 
@@ -59,4 +73,9 @@ async def get_pipeline_status(task_id: str) -> dict[str, object]:
     }
 
 
-__all__ = ["get_pipeline_status", "router", "trigger_pipeline_full"]
+__all__ = [
+    "PipelineFullBody",
+    "get_pipeline_status",
+    "router",
+    "trigger_pipeline_full",
+]
