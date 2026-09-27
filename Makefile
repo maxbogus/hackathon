@@ -45,6 +45,10 @@ REPO_ROOT := $(shell pwd)
         mlflow-probe mlflow-demo mlflow-runs mlflow-test mlflow-ui mlflow-server mlflow-run \
         mlflow-ingest mlflow-ingest-only mlflow-leaderboard \
         lineage-snapshot-real lineage-snapshot lineage-verify lineage-test \
+        dvc-probe dvc-init dvc-add-smoke dvc-add-real dvc-add-artifacts \
+        dvc-status dvc-cache-size dvc-test \
+        dvc-probe dvc-init dvc-add-smoke dvc-add-real dvc-add-artifacts \
+        dvc-status dvc-cache-size dvc-test \
         db-upgrade db-downgrade db-revision db-current db-history
 
 # ---------------------------------------------------------------------------
@@ -574,6 +578,42 @@ lineage-verify: ## Проверить целостность: sha256 в meta.jso
 
 lineage-test: ## Тесты lineage пакета (hashing + snapshot, +pytest эфемерно)
 	$(UV) run --directory ml --with pytest --with pytest-asyncio python -m pytest tests/test_lineage_hashing.py tests/test_lineage_snapshot.py -q
+
+
+# ---------------------------------------------------------------------------
+# MLOPS LAB: DVC (dataset tracking, hardlink cache)
+# ---------------------------------------------------------------------------
+# DVC is NOT in uv.lock: installed ephemerally via uv run --with dvc.
+# cache.type=hardlink + cache.dir=mlops/dvc-cache on ext4 = 0 GB overhead.
+# Verified: train.csv inode in repo == inode in cache, link count = 2.
+# .dvc/ and *.dvc are committed; .dvc/cache/ is in .gitignore.
+
+dvc-probe: ## DVC version + filesystem support (hardlink/reflink)
+	@bash $(REPO_ROOT)/mlops/probes/dvc_probe.sh
+
+dvc-init: ## dvc init --no-scm + cache.type=hardlink + cache.dir=mlops/dvc-cache
+	@if [ -d $(REPO_ROOT)/.dvc ]; then echo "already initialized"; exit 0; fi
+	$(UV) run --with dvc dvc init --no-scm
+	$(UV) run --with dvc dvc cache dir mlops/dvc-cache
+	$(UV) run --with dvc dvc config cache.type hardlink
+
+dvc-add-smoke: ## dvc add data/external/normalized/manifest.json (smoke 5 KB, ~2s)
+	$(UV) run --with dvc dvc add data/external/normalized/manifest.json
+
+dvc-add-real: ## dvc add data/real/*.csv (~18s for 8 GB train.csv + ~6s for 2 GB test.csv)
+	$(UV) run --with dvc dvc add data/real/train.csv data/real/test.csv
+
+dvc-add-artifacts: ## dvc add ml/artifacts/*/model.pkl (~25s, 23 files)
+	@for pkl in ml/artifacts/*/model.pkl; do $(UV) run --with dvc dvc add "$$pkl"; done
+
+dvc-status: ## dvc status (data up-to-date?)
+	$(UV) run --with dvc dvc status
+
+dvc-cache-size: ## DVC cache size (close to 0 if hardlink works)
+	@du -sh $(REPO_ROOT)/mlops/dvc-cache 2>/dev/null || echo "no cache yet"
+
+dvc-test: ## DVC probe tests (script exists + version >= 3.0)
+	$(UV) run --with pytest --with pytest-asyncio python -m pytest ml/tests/test_dvc_probe.py -q
 
 # CI gate (расширенный): все проверки включая структурный анализ
 # ---------------------------------------------------------------------------

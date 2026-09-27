@@ -27,8 +27,12 @@ from transit_ai.tracking import experiment_name, is_enabled, tracking_uri  # noq
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Local holdout vs platform leaderboard")
-    parser.add_argument("--top", type=int, default=30, help="показать top-N (default 30)")
+    parser = argparse.ArgumentParser(
+        description="Local holdout vs platform leaderboard"
+    )
+    parser.add_argument(
+        "--top", type=int, default=30, help="показать top-N (default 30)"
+    )
     parser.add_argument("--all", action="store_true", help="показать все")
     args = parser.parse_args()
 
@@ -64,8 +68,10 @@ def main() -> int:
     print()
 
     # Header
-    print(f"{'submission_id':<40} {'model':<30} {'holdout':>8} {'platform':>9} "
-          f"{'drift':>8} {'submitted':>10} {'git':>9}")
+    print(
+        f"{'submission_id':<40} {'model':<30} {'holdout':>8} {'platform':>9} "
+        f"{'drift':>8} {'submitted':>10} {'git':>9}"
+    )
     print("-" * 120)
 
     limit = len(runs) if args.all else args.top
@@ -85,8 +91,10 @@ def main() -> int:
                 return f"{v:8.4f}"
             return f"{v:>8}"
 
-        print(f"{sub:<40} {model:<30} {fmt(holdout):>8} {fmt(platform):>9} "
-              f"{fmt(drift):>8} {submitted:>10} {git:>9}")
+        print(
+            f"{sub:<40} {model:<30} {fmt(holdout):>8} {fmt(platform):>9} "
+            f"{fmt(drift):>8} {submitted:>10} {git:>9}"
+        )
 
     # Статистика
     submitted_count = 0

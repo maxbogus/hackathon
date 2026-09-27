@@ -56,13 +56,16 @@ def ingest_artifact(client, source: ArtifactSource, exp_id: str) -> str:
     if _already_ingested(client, source, exp_id):
         return "skipped"
     run_name = f"artifact-{source.model_id}"
-    with track_run(run_name, tags={
-        "transit_ai.source": "ml-artifact",
-        "transit_ai.kind": source.kind,
-        "transit_ai.git_commit": source.git_commit,
-        "transit_ai.ingest_key": source.ingest_key,
-        "transit_ai.model_id": source.model_id,
-    }) as run:
+    with track_run(
+        run_name,
+        tags={
+            "transit_ai.source": "ml-artifact",
+            "transit_ai.kind": source.kind,
+            "transit_ai.git_commit": source.git_commit,
+            "transit_ai.ingest_key": source.ingest_key,
+            "transit_ai.model_id": source.model_id,
+        },
+    ) as run:
         if not run.enabled:
             return "disabled"
         run.log_params(source.params)
@@ -77,21 +80,27 @@ def ingest_manifest(client, source: ManifestSource, exp_id: str) -> str:
     if _already_ingested(client, source, exp_id):
         return "skipped"
     run_name = f"submission-{source.submission_id}"
-    with track_run(run_name, params={
-        "submission_id": source.submission_id,
-        "model_id": source.model_id,
-        "git_commit": source.git_commit,
-        "dataset_hash_sha256": source.dataset_hash_sha256,
-        "row_count": source.row_count,
-        "post_processing": ",".join(source.post_processing),
-        "coefficients": ",".join(f"{k}={v}" for k, v in source.coefficients.items()),
-        "train_date_range": ",".join(source.train_date_range),
-        "submission_date_range": ",".join(source.submission_date_range),
-    }, tags={
-        "transit_ai.source": "submission-manifest",
-        "transit_ai.ingest_key": source.ingest_key,
-        "transit_ai.platform_submitted": str(source.platform_submitted),
-    }) as run:
+    with track_run(
+        run_name,
+        params={
+            "submission_id": source.submission_id,
+            "model_id": source.model_id,
+            "git_commit": source.git_commit,
+            "dataset_hash_sha256": source.dataset_hash_sha256,
+            "row_count": source.row_count,
+            "post_processing": ",".join(source.post_processing),
+            "coefficients": ",".join(
+                f"{k}={v}" for k, v in source.coefficients.items()
+            ),
+            "train_date_range": ",".join(source.train_date_range),
+            "submission_date_range": ",".join(source.submission_date_range),
+        },
+        tags={
+            "transit_ai.source": "submission-manifest",
+            "transit_ai.ingest_key": source.ingest_key,
+            "transit_ai.platform_submitted": str(source.platform_submitted),
+        },
+    ) as run:
         if not run.enabled:
             return "disabled"
         # Metrics: holdout + platform (если есть)
@@ -101,9 +110,9 @@ def ingest_manifest(client, source: ManifestSource, exp_id: str) -> str:
             run.log_metrics({"platform_score": source.platform_score})
         # Drift = platform - holdout (если оба есть)
         if source.holdout_wape_score is not None and source.platform_score is not None:
-            run.log_metrics({
-                "drift_wape_score": source.platform_score - source.holdout_wape_score
-            })
+            run.log_metrics(
+                {"drift_wape_score": source.platform_score - source.holdout_wape_score}
+            )
         run.log_artifact(source.path)
         if source.notes:
             run.log_json({"notes": source.notes}, "notes.json")
@@ -114,23 +123,29 @@ def ingest_benchmark(client, source: BenchmarkSource, exp_id: str) -> str:
     if _already_ingested(client, source, exp_id):
         return "skipped"
     run_name = source.name
-    with track_run(run_name, tags={
-        "transit_ai.source": "benchmark-csv",
-        "transit_ai.ingest_key": source.ingest_key,
-    }) as run:
+    with track_run(
+        run_name,
+        tags={
+            "transit_ai.source": "benchmark-csv",
+            "transit_ai.ingest_key": source.ingest_key,
+        },
+    ) as run:
         if not run.enabled:
             return "disabled"
         # Парсим CSV: первая строка — header, далее data
         import csv
+
         with source.path.open() as f:
             reader = csv.reader(f)
             rows = list(reader)
         if not rows:
             return "empty"
-        run.log_params({
-            "n_rows": len(rows) - 1,
-            "columns": ",".join(rows[0]),
-        })
+        run.log_params(
+            {
+                "n_rows": len(rows) - 1,
+                "columns": ",".join(rows[0]),
+            }
+        )
         run.log_artifact(source.path)
         return "created"
 
@@ -159,15 +174,23 @@ def main() -> int:
 
     plan = discover_all()
     if args.only != "all":
-        plan.artifact_sources = plan.artifact_sources if args.only == "artifacts" else []
-        plan.manifest_sources = plan.manifest_sources if args.only == "manifests" else []
-        plan.benchmark_sources = plan.benchmark_sources if args.only == "benchmarks" else []
+        plan.artifact_sources = (
+            plan.artifact_sources if args.only == "artifacts" else []
+        )
+        plan.manifest_sources = (
+            plan.manifest_sources if args.only == "manifests" else []
+        )
+        plan.benchmark_sources = (
+            plan.benchmark_sources if args.only == "benchmarks" else []
+        )
 
     if not args.quiet:
         print(f"experiment: {exp_name} (id={exp_id})")
         print(f"uri:        {tracking_uri()}")
-        print(f"sources:    {plan.total} ({plan.artifact_count} artifacts + "
-              f"{plan.manifest_count} manifests + {plan.benchmark_count} benchmarks)")
+        print(
+            f"sources:    {plan.total} ({plan.artifact_count} artifacts + "
+            f"{plan.manifest_count} manifests + {plan.benchmark_count} benchmarks)"
+        )
         print()
 
     counts = {"created": 0, "skipped": 0, "disabled": 0, "empty": 0, "errors": 0}
@@ -209,8 +232,10 @@ def main() -> int:
     elapsed = time.monotonic() - t0
     if not args.quiet:
         print()
-        print(f"created={counts['created']} skipped={counts['skipped']} "
-              f"errors={counts['errors']} time={elapsed:.1f}s")
+        print(
+            f"created={counts['created']} skipped={counts['skipped']} "
+            f"errors={counts['errors']} time={elapsed:.1f}s"
+        )
 
     return 0
 

@@ -126,7 +126,9 @@ def _build_artifact_source(meta_path: Path, repo_root: Path) -> ArtifactSource:
     kind = data.get("kind", "")
     git_commit = data.get("git_commit", "unknown")
     metrics_raw = data.get("metrics", {})
-    metrics = {k: float(v) for k, v in metrics_raw.items() if isinstance(v, (int, float))}
+    metrics = {
+        k: float(v) for k, v in metrics_raw.items() if isinstance(v, (int, float))
+    }
     # params: всё из meta кроме metrics/files/train_data_hash → в params как JSON
     params: dict[str, str] = {}
     for k, v in data.items():
@@ -158,7 +160,9 @@ def _build_artifact_source(meta_path: Path, repo_root: Path) -> ArtifactSource:
     )
 
 
-def discover_artifact_sources(repo_root: Path | str = REPO_ROOT_DEFAULT) -> list[ArtifactSource]:
+def discover_artifact_sources(
+    repo_root: Path | str = REPO_ROOT_DEFAULT,
+) -> list[ArtifactSource]:
     """Все артефакты в ml/artifacts/*/ с валидным meta.json + model.pkl."""
     root = Path(repo_root)
     artifacts_dir = root / "ml" / "artifacts"
@@ -176,7 +180,9 @@ def discover_artifact_sources(repo_root: Path | str = REPO_ROOT_DEFAULT) -> list
     return sources
 
 
-def discover_manifest_sources(repo_root: Path | str = REPO_ROOT_DEFAULT) -> list[ManifestSource]:
+def discover_manifest_sources(
+    repo_root: Path | str = REPO_ROOT_DEFAULT,
+) -> list[ManifestSource]:
     """Все submission manifests в predictions/*.json (НЕ manifest от harvester)."""
     root = Path(repo_root)
     pred_dir = root / "predictions"
@@ -223,7 +229,9 @@ def discover_manifest_sources(repo_root: Path | str = REPO_ROOT_DEFAULT) -> list
     return sources
 
 
-def discover_benchmark_sources(repo_root: Path | str = REPO_ROOT_DEFAULT) -> list[BenchmarkSource]:
+def discover_benchmark_sources(
+    repo_root: Path | str = REPO_ROOT_DEFAULT,
+) -> list[BenchmarkSource]:
     """Все benchmark CSV в docs/reports/benchmark_*.csv."""
     root = Path(repo_root)
     rep_dir = root / "docs" / "reports"

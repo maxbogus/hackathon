@@ -51,7 +51,9 @@ def fake_repo(tmp_path: Path) -> Path:
         "files": {"model": "model.pkl"},
     }
     (art_dir / "meta.json").write_text(json.dumps(meta))
-    (art_dir / "model.pkl").write_bytes(b"\x80\x04\x95\x10\x00\x00\x00\x00\x00\x00")  # fake pickle header
+    (art_dir / "model.pkl").write_bytes(
+        b"\x80\x04\x95\x10\x00\x00\x00\x00\x00\x00"
+    )  # fake pickle header
 
     # 2. predictions/submission_xxx.json (манифест)
     pred_dir = tmp_path / "predictions"
@@ -89,6 +91,7 @@ def test_make_ingest_key_is_stable_per_source(tmp_path: Path) -> None:
     assert make_ingest_key(p) != make_ingest_key(tmp_path / "m.json") or True
     # Гарантия: sha256 реальный
     import hashlib
+
     expected = hashlib.sha256(p.read_bytes()).hexdigest()
     assert make_ingest_key(p) == expected
 
@@ -100,7 +103,9 @@ def test_discover_artifact_sources_finds_model_pkl(fake_repo: Path) -> None:
     assert isinstance(s, ArtifactSource)
     assert s.model_id == "test_model"
     assert s.meta_path == fake_repo / "ml" / "artifacts" / "test_model" / "meta.json"
-    assert s.model_pkl_path == fake_repo / "ml" / "artifacts" / "test_model" / "model.pkl"
+    assert (
+        s.model_pkl_path == fake_repo / "ml" / "artifacts" / "test_model" / "model.pkl"
+    )
     assert s.kind == "xgboost"
     # params/metrics извлечены
     assert s.metrics["wape_score"] == 0.85
@@ -146,6 +151,7 @@ def test_artifact_source_ingest_key_is_sha256_of_meta(fake_repo: Path) -> None:
     """source.ingest_key == sha256(meta.json bytes)."""
     sources = list(discover_artifact_sources(fake_repo))
     import hashlib
+
     expected = hashlib.sha256(sources[0].meta_path.read_bytes()).hexdigest()
     assert sources[0].ingest_key == expected
 
@@ -153,6 +159,7 @@ def test_artifact_source_ingest_key_is_sha256_of_meta(fake_repo: Path) -> None:
 def test_manifest_source_ingest_key_is_sha256_of_json(fake_repo: Path) -> None:
     sources = list(discover_manifest_sources(fake_repo))
     import hashlib
+
     expected = hashlib.sha256(sources[0].path.read_bytes()).hexdigest()
     assert sources[0].ingest_key == expected
 
