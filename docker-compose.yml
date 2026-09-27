@@ -101,6 +101,9 @@ services:
       - ./ml:/app/ml:rw
       # predictions: rw — Celery tasks пишут submission.csv
       - ./predictions:/app/predictions:rw
+      # F-096: docs/schemas/prediction_artifact.schema.json — ArtifactLoader читает в runtime
+      # ro поверх COPY из Dockerfile (для dev-итераций без пересборки образа)
+      - ./docs:/app/docs:ro
     networks:
       - transit-net
     # Backend в compose: не пробрасываем порт наружу (frontend ходит через transit-net)

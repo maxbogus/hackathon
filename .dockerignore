@@ -44,6 +44,8 @@ node_modules/
 tests/
 docs/
 scripts/
+# F-096: docs/schemas/prediction_artifact.schema.json нужен ArtifactLoader в runtime
+!docs/schemas/
 
 # === Runtime данные (gitignored, монтируются через volumes) ===
 data/

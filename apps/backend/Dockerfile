@@ -39,6 +39,9 @@ RUN pip install --no-index --find-links=/tmp/wheels/ -r /tmp/requirements.deps.t
 
 # Workspace sources (owned by user 1000)
 COPY --chown=1000:1000 pyproject.toml uv.lock* README.md ./
+# F-096: docs/schemas/prediction_artifact.schema.json нужен ArtifactLoader в runtime
+# (REPO_ROOT/docs/schemas/prediction_artifact.schema.json = /app/docs/...)
+COPY --chown=1000:1000 docs /app/docs
 COPY --chown=1000:1000 ml/pyproject.toml ml/README.md ./ml/
 # T-198m: копируем исходный код transit_ai (workspace package)
 COPY --chown=1000:1000 ml/transit_ai /app/ml/transit_ai
