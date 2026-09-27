@@ -748,3 +748,63 @@ Predictions залиты как синтетика (shift test.csv). Для prod
 
 P0-сабмит: опубликовать backend `:8000` в `docker-compose.yml` -> `make loadtest-smoke` + `loadtest-baseline` ->
 обязательный блок производительности в README -> `docs/SUBMISSION.md` (6 пунктов формы, RU).
+
+---
+
+# 2026-09-27T22:45Z — T-233: переключатель маршрута на экране «Аналитик»
+
+## Что сделано (RED -> GREEN -> REFACTOR)
+
+**1. `apps/frontend/src/lib/routeCatalog.ts` (NEW)** — каталог маршрутов для
+селектора: объединение `GET /api/v1/historical` (маршруты с фактами) и
+`GET /api/v1/predictions/load` (маршруты с прогнозами), сортировка + дедуп.
+Один упавший источник не обнуляет список; если оба пусты/упали — `CANONICAL_ROUTES`
+(10 маршрутов хакатона, F-045 / clinerule 23 R6). Функция никогда не бросает —
+тот же контракт, что у `lib/routeLoad.ts` / `lib/geoRoutes.ts`.
+
+**2. `components/Filters/RouteSelect.tsx` (NEW)** — pure controlled
+`<select data-testid="route-select">` (зеркало `HorizonGranularity`): список
+приходит сверху, наружу уходит `number`, в API компонент не ходит.
+
+**3. `components/Charts/AnalystDashboard.tsx`** — `routeId` получил сеттер,
+добавлены `useQuery(['route-catalog'])` (staleTime 5 мин) и `routeOptions`
+(текущий маршрут всегда есть в опциях — иначе браузер сбросил бы `value`).
+Оба графика рефетчатся сами: `routeId` уже в их `queryKey`/URL.
+
+**4. `components/Filters/FiltersPanel.tsx`** — вместо статичной строки
+«Маршрут: 7» селектор; ранний `return` по `/api/v1/features` убран: сбой фич
+больше не скрывает маршрут и коэффициенты (`data-testid="filters-features-{loading,error}"`).
+
+**5. Тесты (16 новых)** — `lib/routeCatalog.test.ts` (7),
+`components/Filters/RouteSelect.test.tsx` (4),
+`components/Charts/AnalystDashboard.test.tsx` (5, wiring: смена маршрута
+доезжает до обоих чартов через `data-route`).
+
+**6. i18n** — `analyst.routeOption` в `ru-RU.ts` + строка в `MIGRATION.md`.
+
+## Проверки
+
+- `yarn test:run` → 298 passed (включая 16 новых); 2 падения в `lib/routeCsv.test.ts` —
+  предсуществующие (скоуп T-221, не трогал).
+- `yarn typecheck` → только предсуществующие ошибки `lib/routeCsv.ts:38,45`.
+- `yarn prettier --check` + `yarn eslint` на новых/изменённых файлах — чисто.
+- `make frontend-text-check` — зелёный.
+- Коммит `7a1b11b`, тикет ушёл в `docs/backlog/archive/T-233-analyst-route-selector.md`.
+
+## Замечания по гигиене репо
+
+- В дереве 3 файла, изменённых **до** этой сессии (чужой WIP):
+  `pages/HistoricalView.tsx`, `pages/PredictionsView.tsx`,
+  `routes/-__root.test.tsx` — в коммит T-233 они не попали.
+- `yarn format` нормализовал формат ~23 посторонних файлов (в репо системный
+  prettier-дрейф: часть файлов закоммичена неформатированной, см. F-122) —
+  изменения откачены `git checkout`, кроме `routes/-__root.test.tsx`:
+  вернуть его исходный формат нельзя без потери чужих правок.
+- F-122 подтверждён этим коммитом: pre-commit pretier печатает
+  `[error] No files matching the pattern ...` (пути от корня репо + `cd apps/frontend`)
+  и всё равно пишет `prettier passed`.
+
+## Следующая задача
+
+T-233 закрыт. Далее — `make backlog-ready`. Вне объёма T-233 осталось
+сохранение выбранного маршрута в URL (`?route=`, TanStack `validateSearch`).
