@@ -145,7 +145,7 @@ def main() -> int:
     else:
         report_path = args.report
 
-    print(f"📊 Checking SLA: {report_path}")
+    print(f" Checking SLA: {report_path}")
     metrics = parse_k6_report(report_path)
     print(f"   p50={metrics['p50_ms']:.1f}ms  p95={metrics['p95_ms']:.1f}ms  "
           f"p99={metrics['p99_ms']:.1f}ms  avg={metrics['avg_ms']:.1f}ms")

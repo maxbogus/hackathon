@@ -136,7 +136,7 @@ describe('router outlet', () => {
 
   it('renders the analyst dashboard at /analyst', async () => {
     await renderAt('/analyst');
-    // AnalystDashboard (T-196) renders an <h1> with "📊 Аналитик — данные и прогнозы".
+    // AnalystDashboard (T-196) renders an <h1> with " Аналитик — данные и прогнозы".
     expect(
       await screen.findByRole('heading', { name: /аналитик.*данные и прогнозы/i }),
     ).toBeInTheDocument();

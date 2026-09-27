@@ -148,7 +148,7 @@
 - `apps/frontend/src/pages/HistoricalView.tsx` — page-wrapper (useQuery → HistoricalTable).
 - `apps/frontend/src/routes/historical.tsx` — file-based route (`/historical`).
 - `apps/frontend/src/routeTree.gen.ts` — добавлен 4-й route (gitignored, генерируется vite-plugin).
-- `apps/frontend/src/lib/roles.ts` — `RoleId` расширен `'passenger' | 'analyst' | 'predictions' | 'historical'`, `ROLES` пополнен 4-й ролью 🕰️ "Исторические данные".
+- `apps/frontend/src/lib/roles.ts` — `RoleId` расширен `'passenger' | 'analyst' | 'predictions' | 'historical'`, `ROLES` пополнен 4-й ролью  "Исторические данные".
 - `apps/frontend/src/lib/i18n/ru-RU.ts` — добавлены `app.roleHistorical.{label,description}`, блок `passenger.historicalTable.*` (14 ключей), блок `historical.{viewTitle,viewHint}`.
 - `apps/frontend/src/components/Passenger/index.ts` — добавлен `HistoricalTable` + `HistoricalTableProps` в barrel.
 - `apps/frontend/src/lib/i18n/MIGRATION.md` — строка T-226.
@@ -173,7 +173,7 @@
 - `docs/ledger/decisions.jsonl` — D-039 (нет globalFilter в таблицах).
 
 **Что осталось / Известные ограничения:**
-- ✅ Вкладка `/historical` (🕰️ Исторические данные) появилась в навигации как 4-я после Прогноз · таблица.
+- ✅ Вкладка `/historical` ( Исторические данные) появилась в навигации как 4-я после Прогноз · таблица.
 - ✅ Поиск убран из обеих таблиц — multi-select маршрутов достаточно для 10 маршрутов.
 - ⚠️ routeCsv.ts имеет 2 pre-existing TS errors (HANDOFF.md упоминал). Не блокер, fix в T-221 follow-up.
 - ⚠️ frontend-text-check падает на pre-existing Cyrillic в комментариях RouteLoadCard.tsx. Не блокер.

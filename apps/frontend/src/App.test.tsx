@@ -10,8 +10,8 @@
  *
  * T-225 / D-037: /passenger переименован в «Диспетчер» (UX-rename). Старая
  * вкладка /dispatcher (AlertsPanel) убрана из nav как orphan-роут.
- * T-222 follow-up: добавлена 3-я вкладка «📋 Прогноз · таблица» (PredictionsTable).
- * В nav остаются 3 ссылки: 🎛️ Диспетчер, 📊 Аналитик, 📋 Прогноз · таблица.
+ * T-222 follow-up: добавлена 3-я вкладка « Прогноз · таблица» (PredictionsTable).
+ * В nav остаются 3 ссылки: 🎛️ Диспетчер,  Аналитик,  Прогноз · таблица.
  *
  * Covers AC-1 (role-switcher with two entries) at a minimal level. The
  * deeper <PassengerMode> behaviour is covered by PassengerMode.test.tsx;

@@ -117,7 +117,7 @@ def main() -> int:
     parser.add_argument("--limit-sec", type=float, default=R6_LIMIT_SEC)
     args = parser.parse_args()
 
-    print(f"📊 Scanning {args.artifacts_dir} for training time...")
+    print(f" Scanning {args.artifacts_dir} for training time...")
     records = scan_artifacts(args.artifacts_dir)
     if not records:
         print("⚠ No artifacts found. Skipping R6 check.")

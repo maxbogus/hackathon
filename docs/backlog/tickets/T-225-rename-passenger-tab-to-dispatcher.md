@@ -47,7 +47,7 @@ assignee: ""
 - [x] `yarn test:run` — 26/26 в моих файлах, 149/151 всего (2 pre-existing failures в `routeCsv.test.ts` — T-221)
 - [x] `yarn lint` — 0 issues в моих файлах (6 pre-existing в `downloadCsv.ts`, 2 warnings в `HorizonToggle.tsx`)
 - [x] `make frontend-text-check` (grep) — без хардкода
-- [x] Визуально (через `yarn dev`): на `/` редирект на `/passenger`, в nav 2 ссылки — 🎛️ Диспетчер (active) и 📊 Аналитик (подтверждено по тестам + ручной проверке DOM)
+- [x] Визуально (через `yarn dev`): на `/` редирект на `/passenger`, в nav 2 ссылки — 🎛️ Диспетчер (active) и  Аналитик (подтверждено по тестам + ручной проверке DOM)
 - [x] Прямая ссылка `/dispatcher` всё ещё работает (orphan, рендерит AlertsPanel — тест `'renders the dispatcher alerts panel at /dispatcher'` остался зелёным)
 
 **Knowledge:**
@@ -89,7 +89,7 @@ cd apps/frontend && yarn lint
 # 4. Visual
 cd apps/frontend && yarn dev
 # Открыть http://localhost:5173/ → редирект на /passenger
-# В nav должно быть: [🎛️ Диспетчер (active)] [📊 Аналитик]
+# В nav должно быть: [🎛️ Диспетчер (active)] [ Аналитик]
 # Перейти на /analyst — там остаётся активной Аналитик
 # Перейти на /dispatcher — orphan-роут, рендерит AlertsPanel (но из nav не доступен)
 ```

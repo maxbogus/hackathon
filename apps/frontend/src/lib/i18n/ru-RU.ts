@@ -91,7 +91,7 @@ export const TEXTS = {
 
   /* T-222 follow-up: страница /predictions — таблица прогнозов. */
   predictions: {
-    viewTitle: '📋 Прогноз — таблица на весь период',
+    viewTitle: ' Прогноз — таблица на весь период',
     viewHint:
       'Все сохранённые прогнозы из БД (10 маршрутов, 1 ноября — 31 декабря). Фильтры по маршрутам, поиск, сортировка по любой колонке. По умолчанию показаны 4 маршрута с лучшим WAPE-score.',
   },
@@ -144,7 +144,7 @@ export const TEXTS = {
        T-226 / F-101: searchPlaceholder удалён (поиск работает глючно,
        multi-select маршрутов достаточно для 10 маршрутов). */
     predictionsTable: {
-      title: '📋 Прогноз — весь период',
+      title: ' Прогноз — весь период',
       routesFilterLabel: 'Маршруты',
       columnRoute: 'Маршрут',
       columnDate: 'Дата',
@@ -163,7 +163,7 @@ export const TEXTS = {
     /* T-226: HistoricalTable.tsx — TanStack Table v8 + virtual scroll,
        зеркало predictionsTable без поиска (F-101), колонка «Факт». */
     historicalTable: {
-      title: '🕰️ Исторические данные — весь период',
+      title: ' Исторические данные — весь период',
       routesFilterLabel: 'Маршруты',
       columnRoute: 'Маршрут',
       columnDate: 'Дата',
@@ -193,7 +193,7 @@ export const TEXTS = {
 
   analyst: {
     /* T-196: Analyst dashboard — historical + predictions + feature toggles */
-    title: '📊 Аналитик — данные и прогнозы',
+    title: ' Аналитик — данные и прогнозы',
     routeLabel: 'Маршрут',
     fromLabel: 'Период с',
     toLabel: 'Период по',
@@ -211,7 +211,7 @@ export const TEXTS = {
     downloadCsv: '⬇️ Скачать CSV',
     csvDownloaded: (rows: number) => `✅ Скачано ${rows} строк`,
     csvError: 'Не удалось сгенерировать CSV',
-    filtersTitle: '⚙️ Параметры прогноза',
+    filtersTitle: ' Параметры прогноза',
     featuresTitle: 'Фичи модели',
     zerosTitle: 'Обнуление',
     coefWeather: 'Погода',
