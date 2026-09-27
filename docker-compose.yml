@@ -106,10 +106,10 @@ services:
       - ./docs:/app/docs:ro
     networks:
       - transit-net
-    # Backend в compose: не пробрасываем порт наружу (frontend ходит через transit-net)
-    # Если нужен прямой доступ — раскомментируйте:
-    # ports:
-    #   - "${BACKEND_HOST_PORT:-8000}:8000"
+    # Backend в compose: порт наружу — Swagger для жюри (:8000/docs) и k6 (localhost:8000).
+    # Внутри сети frontend ходит по имени сервиса (transit-net).
+    ports:
+      - "${BACKEND_HOST_PORT:-8000}:8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/api/v1/healthz').raise_for_status()"]
       interval: 30s

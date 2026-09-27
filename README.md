@@ -166,6 +166,39 @@ make assistant-test      # smoke test registry моделей
 - **Cache:** Redis 7
 - **Tooling:** uv 0.5+, ruff, mypy strict, yarn 4 (corepack), vite 5+, vitest, tsc 5+, eslint 9+ flat config, orval
 
+## 📈 Производительность (замеры)
+
+> **Обязательный раздел по ТЗ.** Методика: k6 0.54 (Docker, `grafana/k6`) нагружает
+> `GET /api/v1/predictions/stop/{id}` (реальный инференс активной модели) по сети
+> `localhost:8000`; k6 пришпилен к CPU 0–1, backend — на остальных ядрах, чтобы
+> измерять сервис, а не тестер. Отчёты: `docs/load-profiles/reports/*.html`.
+
+| Профиль | Дата | Нагрузка | Запросов | Err | avg | p90 | **p95** | max |
+|---|---|---|---|---|---|---|---|---|
+| smoke (CI-gate) | 2026-09-27 | 10 VU × 30 s (think-time 1 s) | 300 | 0.00 % | 7.7 ms | 18.5 ms | **26.3 ms** | 71.5 ms |
+
+**Выводы (честно):**
+
+- p95 = **26 мс** при SLA хакатона **≤ 2000 мс** (R6) — запас ~75×;
+- ошибок 0 из 300; узкое место при 10 VU не найдено;
+- RPS в smoke ограничен think-time 1 с (≈10 rps на 1 воркер промпта), поэтому это
+  проверка latency-бюджета, а не замер пропускной способности: регрессионный
+  `make loadtest-baseline` (50 VU × 5 min) и `stress` (100 VU × 3 min) дают
+  throughput-числа, HTML-отчёты кладутся туда же.
+
+**Ресурсы одного экземпляра** (`docker-compose.yml`, лимиты, а не «железо»):
+
+| Контейнер | CPU | RAM | Роль |
+|---|---|---|---|
+| backend (FastAPI) | 0.5 vCPU | 768 MiB | API + инференс из артефактов |
+| postgres (TimescaleDB) | — | 512 MiB | actuals + predictions |
+| redis | — | 128 MiB | кэш + Celery broker |
+| frontend (nginx) | — | 128 MiB | статика + прокси `/api` |
+| k6 (только профиль `loadtest`) | 2.0 vCPU (cpuset 0,1) | 1 GiB | тестер нагрузки |
+
+Воспроизведение: `make up` → `make loadtest-smoke` → `make loadtest-check`
+(парсит JSON последнего прогона и валидирует SLA p95 ≤ 2 s, err ≤ 1 %).
+
 ## Документация
 
 - [AGENTS.md](AGENTS.md) — карта проекта для AI-агентов
