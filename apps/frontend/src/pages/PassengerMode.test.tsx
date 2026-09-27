@@ -1,120 +1,166 @@
 /**
- * T-129: RED phase — integration tests for the <PassengerMode> page.
+ * T-200 (новая редакция): <PassengerMode> показывает нагрузку по всем
+ * доступным маршрутам (10 трамвайных линий Москвы). Никаких остановок —
+ * только сетка карточек с номером маршрута и текущей загрузкой.
  *
- * The page renders:
- *  - a <select> with all stops (loaded via getStops)
- *  - three <EtaCard>s with the closest trams (loaded via getEta)
- *  - a recommendation banner driven by recommend() (T-130)
+ * Что на экране:
+ *  - заголовок «Нагрузка по линиям»
+ *  - сетка <RouteLoadCard> × 10 (по одной на маршрут)
+ *  - каждая карточка раскрашена по 4-уровневой шкале (loadTier)
+ *  - подвал: «Модель: baseline_v1 · WAPE-score 0.9272»
  *
- * We mock `etaClient` so the tests stay synchronous-ish and don't need MSW.
+ * Источник данных:
+ *  - список маршрутов: GET /api/v1/historical → routes[]
+ *  - нагрузка: GET /api/v1/historical/{route_id}?granularity=hour (последний час)
+ *  - активная модель: GET /api/v1/models/active
  */
 
-import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { describe, expect, it, vi, afterEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 
 import { PassengerMode } from './PassengerMode';
 
-// Mock the data layer. Real-mode behaviour is covered separately by
-// etaClient.test.ts — here we only need to drive the page through React.
-vi.mock('@/lib/etaClient', () => {
-  return {
-    getStops: vi.fn(async () => [
-      { id: 1, name: 'Белорусская', lat: 55.7765, lon: 37.5842, routes: [7, 9] },
-      { id: 2, name: 'Чистые пруды', lat: 55.7588, lon: 37.6387, routes: [3, 39] },
-    ]),
-    getEta: vi.fn(async (stopId: number) => {
-      if (stopId === 1) {
-        return [
-          { route_id: 7, route_name: '7', eta_min: 2, predicted_load_pct: 35, model_id: 'm' },
-          { route_id: 9, route_name: '9', eta_min: 6, predicted_load_pct: 78, model_id: 'm' },
-          { route_id: 10, route_name: 'А', eta_min: 11, predicted_load_pct: 40, model_id: 'm' },
-        ];
-      }
-      if (stopId === 2) {
-        return [
-          { route_id: 3, route_name: '3', eta_min: 1, predicted_load_pct: 95, model_id: 'm' },
-          { route_id: 39, route_name: '39', eta_min: 6, predicted_load_pct: 60, model_id: 'm' },
-        ];
-      }
-      return [];
-    }),
-  };
+const ROUTES = [1, 7, 11, 12, 17, 25, 26, 28, 50];
+const ACTIVE_MODEL_PAYLOAD = {
+  model_id: 'baseline_v1',
+  metrics: { wape_score: 0.9272, rmsle: 0.23 },
+};
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
-describe('<PassengerMode>', () => {
-  it('renders a stop selector populated with all stops from the data layer', async () => {
-    render(<PassengerMode />);
-    await waitFor(() => {
-      expect(screen.getByRole('option', { name: /белорусская/i })).toBeInTheDocument();
-      expect(screen.getByRole('option', { name: /чистые пруды/i })).toBeInTheDocument();
-    });
-  });
+function mockApi(opts: {
+  routes?: number[];
+  perRouteValue?: Record<number, number>;
+  modelPayload?: object | null;
+} = {}): void {
+  const routes = opts.routes ?? ROUTES;
+  const perRouteValue = opts.perRouteValue ?? {};
+  const modelPayload = opts.modelPayload ?? ACTIVE_MODEL_PAYLOAD;
 
-  it('renders exactly three <EtaCard>s for the initially selected stop', async () => {
-    render(<PassengerMode />);
-    // The first stop (id=1) has 3 trams in the mock; cards appear once data loads.
-    // EtaCard sets data-testid="eta-card" on its root element so we count by that.
-    await waitFor(() => {
-      const cards = screen.getAllByTestId('eta-card');
-      expect(cards.length).toBe(3);
-    });
-  });
+  global.fetch = vi.fn(async (input: RequestInfo | URL) => {
+    const url = typeof input === 'string' ? input : input.toString();
 
-  it('shows a recommendation banner driven by recommend()', async () => {
-    render(<PassengerMode />);
-    await waitFor(() => {
-      // For the default mock stop (id=1, load 35%) recommend() returns
-      // "Садитесь — будет комфортно" with success severity.
-      expect(screen.getByText(/садитесь/i)).toBeInTheDocument();
-    });
-  });
-
-  it('refetches ETA predictions when a different stop is selected', async () => {
-    const { getEta } = await import('@/lib/etaClient');
-    render(<PassengerMode />);
-    await waitFor(() => screen.getByRole('combobox'));
-    const select = screen.getByRole('combobox') as HTMLSelectElement;
-    fireEvent.change(select, { target: { value: '2' } });
-
-    await waitFor(() => {
-      expect(getEta).toHaveBeenCalledWith(2);
-    });
-  });
-
-  it('handles the "no data" case gracefully when getEta returns []', async () => {
-    const { getEta } = await import('@/lib/etaClient');
-    (getEta as ReturnType<typeof vi.fn>).mockResolvedValueOnce([]);
-
-    render(<PassengerMode />);
-    await waitFor(() => {
-      expect(screen.getByText(/нет данных/i)).toBeInTheDocument();
-    });
-  });
-
-  it('shows the active model id from /api/v1/models/active in the footer (T-201)', async () => {
-    // Mock fetch for /models/active (T-201: replace hard-coded "—" with
-    // the active model id + WAPE-score fetched on mount).
-    const originalFetch = global.fetch;
-    global.fetch = vi.fn(async (input: RequestInfo | URL) => {
-      const url = typeof input === 'string' ? input : input.toString();
-      if (url.includes('/api/v1/models/active')) {
-        return new Response(
-          JSON.stringify({ model_id: 'baseline_v1', wape_score: 0.9272 }),
-          { status: 200, headers: { 'content-type': 'application/json' } },
-        );
-      }
-      return originalFetch(input);
-    }) as typeof global.fetch;
-
-    try {
-      render(<PassengerMode />);
-      await waitFor(() => {
-        expect(screen.getByText(/baseline_v1/i)).toBeInTheDocument();
+    if (url.includes('/api/v1/historical') && !url.match(/\/historical\/\d/)) {
+      // /api/v1/historical → list of routes
+      return new Response(JSON.stringify({ routes, count: routes.length }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
       });
-      // Footer should mention WAPE-score when available.
-      expect(screen.getByText(/0\.9272|0\.93/i)).toBeInTheDocument();
-    } finally {
-      global.fetch = originalFetch;
     }
+
+    const routeMatch = url.match(/\/api\/v1\/historical\/(\d+)/);
+    if (routeMatch) {
+      const routeId = Number(routeMatch[1]);
+      // Default: 60 boardings/hour → 60/150 = 40% load (green)
+      const value = perRouteValue[routeId] ?? 60;
+      return new Response(
+        JSON.stringify({
+          route_id: routeId,
+          granularity: 'hour',
+          points: [
+            { period_start: '2025-09-30T20:00:00Z', period_end: '2025-09-30T21:00:00Z', value },
+          ],
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      );
+    }
+
+    if (url.includes('/api/v1/models/active')) {
+      if (modelPayload === null) {
+        return new Response('boom', { status: 503 });
+      }
+      return new Response(JSON.stringify(modelPayload), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+
+    return new Response('not found', { status: 404 });
+  }) as typeof global.fetch;
+}
+
+describe('<PassengerMode> — нагрузка по линиям', () => {
+  it('does NOT render a stop selector (T-200: убрали остановки)', async () => {
+    mockApi();
+    render(<PassengerMode />);
+    await waitFor(() => {
+      // Никаких <select> с остановками
+      expect(screen.queryByRole('combobox')).toBeNull();
+    });
+  });
+
+  it('renders one <RouteLoadCard> per route from /api/v1/historical', async () => {
+    mockApi();
+    render(<PassengerMode />);
+    await waitFor(() => {
+      const cards = screen.getAllByTestId('route-load-card');
+      expect(cards.length).toBe(ROUTES.length);
+    });
+  });
+
+  it('each route card shows the route number and load percentage', async () => {
+    mockApi({ perRouteValue: { 7: 120 } }); // 120/150 = 80% → yellow (70-90)
+    render(<PassengerMode />);
+    await waitFor(() => {
+      expect(screen.getByText('Маршрут 7')).toBeInTheDocument();
+      // 120/150 = 80%
+      expect(screen.getByText('80%')).toBeInTheDocument();
+    });
+  });
+
+  it('colors the card yellow for load 80% (between 70 and 90)', async () => {
+    mockApi({ perRouteValue: { 7: 120 } }); // 80%
+    render(<PassengerMode />);
+    const card = await waitFor(() => {
+      const cards = screen.getAllByTestId('route-load-card');
+      const c = cards.find((el) => el.textContent?.includes('Маршрут 7'));
+      if (!c) throw new Error('Маршрут 7 card not found');
+      return c;
+    });
+    expect(card.getAttribute('data-tier')).toBe('yellow');
+  });
+
+  it('colors the card red for load 100% (between 90 and 110)', async () => {
+    mockApi({ perRouteValue: { 1: 150 } }); // 100%
+    render(<PassengerMode />);
+    const card = await waitFor(() => {
+      const cards = screen.getAllByTestId('route-load-card');
+      const c = cards.find((el) => el.textContent?.includes('Маршрут 1'));
+      if (!c) throw new Error('Маршрут 1 card not found');
+      return c;
+    });
+    expect(card.getAttribute('data-tier')).toBe('red');
+  });
+
+  it('colors the card green for low load (60/150 = 40%)', async () => {
+    mockApi({ perRouteValue: { 11: 60 } }); // 40%
+    render(<PassengerMode />);
+    const card = await waitFor(() => {
+      const cards = screen.getAllByTestId('route-load-card');
+      const c = cards.find((el) => el.textContent?.includes('Маршрут 11'));
+      if (!c) throw new Error('Маршрут 11 card not found');
+      return c;
+    });
+    expect(card.getAttribute('data-tier')).toBe('green');
+  });
+
+  it('shows the active model + WAPE-score in the footer', async () => {
+    mockApi();
+    render(<PassengerMode />);
+    await waitFor(() => {
+      expect(screen.getByText(/baseline_v1/i)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/0\.9272/i)).toBeInTheDocument();
+  });
+
+  it('keeps showing cards when /models/active is down (silent failure)', async () => {
+    mockApi({ modelPayload: null });
+    render(<PassengerMode />);
+    await waitFor(() => {
+      const cards = screen.getAllByTestId('route-load-card');
+      expect(cards.length).toBe(ROUTES.length);
+    });
   });
 });

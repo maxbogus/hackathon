@@ -31,7 +31,7 @@ describe('t() — static lookups', () => {
   });
 
   it('returns the passenger-mode heading', () => {
-    expect(t('passenger.modeTitle')).toBe('🧍 Пассажир — ближайшие трамваи');
+    expect(t('passenger.modeTitle')).toBe('🧍 Пассажир — нагрузка по линиям');
   });
 
   it('returns the severity labels', () => {

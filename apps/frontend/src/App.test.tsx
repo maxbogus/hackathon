@@ -45,7 +45,7 @@ describe('<App>', () => {
   it('redirects "/" to /passenger and renders the passenger panel', async () => {
     renderWithProviders(<App />);
     expect(
-      await screen.findByRole('heading', { name: /пассажир.*ближайшие трамваи/i }),
+      await screen.findByRole('heading', { name: /пассажир.*нагрузка по линиям/i }),
     ).toBeInTheDocument();
   });
 });

@@ -26,6 +26,14 @@ export interface ActiveModelInfo {
  * Fetch the active model from the backend. Returns `null` on any failure
  * (network, 5xx, malformed JSON) — callers should treat that as
  * "footer has no extra info".
+ *
+ * The backend returns `wape_score` nested inside `metrics`:
+ *   {
+ *     "model_id": "baseline_v1",
+ *     "metrics": { "wape_score": 0.9272, ... },
+ *     ...
+ *   }
+ * We also accept a top-level `wape_score` for backward compatibility.
  */
 export async function fetchActiveModel(
   baseUrl = '/api/v1/models/active',
@@ -39,13 +47,17 @@ export async function fetchActiveModel(
     }
     const data = (await response.json()) as Record<string, unknown>;
     const modelId = typeof data['model_id'] === 'string' ? data['model_id'] : null;
-    const wapeRaw = data['wape_score'];
+
+    // WAPE-score: prefer nested metrics.wape_score, fall back to top-level.
+    const metrics = (data['metrics'] ?? {}) as Record<string, unknown>;
+    const wapeRaw = metrics['wape_score'] ?? data['wape_score'];
     const wape =
       typeof wapeRaw === 'number'
         ? wapeRaw
         : typeof wapeRaw === 'string'
           ? Number.parseFloat(wapeRaw)
           : null;
+
     if (!modelId) {
       return null;
     }

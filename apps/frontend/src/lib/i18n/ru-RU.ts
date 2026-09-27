@@ -69,12 +69,12 @@ export const TEXTS = {
   },
 
   passenger: {
-    modeTitle: '🧍 Пассажир — ближайшие трамваи',
-    modeHint: 'Выберите остановку, чтобы увидеть прогноз прибытия и загрузки.',
+    modeTitle: '🧍 Пассажир — нагрузка по линиям',
+    modeHint: 'Текущая загрузка каждого маршрута. Выберите свободный — и езжайте.',
     stopsLabel: 'Остановка',
     stopsLoading: 'Загрузка остановок…',
-    stopsEmpty: 'Нет остановок',
-    etaLoading: 'Загрузка прогнозов…',
+    stopsEmpty: 'Нет маршрутов',
+    etaLoading: 'Загрузка нагрузки…',
     etaError: (msg: string) => `Ошибка загрузки данных: ${msg}`,
     modelFooter: (modelId: string) => `Модель: ${modelId} · обновлено только что`,
     activeModelFooter: (modelId: string, wape: string) =>
@@ -84,6 +84,13 @@ export const TEXTS = {
       departed: '🚉 Ушёл',
       etaTemplate: (min: number) => `⏱ ${min} мин`,
       loadTemplate: (pct: number) => `👥 ${pct}% загрузка`,
+    },
+    /* T-200 (новая редакция): легенда загрузки по 4 уровням */
+    loadTier: {
+      green: 'свободно',
+      yellow: 'умеренно',
+      red: 'тесно',
+      darkred: 'перегруз',
     },
   },
 
