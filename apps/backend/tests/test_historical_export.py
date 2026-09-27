@@ -133,7 +133,9 @@ class TestHistoricalExportCsv:
         assert len(lines) == 2
         assert lines[1] == "1;2025-10-30;10;200.00"
 
-    def test_returns_multiple_routes_sorted(self, client: TestClient, app_with_db) -> None:
+    def test_returns_multiple_routes_sorted(
+        self, client: TestClient, app_with_db
+    ) -> None:
         rows = [
             Actual(
                 route_id=7,

@@ -29,14 +29,17 @@ export const TEXTS = {
     navAriaLabel: 'Переключатель ролей',
     /* App.tsx role-switcher buttons (T-141 replaces 4 hardcoded RoleDef literals) */
     rolePassenger: {
-      label: 'Пассажир',
-      description: 'Когда приедет трамвай и будет ли место?',
-      placeholder: 'Этот режим появится в следующих тикетах. Сейчас готов только режим «Пассажир».',
-    },
-    roleDispatcher: {
+      // T-225 / D-037: «Пассажир» в nav переименован в «Диспетчер» (UX-rename).
+      // Emoji обновлён в lib/roles.ts (🧍 → 🎛️). Сам дашборд PassengerMode
+      // (страница /passenger) сохраняет имя «Пассажир — нагрузка по линиям»
+      // в passenger.modeTitle — это название страницы, а не роль в nav.
       label: 'Диспетчер',
-      description: 'Алерты по перегрузу (T-131)',
+      description: 'Когда приедет трамвай и будет ли место?',
+      placeholder:
+        'Этот режим сейчас в активной разработке. Показаны реальные и прогнозные данные по маршрутам.',
     },
+    // T-225 / D-037: блок app.roleDispatcher удалён (orphan, /dispatcher
+    // остался как orphan-роут для прямого URL — см. routes/dispatcher.tsx).
     roleAnalyst: {
       label: 'Аналитик',
       description: 'Графики и метрики (T-035/037)',
@@ -106,6 +109,20 @@ export const TEXTS = {
     actualsHeader: 'Как было (факт)',
     predictionsHeader: 'Как будет (прогноз)',
     routeNoData: 'нет данных',
+    /* T-218+ (отзыв пользователя): карточка показывает прогноз и отклонение */
+    predictedShort: 'прогноз',
+    deviationShort: 'отклонение',
+    routeNoPrediction: 'нет прогноза',
+    /* T-218+: легенда цветовой шкалы (LoadLegend.tsx) */
+    legend: {
+      title: 'Условные обозначения',
+      green: 'в норме · |откл| < 15%',
+      yellow: '+15..+30% от прогноза',
+      red: '+30..+60%',
+      darkred: 'перегруз +60%+',
+      lightblue: 'недогруз · меньше чем ожидалось',
+      gray: 'нет данных',
+    },
   },
 
   common: {

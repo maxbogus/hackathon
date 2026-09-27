@@ -79,9 +79,7 @@ class OverloadAlertsResponse(BaseModel):
     )
     horizon: str = Field(
         default="day",
-        description=(
-            f"Forecast horizon used to score alerts. One of {HORIZONS}."
-        ),
+        description=(f"Forecast horizon used to score alerts. One of {HORIZONS}."),
     )
     alerts: list[OverloadAlert] = Field(
         default_factory=list,

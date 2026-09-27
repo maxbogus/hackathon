@@ -2,17 +2,20 @@
  * TanStack Router file-based routing - root route.
  *
  * T-135: this is now the app shell.
- *   - Header (title + tagline + role-switcher with 4 URL <Link>s).
- *   - <Outlet /> renders the matched child route (passenger, dispatcher,
- *     analyst, planner). The role lives in the URL - browser back/forward
- *     and reload all work for free.
+ *   - Header (title + tagline + role-switcher with 2 URL <Link>s — Диспетчер
+ *     + Аналитик, см. T-225 / D-037).
+ *   - <Outlet /> renders the matched child route (passenger = Диспетчер,
+ *     analyst). The /dispatcher route still exists as an orphan (AlertsPanel)
+ *     for backward compatibility — it is reachable by direct URL but no
+ *     longer surfaced in the role-switcher. The role lives in the URL —
+ *     browser back/forward and reload all work for free.
  *
  * Required by @tanstack/router-vite-plugin (F-009): the plugin refuses
  * to start without this file even if all routes live elsewhere.
  *
  * Why the active role is computed from the URL (not React state):
  *   The URL is the source of truth. `useRouterState` reads it on every
- *   render, so a deep link to /dispatcher paints the dispatcher tab as
+ *   render, so a deep link to /passenger paints the Диспетчер tab as
  *   active without any state plumbing.
  *
  * QueryClientProvider (T-AUDIT-FIX): TanStack Query hooks (useQuery in

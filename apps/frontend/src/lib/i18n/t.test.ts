@@ -41,14 +41,17 @@ describe('t() — static lookups', () => {
   });
 
   it('returns the role labels', () => {
-    expect(t('app.rolePassenger.label')).toBe('Пассажир');
-    expect(t('app.roleDispatcher.label')).toBe('Диспетчер');
+    // T-225: /passenger переименован в «Диспетчер» (UX-rename). /dispatcher
+    // убран из nav как orphan, ключ app.roleDispatcher больше не используется.
+    expect(t('app.rolePassenger.label')).toBe('Диспетчер');
     expect(t('app.roleAnalyst.label')).toBe('Аналитик');
     // T-200 / D-027: planner tab was removed — no rolePlanner key anymore.
+    // T-225 / D-037: dispatcher removed from nav — no roleDispatcher key anymore.
   });
 
   it('returns deep-nested placeholders', () => {
-    expect(t('app.rolePassenger.placeholder')).toMatch(/Сейчас готов только режим «Пассажир»/);
+    // T-225: placeholder обновлён — «Пассажир» устарело.
+    expect(t('app.rolePassenger.placeholder')).toMatch(/этот режим/i);
   });
 });
 
@@ -97,8 +100,7 @@ describe('t() — type safety (compile-time)', () => {
       'app.rolePassenger.label',
       'app.rolePassenger.description',
       'app.rolePassenger.placeholder',
-      'app.roleDispatcher.label',
-      'app.roleDispatcher.description',
+      // T-225: app.roleDispatcher удалён (orphan).
       'app.roleAnalyst.label',
       'app.roleAnalyst.description',
       'dispatcher.alerts.title',

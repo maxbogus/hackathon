@@ -57,7 +57,9 @@ def _seed_actuals_two_routes(factory) -> None:
                         Actual(
                             route_id=route_id,
                             period_start=datetime(2025, 10, 30, hour, 0, 0, tzinfo=UTC),
-                            period_end=datetime(2025, 10, 30, hour + 1, 0, 0, tzinfo=UTC),
+                            period_end=datetime(
+                                2025, 10, 30, hour + 1, 0, 0, tzinfo=UTC
+                            ),
                             value=v,
                         )
                     )
@@ -97,7 +99,9 @@ def test_historical_load_returns_avg_per_route(app_with_db, client) -> None:
     assert by_route[1]["sample_size"] == 3
 
 
-def test_historical_load_no_params_falls_back_to_max_period(app_with_db, client) -> None:
+def test_historical_load_no_params_falls_back_to_max_period(
+    app_with_db, client
+) -> None:
     factory = app_with_db.state.session_factory
 
     async def seed() -> None:

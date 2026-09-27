@@ -1,6 +1,41 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-27T12:35:00Z
+> Последнее обновление: 2026-09-27T13:30:00Z
+# Обновлено: Cline (агент) — T-225 done: rename «Пассажир» → «Диспетчер» в nav, /dispatcher убран из nav как orphan-роут (F-098, D-037).
+
+## Мини-сессия 2026-09-27T13:30:00Z — T-225 rename «Пассажир» → «Диспетчер» (F-098, D-037)
+
+**Контекст:** На демо жюри nav содержал «🧍 Пассажир» (/passenger) и «🎛️ Диспетчер» (/dispatcher) — две вкладки с похожей семантикой. На самом деле /passenger — это основной экран диспетчера (нагрузка по линиям + отклонение actual vs prediction по T-218), а /dispatcher (AlertsPanel) — отдельный алерт-экран. Пользователь попросил переименовать /passenger → «Диспетчер», а /dispatcher убрать из nav (orphan-роут сохранить).
+
+**Что сделано:**
+- `apps/frontend/src/lib/roles.ts`: `RoleId` сужен с 3 до 2 (`'passenger' | 'analyst'`), запись `dispatcher` удалена из `ROLES`, emoji 🧍 → 🎛️ у passenger.
+- `apps/frontend/src/lib/i18n/ru-RU.ts`: `app.rolePassenger.label` → `'Диспетчер'`, блок `app.roleDispatcher` удалён (orphan), placeholder обновлён под новый текст.
+- `apps/frontend/src/routes/{__root,passenger,dispatcher}.tsx`: обновлены header-комментарии (без функциональных изменений — /dispatcher остался как orphan-роут).
+- 3 теста обновлены: `App.test.tsx` (новое поведение nav), `routes/-__root.test.tsx` (2 ссылки вместо 3, проверка orphan-роута), `lib/i18n/t.test.ts` (snapshot sampleKeys без roleDispatcher).
+- `apps/frontend/src/lib/i18n/MIGRATION.md`: строка для T-225.
+
+**Метрики:**
+- vitest (3 затронутых файла): 26/26 passed (было 5 failed в RED-фазе).
+- vitest (full): 149/151 passed (2 pre-existing failures в `routeCsv.test.ts` — T-221, не моя зона).
+- yarn typecheck: 0 errors в моих файлах (2 pre-existing в `routeCsv.ts`).
+- yarn lint: 0 issues в моих файлах (6 pre-existing в `downloadCsv.ts`, 2 warnings в `HorizonToggle.tsx`).
+- `make frontend-text-check` (grep): 0 хардкода.
+
+**Артефакты:**
+- `apps/frontend/src/lib/roles.ts` (RoleId + ROLES обновлены)
+- `apps/frontend/src/lib/i18n/ru-RU.ts` (app.rolePassenger + удалён app.roleDispatcher)
+- `apps/frontend/src/routes/{__root,passenger,dispatcher}.tsx` (только комментарии)
+- `apps/frontend/src/{App.test.tsx,routes/-__root.test.tsx,lib/i18n/t.test.ts}` (тесты обновлены)
+- `apps/frontend/src/lib/i18n/MIGRATION.md` (T-225 row)
+- `docs/ledger/findings.jsonl` (F-098)
+- `docs/ledger/decisions.jsonl` (D-037)
+- `docs/backlog/tickets/T-225-rename-passenger-tab-to-dispatcher.md` (тикет создан, status: ready → in-progress; пометить done после commit)
+
+**На заметку для следующей сессии:**
+- Заголовок страницы `passenger.modeTitle = '🧍 Пассажир — нагрузка по линиям'` НЕ переименован — это название дашборда, не роль. Если пользователь захочет и его переименовать, см. apps/frontend/src/pages/PassengerMode.tsx:97.
+- Если понадобится вернуть AlertsPanel в nav — добавить одну запись в ROLES + emoji + i18n ключ.
+- T-204 (XLSX-экспорт), T-221..T-224 (CSV-интеграция) — в работе, см. STATUS.md.
+
 # Обновлено: Cline (агент) — T-218 done: PassengerMode показывает actuals + predictions рядом (clinerule 31, F-096, D-036).
 
 ## Мини-сессия 2026-09-27T12:35:00Z — fix 'нет данных' на PassengerMode (T-218)

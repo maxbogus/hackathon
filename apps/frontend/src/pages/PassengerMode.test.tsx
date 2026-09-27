@@ -7,6 +7,12 @@
  *  - GET /api/v1/historical/load  → avg boardings per route (actuals)
  *  - GET /api/v1/predictions/load → avg boardings per route (predictions)
  *  - GET /api/v1/models/active   → активная модель для footer
+ *
+ * T-218+: карточка actual теперь показывает:
+ *   - фактическое число пассажиров (boardings)
+ *   - прогноз на этот же routeId
+ *   - отклонение actual vs prediction, в %
+ * Цвет по асимметричной шкале (over=hot, under=cool, normal=green, unknown=gray).
  */
 
 import { describe, expect, it, vi, afterEach } from 'vitest';
@@ -132,22 +138,102 @@ describe('<PassengerMode> — два блока actuals+predictions', () => {
     });
   });
 
-  it('shows percentage for predictions block', async () => {
-    mockLoadApi({ predictionsByRoute: { 7: 120 } }); // 80%
+  it('renders legend with 6 color tiers', async () => {
+    mockLoadApi();
     render(<PassengerMode />);
     await waitFor(() => {
-      expect(screen.getByText('80%')).toBeInTheDocument();
+      expect(screen.getByTestId('load-legend')).toBeInTheDocument();
+      expect(screen.getByTestId('legend-green')).toBeInTheDocument();
+      expect(screen.getByTestId('legend-lightblue')).toBeInTheDocument();
+      expect(screen.getByTestId('legend-darkred')).toBeInTheDocument();
     });
   });
 
-  it('colors predictions card yellow for load 80%', async () => {
-    mockLoadApi({ predictionsByRoute: { 7: 120 } });
+  it('shows actuals card with passenger count + deviation when actual > prediction', async () => {
+    // actual=120, prediction=100 → +20% → tier=yellow, side=over
+    mockLoadApi({ actualsByRoute: { 7: 120 }, predictionsByRoute: { 7: 100 } });
     render(<PassengerMode />);
     await waitFor(() => {
-      const cards = screen.getAllByTestId('route-load-card');
-      const inPredictions = cards.filter((c) => c.parentElement?.getAttribute('data-testid') === 'predictions-grid');
-      const c = inPredictions.find((el) => el.textContent?.includes('Маршрут 7'));
-      expect(c?.getAttribute('data-tier')).toBe('yellow');
+      const card = cardByRoute('actuals-grid', 7);
+      expect(card).toBeDefined();
+      expect(card?.textContent).toMatch(/120 чел/);
+      expect(card?.textContent).toMatch(/\+20\.0%/);
+      expect(card?.getAttribute('data-side')).toBe('over');
+      expect(card?.getAttribute('data-tier')).toBe('yellow');
+    });
+  });
+
+  it('shows actuals card in lightblue when actual < prediction (under)', async () => {
+    // actual=30, prediction=100 → -70% → side=under → рендерится lightblue
+    mockLoadApi({ actualsByRoute: { 17: 30 }, predictionsByRoute: { 17: 100 } });
+    render(<PassengerMode />);
+    await waitFor(() => {
+      const card = cardByRoute('actuals-grid', 17);
+      expect(card?.getAttribute('data-side')).toBe('under');
+      expect(card?.textContent).toMatch(/30 чел/);
+      expect(card?.textContent).toMatch(/-70\.0%/);
+    });
+  });
+
+  it('shows actuals card in green when |dev| < 15%', async () => {
+    // actual=105, prediction=100 → +5% → side=normal, tier=green
+    mockLoadApi({ actualsByRoute: { 25: 105 }, predictionsByRoute: { 25: 100 } });
+    render(<PassengerMode />);
+    await waitFor(() => {
+      const card = cardByRoute('actuals-grid', 25);
+      expect(card?.getAttribute('data-side')).toBe('normal');
+      expect(card?.getAttribute('data-tier')).toBe('green');
+    });
+  });
+
+  it('shows actuals card in darkred when actual >> prediction', async () => {
+    // actual=200, prediction=100 → +100% → side=over, tier=darkred
+    mockLoadApi({ actualsByRoute: { 11: 200 }, predictionsByRoute: { 11: 100 } });
+    render(<PassengerMode />);
+    await waitFor(() => {
+      const card = cardByRoute('actuals-grid', 11);
+      expect(card?.getAttribute('data-tier')).toBe('darkred');
+      expect(card?.textContent).toMatch(/\+100\.0%/);
+    });
+  });
+
+  it('actuals card with missing prediction → side=unknown (gray)', async () => {
+    // Если actual route_id отсутствует в predictions → actual-карточка покажет gray
+    mockLoadApi({ actualsByRoute: { 7: 80 }, predictionsEmpty: true });
+    render(<PassengerMode />);
+    await waitFor(() => {
+      const card = cardByRoute('actuals-grid', 7);
+      expect(card?.getAttribute('data-side')).toBe('unknown');
+      expect(card?.textContent).toMatch(/80 чел/);
+    });
+  });
+
+  it('prediction card does NOT show "нет прогноза" under the forecast number', async () => {
+    // Regression (F-097): prediction-карточка всегда получала boardings из predictions,
+    // но predictionBoardings не передавалось → computeDeviation(null) → подпись
+    // «нет прогноза» под САМИМ числом прогноза.
+    mockLoadApi({ predictionsByRoute: { 7: 100 } });
+    render(<PassengerMode />);
+    await waitFor(() => {
+      const card = cardByRoute('predictions-grid', 7);
+      expect(card).toBeDefined();
+      expect(card?.textContent).toMatch(/100 чел/);
+      // Под числом прогноза не должно быть «нет прогноза» и не должно быть +/-0.0%.
+      expect(card?.textContent).not.toMatch(/нет прогноза/);
+      expect(card?.textContent).not.toMatch(/[+-]0\.0%/);
+    });
+  });
+
+  it('actuals card without matching prediction shows "нет прогноза" (existing behavior)', async () => {
+    // Контр-тест: actual-карточка БЕЗ прогноза по тому же routeId должна
+    // показывать «нет прогноза» (as designed in T-218+).
+    mockLoadApi({ actualsByRoute: { 7: 80 }, predictionsEmpty: true });
+    render(<PassengerMode />);
+    await waitFor(() => {
+      const card = cardByRoute('actuals-grid', 7);
+      expect(card).toBeDefined();
+      expect(card?.textContent).toMatch(/80 чел/);
+      expect(card?.textContent).toMatch(/нет прогноза/);
     });
   });
 
@@ -169,3 +255,10 @@ describe('<PassengerMode> — два блока actuals+predictions', () => {
     });
   });
 });
+
+/** Хелпер: найти карточку по grid + routeId. */
+function cardByRoute(testId: string, routeId: number): HTMLElement | undefined {
+  const grid = screen.getByTestId(testId);
+  const cards = grid.querySelectorAll<HTMLElement>('[data-testid="route-load-card"]');
+  return Array.from(cards).find((c) => c.getAttribute('data-route-id') === String(routeId));
+}

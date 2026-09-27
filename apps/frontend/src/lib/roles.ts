@@ -1,14 +1,18 @@
 /**
- * T-135 / T-200: Pure data for the three role personas.
+ * T-135 / T-200: Pure data for the role personas.
  *
  * Extracted from App.tsx so that the file-based route components
- * (passenger.tsx, dispatcher.tsx, analyst.tsx) and the RoleSwitcherNav in
- * the root layout can both reference the same dispatch table without
- * re-implementing it.
+ * (passenger.tsx, analyst.tsx) and the RoleSwitcherNav in the root layout
+ * can both reference the same dispatch table without re-implementing it.
  *
  * T-200 / D-027: the `planner` role was removed (was a placeholder tab
- * with no real dashboard). Only the three roles with working dashboards
- * remain. When Monte Carlo scenarios (T-036) land, this entry returns.
+ * with no real dashboard). Only the roles with working dashboards remain.
+ *
+ * T-225 / D-037: the `dispatcher` role was removed from the navigation
+ * (orphan route `/dispatcher` kept for backward compatibility / debugging,
+ * but not surfaced in the role-switcher). The `passenger` role was renamed
+ * to «Диспетчер» (the dispatcher-facing dashboard). Only two roles remain
+ * in the nav: passenger (= Диспетчер) and analyst.
  *
  * Why a separate module (and no JSX here):
  *   - Pure data, no React, no router — easy to unit-test.
@@ -23,7 +27,7 @@
  * "coming soon" copy.
  */
 
-export type RoleId = 'passenger' | 'dispatcher' | 'analyst';
+export type RoleId = 'passenger' | 'analyst';
 
 export interface RoleDef {
   /** URL slug, used as the route path. */
@@ -31,14 +35,10 @@ export interface RoleDef {
   /** Emoji rendered next to the role label in the header. */
   readonly emoji: string;
   /** TKey whose value is the role button label. */
-  readonly labelKey:
-    | 'app.rolePassenger.label'
-    | 'app.roleDispatcher.label'
-    | 'app.roleAnalyst.label';
+  readonly labelKey: 'app.rolePassenger.label' | 'app.roleAnalyst.label';
   /** TKey whose value is the description shown in the placeholder panel. */
   readonly descriptionKey:
     | 'app.rolePassenger.description'
-    | 'app.roleDispatcher.description'
     | 'app.roleAnalyst.description';
   /** Shared "coming soon" body. See file header for rationale. */
   readonly placeholderKey: 'app.rolePassenger.placeholder';
@@ -47,16 +47,12 @@ export interface RoleDef {
 export const ROLES: ReadonlyArray<RoleDef> = [
   {
     id: 'passenger',
-    emoji: '🧍',
+    // T-225: «Пассажир» в nav теперь называется «Диспетчер». Emoji тоже
+    // перенесён с 🧍 (passenger) на 🎛️ (dispatcher). Сама страница
+    // PassengerMode (дашборд «нагрузка по линиям») не переименована.
+    emoji: '🎛️',
     labelKey: 'app.rolePassenger.label',
     descriptionKey: 'app.rolePassenger.description',
-    placeholderKey: 'app.rolePassenger.placeholder',
-  },
-  {
-    id: 'dispatcher',
-    emoji: '🎛️',
-    labelKey: 'app.roleDispatcher.label',
-    descriptionKey: 'app.roleDispatcher.description',
     placeholderKey: 'app.rolePassenger.placeholder',
   },
   {

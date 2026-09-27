@@ -51,26 +51,76 @@ def client(app_with_db):
 def _seed(factory):
     async def seed():
         async with factory() as s:
-            s.add(FeatureToggle(name="use_poi", description="POI", enabled=True, is_default=True))
-            s.add(FeatureToggle(name="use_weather", description="Wx", enabled=True, is_default=True))
-            s.add(FeatureToggle(name="use_events", description="Ev", enabled=True, is_default=True))
-            s.add(FeatureToggle(name="use_seasonal", description="Se", enabled=True, is_default=True))
-            s.add(FeatureToggle(name="use_traffic", description="Tr", enabled=False, is_default=False))
-            s.add(ZeroOverride(name="zero_route_5", description="r5", enabled=True, params={"route_id": 5}))
-            s.add(ZeroOverride(name="zero_night_pred_cap", description="night", enabled=True, params={"pred_cap": 55, "hours": [0, 1, 2, 3, 4]}))
+            s.add(
+                FeatureToggle(
+                    name="use_poi", description="POI", enabled=True, is_default=True
+                )
+            )
+            s.add(
+                FeatureToggle(
+                    name="use_weather", description="Wx", enabled=True, is_default=True
+                )
+            )
+            s.add(
+                FeatureToggle(
+                    name="use_events", description="Ev", enabled=True, is_default=True
+                )
+            )
+            s.add(
+                FeatureToggle(
+                    name="use_seasonal", description="Se", enabled=True, is_default=True
+                )
+            )
+            s.add(
+                FeatureToggle(
+                    name="use_traffic",
+                    description="Tr",
+                    enabled=False,
+                    is_default=False,
+                )
+            )
+            s.add(
+                ZeroOverride(
+                    name="zero_route_5",
+                    description="r5",
+                    enabled=True,
+                    params={"route_id": 5},
+                )
+            )
+            s.add(
+                ZeroOverride(
+                    name="zero_night_pred_cap",
+                    description="night",
+                    enabled=True,
+                    params={"pred_cap": 55, "hours": [0, 1, 2, 3, 4]},
+                )
+            )
             for route_id, vals in [(1, [40.0, 80.0, 120.0]), (7, [60.0, 90.0, 110.0])]:
                 for hour, v in enumerate(vals):
-                    s.add(Prediction(
-                        route_id=route_id,
-                        period_start=datetime(2025, 11, 1, hour, 0, 0, tzinfo=UTC),
-                        period_end=datetime(2025, 11, 1, hour + 1, 0, 0, tzinfo=UTC),
-                        value=v, lower=v * 0.9, upper=v * 1.1,
-                        horizon="day", granularity="hour",
-                        model_id="baseline_v1", model_kind="baseline", model_version="v0.1.0",
-                        feature_set="with_all", zeros_applied=True,
-                        coef_weather=1.0, coef_event=1.0, coef_season=1.0,
-                    ))
+                    s.add(
+                        Prediction(
+                            route_id=route_id,
+                            period_start=datetime(2025, 11, 1, hour, 0, 0, tzinfo=UTC),
+                            period_end=datetime(
+                                2025, 11, 1, hour + 1, 0, 0, tzinfo=UTC
+                            ),
+                            value=v,
+                            lower=v * 0.9,
+                            upper=v * 1.1,
+                            horizon="day",
+                            granularity="hour",
+                            model_id="baseline_v1",
+                            model_kind="baseline",
+                            model_version="v0.1.0",
+                            feature_set="with_all",
+                            zeros_applied=True,
+                            coef_weather=1.0,
+                            coef_event=1.0,
+                            coef_season=1.0,
+                        )
+                    )
             await s.commit()
+
     asyncio.run(seed())
 
 

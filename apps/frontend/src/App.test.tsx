@@ -8,7 +8,11 @@
  *
  * T-200 / D-027: planner was removed — three roles remain.
  *
- * Covers AC-1 (role-switcher with three entries) at a minimal level. The
+ * T-225 / D-037: /passenger переименован в «Диспетчер» (UX-rename). Старая
+ * вкладка /dispatcher (AlertsPanel) убрана из nav как orphan-роут. В nav
+ * остаются 2 ссылки: 🎛️ Диспетчер (= /passenger) и 📊 Аналитик.
+ *
+ * Covers AC-1 (role-switcher with two entries) at a minimal level. The
  * deeper <PassengerMode> behaviour is covered by PassengerMode.test.tsx;
  * per-route outlet behaviour is covered by __root.test.tsx.
  */
@@ -33,13 +37,18 @@ function renderWithProviders(ui: React.ReactElement): void {
 }
 
 describe('<App>', () => {
-  it('renders a role-switcher with three role links (no planner — T-200)', async () => {
+  it('renders a role-switcher with two role links (Диспетчер + Аналитик — T-225)', async () => {
     renderWithProviders(<App />);
-    expect(await screen.findByRole('link', { name: /пассажир/i })).toBeInTheDocument();
+    // T-225: /passenger теперь называется «Диспетчер», /dispatcher удалён из nav.
     expect(await screen.findByRole('link', { name: /диспетчер/i })).toBeInTheDocument();
     expect(await screen.findByRole('link', { name: /аналитик/i })).toBeInTheDocument();
+    // T-225: «Пассажир» в nav больше нет (был переименован).
+    expect(screen.queryByRole('link', { name: /^🧍\s*пассажир$/i })).not.toBeInTheDocument();
     // T-200 / D-027: planner tab was removed.
     expect(screen.queryByRole('link', { name: /планировщик/i })).not.toBeInTheDocument();
+    // Sanity: должно быть ровно 2 ссылки в nav.
+    const links = screen.getAllByRole('link');
+    expect(links).toHaveLength(2);
   });
 
   it('redirects "/" to /passenger and renders the passenger panel', async () => {

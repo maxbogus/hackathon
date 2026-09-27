@@ -6,13 +6,19 @@
  *   <div data-testid="actuals-grid">{...RouteLoadCard variant="actual"}</div>
  *   <h2>Как будет (predictions)</h2>
  *   <div data-testid="predictions-grid">{...RouteLoadCard variant="prediction"}</div>
+ *   <LoadLegend /> — пояснение цветов
  *
  * Источники:
  *   - actuals:     GET /api/v1/historical/load  (fallback MAX period)
  *   - predictions: GET /api/v1/predictions/load (submission period)
+ *
+ * T-218+ (отзыв пользователя):
+ *   Карточка actual получает prediction того же routeId через `predictionById`,
+ *   чтобы посчитать deviation (over/under/normal). Если прогноза нет —
+ *   карточка рендерится серой (unknown).
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { t, tf } from '@/lib/i18n/t';
 
@@ -20,6 +26,7 @@ import { Alert } from '@/lib/Alert';
 import { fetchActiveModel, formatWapeScore, type ActiveModelInfo } from '@/lib/activeModel';
 import { fetchAllRouteLoads, type RouteLoad } from '@/lib/routeLoad';
 
+import { LoadLegend } from '@/components/Passenger/LoadLegend';
 import { RouteLoadCard } from '@/components/Passenger/RouteLoadCard';
 
 export function PassengerMode(): JSX.Element {
@@ -38,7 +45,6 @@ export function PassengerMode(): JSX.Element {
         const { actuals: a, predictions: p } = await fetchAllRouteLoads(
           controller.signal,
         );
-        if (controller.signal.aborted) return;
         if (controller.signal.aborted) return;
         setActuals(a);
         setPredictions(p);
@@ -70,6 +76,15 @@ export function PassengerMode(): JSX.Element {
     };
   }, []);
 
+  // predictionsById: routeId → boardings (для deviation в actual-карточках).
+  const predictionsById = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const p of predictions) {
+      if (p.boardings !== null) m.set(p.routeId, p.boardings);
+    }
+    return m;
+  }, [predictions]);
+
   const wapeLabel = formatWapeScore(activeModel?.wape_score ?? null);
   const modelId = activeModel?.model_id ?? '\u2014';
   const footerText =
@@ -99,28 +114,22 @@ export function PassengerMode(): JSX.Element {
             data-testid="actuals-grid"
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
               gap: 12,
               marginTop: 8,
             }}
           >
-            {actuals.map((load) =>
-              load.loadPct === null ? (
-                <RouteLoadCard
-                  key={load.routeId}
-                  routeId={load.routeId}
-                  loadPct={null}
-                  variant="actual"
-                />
-              ) : (
-                <RouteLoadCard
-                  key={load.routeId}
-                  routeId={load.routeId}
-                  loadPct={load.loadPct}
-                  variant="actual"
-                />
-              ),
-            )}
+            {actuals.map((load) => (
+              <RouteLoadCard
+                key={load.routeId}
+                routeId={load.routeId}
+                boardings={load.boardings}
+                predictionBoardings={predictionsById.get(load.routeId) ?? null}
+                tier={load.tier === 'unknown' ? null : load.tier}
+                loadPct={load.loadPct}
+                variant="actual"
+              />
+            ))}
           </div>
         </>
       )}
@@ -134,31 +143,26 @@ export function PassengerMode(): JSX.Element {
             data-testid="predictions-grid"
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
               gap: 12,
               marginTop: 8,
             }}
           >
-            {predictions.map((load) =>
-              load.loadPct === null ? (
-                <RouteLoadCard
-                  key={load.routeId}
-                  routeId={load.routeId}
-                  loadPct={null}
-                  variant="prediction"
-                />
-              ) : (
-                <RouteLoadCard
-                  key={load.routeId}
-                  routeId={load.routeId}
-                  loadPct={load.loadPct}
-                  variant="prediction"
-                />
-              ),
-            )}
+            {predictions.map((load) => (
+              <RouteLoadCard
+                key={load.routeId}
+                routeId={load.routeId}
+                boardings={load.boardings}
+                tier={load.tier === 'unknown' ? null : load.tier}
+                loadPct={load.loadPct}
+                variant="prediction"
+              />
+            ))}
           </div>
         </>
       )}
+
+      <LoadLegend />
 
       <p style={{ marginTop: 16, color: '#888', fontSize: 12 }}>{footerText}</p>
     </section>
