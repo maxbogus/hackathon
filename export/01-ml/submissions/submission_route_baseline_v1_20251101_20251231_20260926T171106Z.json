@@ -1,0 +1,41 @@
+{
+  "submission_id": "A_conservative_holidays_cold_snap",
+  "csv_filename": "submission_route_baseline_v1_20251101_20251231_20260926T171106Z.csv",
+  "generated_at": "2026-09-26T17:11:06.787958+00:00",
+  "git_commit": "25ef91e",
+  "git_branch": "master",
+  "data_source": "RealSource",
+  "dataset_hash_sha256": "unknown",
+  "model_id": "route_baseline_v1",
+  "model_uri": "ml/artifacts/route_baseline_v1/model.pkl",
+  "train_date_range": [
+    "2025-01-01",
+    "2025-08-31"
+  ],
+  "submission_date_range": [
+    "2025-11-01",
+    "2025-12-31"
+  ],
+  "row_count": 14640,
+  "expected_rows": 14640,
+  "total_predictions_sum": 11496061.000160001,
+  "coefficients": {
+    "weather": 1.0,
+    "event": 1.0,
+    "season": 1.0
+  },
+  "post_processing": [
+    "clip_negatives",
+    "per_route_log_bias_calibration",
+    "pred_cap_55_hours_[0,1,2,3,4]_F-060",
+    "zero_route_[5]_F-051",
+    "holiday_override_2025-11-03_mult_0.5",
+    "holiday_override_2025-11-04_mult_0.5",
+    "holiday_override_2025-12-31_mult_0.7",
+    "cold_snap_2025-12-23_to_2025-12-31_mult_0.92"
+  ],
+  "platform_submitted": false,
+  "platform_score": null,
+  "platform_score_submitted_at": null,
+  "holdout_wape_score": "untestable_no_holdout_data"
+}

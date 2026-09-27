@@ -1,0 +1,94 @@
+flowchart TB
+    subgraph External["Внешние источники"]
+        W[Open-Meteo Weather]
+        T[OSM Traffic]
+        P[OSM POI]
+        H[holidays lib]
+    end
+
+    subgraph Harvester["apps/harvester (Celery worker)"]
+        HW[fetch_weather_json]
+        HT[fetch_traffic_json]
+        HP[fetch_poi_json]
+        HE[fetch_events_json]
+        HA[fetch_all]
+    end
+
+    subgraph DataLayer["Data Layer"]
+        JSON["data/external/*.json (hardcoded)"]
+        DB[(PostgreSQL + TimescaleDB)]
+    end
+
+    subgraph MLPipeline["apps/ml_pipeline (Celery worker)"]
+        MT[train_xgboost_task]
+        MP[predict_window_task]
+        MF[full_pipeline]
+        MA[ml/artifacts/*.pkl]
+    end
+
+    subgraph Backend["apps/backend (FastAPI :8000)"]
+        BA["/api/v1/predictions/*"]
+        BH["/api/v1/historical/*"]
+        BF["/api/v1/features"]
+        BZ["/api/v1/zeros/toggle"]
+        BC["/api/v1/predictions/export.csv"]
+    end
+
+    subgraph Frontend["apps/frontend (React :5173)"]
+        FP["/passenger (T-129)"]
+        FD["/dispatcher (T-131)"]
+        FA["/analyst (T-196)"]
+        FPL["/planner (T-036)"]
+    end
+
+    subgraph Assistant["apps/assistant (LLM)"]
+        AL[LiteLLM + Anthropic]
+        AT[tools/]
+    end
+
+    subgraph MCP["apps/mcp (MCP 2.0)"]
+        MS[stdio JSON-RPC]
+        MT2[aggregation tools]
+    end
+
+    W --> HW
+    T --> HT
+    P --> HP
+    H --> HE
+
+    HW & HT & HP & HE --> JSON
+    HA --> HW & HT & HP & HE
+
+    JSON --> MT
+    MT --> MA
+    MA --> MP
+    MP --> DB
+    MF --> MT & MP
+
+    DB --> BA & BH & BF & BZ & BC
+    MA --> BA
+
+    BA --> FP & FD & FA & FPL
+    BH --> FA
+    BF --> FA
+    BZ --> FA
+    BC --> FA
+
+    BA & BH & BF --> AL
+    AL --> AT
+    AT --> BA
+
+    BA & BH --> MS
+    MS --> MT2
+
+    classDef ext fill:#f9f,stroke:#333
+    classDef celery fill:#bbf,stroke:#333
+    classDef db fill:#bfb,stroke:#333
+    classDef api fill:#fbb,stroke:#333
+    classDef fe fill:#fbf,stroke:#333
+
+    class W,T,P,H ext
+    class HW,HT,HP,HE,HA,MT,MP,MF celery
+    class JSON,DB,MA db
+    class BA,BH,BF,BZ,BC api
+    class FP,FD,FA,FPL,AL,AT,MS,MT2 fe

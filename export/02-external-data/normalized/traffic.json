@@ -1,0 +1,342 @@
+{
+  "source": "traffic",
+  "rows": [
+    {
+      "id": "kremlin",
+      "lat": 55.752,
+      "lon": 37.6175,
+      "category": "major_arterial",
+      "jam_level": 4.5,
+      "notes": "Кремль, Моховая"
+    },
+    {
+      "id": "tverskaya",
+      "lat": 55.7615,
+      "lon": 37.6105,
+      "category": "major_arterial",
+      "jam_level": 5.0,
+      "notes": "Тверская, Пушкинская"
+    },
+    {
+      "id": "arbatskaya",
+      "lat": 55.7525,
+      "lon": 37.6015,
+      "category": "pedestrian_zone",
+      "jam_level": 3.5,
+      "notes": "Арбатская площадь"
+    },
+    {
+      "id": "leninsky_1",
+      "lat": 55.728,
+      "lon": 37.587,
+      "category": "tram_car_shared",
+      "jam_level": 4.0,
+      "notes": "Ленинский пр-т, Октябрьская"
+    },
+    {
+      "id": "leninsky_2",
+      "lat": 55.69,
+      "lon": 37.55,
+      "category": "major_arterial",
+      "jam_level": 4.5,
+      "notes": "Ленинский, Университет"
+    },
+    {
+      "id": "garden_ring_w",
+      "lat": 55.77,
+      "lon": 37.58,
+      "category": "major_arterial",
+      "jam_level": 5.0,
+      "notes": "Садовое кольцо запад"
+    },
+    {
+      "id": "garden_ring_e",
+      "lat": 55.768,
+      "lon": 37.658,
+      "category": "major_arterial",
+      "jam_level": 4.5,
+      "notes": "Садовое кольцо восток"
+    },
+    {
+      "id": "ttk_1",
+      "lat": 55.762,
+      "lon": 37.638,
+      "category": "tram_car_shared",
+      "jam_level": 4.5,
+      "notes": "ТТК, Пролетарская"
+    },
+    {
+      "id": "ttk_2",
+      "lat": 55.734,
+      "lon": 37.663,
+      "category": "tram_car_shared",
+      "jam_level": 4.0,
+      "notes": "ТТК, Волгоградский"
+    },
+    {
+      "id": "kashirka_1",
+      "lat": 55.662,
+      "lon": 37.629,
+      "category": "tram_car_shared",
+      "jam_level": 3.5,
+      "notes": "Каширское шоссе"
+    },
+    {
+      "id": "kashirka_2",
+      "lat": 55.645,
+      "lon": 37.683,
+      "category": "tram_car_shared",
+      "jam_level": 3.5,
+      "notes": "Каширское шоссе юг"
+    },
+    {
+      "id": "sadovaya",
+      "lat": 55.7735,
+      "lon": 37.6355,
+      "category": "tram_car_shared",
+      "jam_level": 4.5,
+      "notes": "Садовая-Черногрязская"
+    },
+    {
+      "id": "bolshaya_lubyanka",
+      "lat": 55.7625,
+      "lon": 37.6285,
+      "category": "major_arterial",
+      "jam_level": 4.5,
+      "notes": "Большая Лубянка"
+    },
+    {
+      "id": "novaya_basmannaya",
+      "lat": 55.77,
+      "lon": 37.6605,
+      "category": "tram_car_shared",
+      "jam_level": 4.0,
+      "notes": "Новая Басманная"
+    },
+    {
+      "id": "paveletsky",
+      "lat": 55.7295,
+      "lon": 37.6395,
+      "category": "tram_car_shared",
+      "jam_level": 4.0,
+      "notes": "Павелецкая"
+    },
+    {
+      "id": "kursky",
+      "lat": 55.758,
+      "lon": 37.6605,
+      "category": "major_arterial",
+      "jam_level": 4.5,
+      "notes": "Курский вокзал"
+    },
+    {
+      "id": "kievsky",
+      "lat": 55.7435,
+      "lon": 37.566,
+      "category": "tram_car_shared",
+      "jam_level": 4.0,
+      "notes": "Киевский вокзал"
+    },
+    {
+      "id": "kazansky",
+      "lat": 55.7735,
+      "lon": 37.6555,
+      "category": "major_arterial",
+      "jam_level": 4.5,
+      "notes": "Казанский вокзал"
+    },
+    {
+      "id": "rizhsky",
+      "lat": 55.7925,
+      "lon": 37.638,
+      "category": "tram_car_shared",
+      "jam_level": 4.0,
+      "notes": "Рижский вокзал"
+    },
+    {
+      "id": "savelovsky",
+      "lat": 55.794,
+      "lon": 37.5875,
+      "category": "tram_car_shared",
+      "jam_level": 4.0,
+      "notes": "Савёловский вокзал"
+    },
+    {
+      "id": "prospekt_mira_1",
+      "lat": 55.781,
+      "lon": 37.6335,
+      "category": "tram_car_shared",
+      "jam_level": 4.5,
+      "notes": "Проспект Мира север"
+    },
+    {
+      "id": "prospekt_mira_2",
+      "lat": 55.768,
+      "lon": 37.632,
+      "category": "tram_car_shared",
+      "jam_level": 4.0,
+      "notes": "Проспект Мира центр"
+    },
+    {
+      "id": "schyolkovskaya",
+      "lat": 55.8095,
+      "lon": 37.743,
+      "category": "major_arterial",
+      "jam_level": 4.0,
+      "notes": "Щёлковская"
+    },
+    {
+      "id": "preobrazhenskaya",
+      "lat": 55.796,
+      "lon": 37.7155,
+      "category": "tram_car_shared",
+      "jam_level": 3.5,
+      "notes": "Преображенская"
+    },
+    {
+      "id": "sokolniki",
+      "lat": 55.791,
+      "lon": 37.6775,
+      "category": "tram_car_shared",
+      "jam_level": 3.5,
+      "notes": "Сокольники"
+    },
+    {
+      "id": "vdnkh",
+      "lat": 55.826,
+      "lon": 37.6395,
+      "category": "tram_car_shared",
+      "jam_level": 3.5,
+      "notes": "ВДНХ юг"
+    },
+    {
+      "id": "botanicheskaya",
+      "lat": 55.843,
+      "lon": 37.636,
+      "category": "tram_car_shared",
+      "jam_level": 3.0,
+      "notes": "Ботаническая"
+    },
+    {
+      "id": "altufevskoe",
+      "lat": 55.858,
+      "lon": 37.5825,
+      "category": "major_arterial",
+      "jam_level": 4.0,
+      "notes": "Алтуфьевское шоссе"
+    },
+    {
+      "id": "dmitrovskoe",
+      "lat": 55.852,
+      "lon": 37.5575,
+      "category": "major_arterial",
+      "jam_level": 4.0,
+      "notes": "Дмитровское шоссе"
+    },
+    {
+      "id": "leningradka",
+      "lat": 55.82,
+      "lon": 37.494,
+      "category": "major_arterial",
+      "jam_level": 4.5,
+      "notes": "Ленинградское шоссе"
+    },
+    {
+      "id": "pokrovka",
+      "lat": 55.7605,
+      "lon": 37.6475,
+      "category": "tram_car_shared",
+      "jam_level": 4.0,
+      "notes": "Покровка"
+    },
+    {
+      "id": "myasnitskaya",
+      "lat": 55.762,
+      "lon": 37.639,
+      "category": "tram_car_shared",
+      "jam_level": 4.0,
+      "notes": "Мясницкая"
+    },
+    {
+      "id": "maroseyka",
+      "lat": 55.7565,
+      "lon": 37.641,
+      "category": "tram_car_shared",
+      "jam_level": 4.0,
+      "notes": "Маросейка"
+    },
+    {
+      "id": "polyanka",
+      "lat": 55.734,
+      "lon": 37.619,
+      "category": "tram_car_shared",
+      "jam_level": 3.5,
+      "notes": "Полянка"
+    },
+    {
+      "id": "bolshaya_pirogovskaya",
+      "lat": 55.7305,
+      "lon": 37.6065,
+      "category": "tram_car_shared",
+      "jam_level": 3.5,
+      "notes": "Большая Пироговская"
+    },
+    {
+      "id": "yugo_zapadnaya",
+      "lat": 55.6635,
+      "lon": 37.4845,
+      "category": "tram_car_shared",
+      "jam_level": 3.5,
+      "notes": "Юго-Западная"
+    },
+    {
+      "id": "profsoyuznaya",
+      "lat": 55.6775,
+      "lon": 37.553,
+      "category": "tram_car_shared",
+      "jam_level": 3.5,
+      "notes": "Профсоюзная"
+    },
+    {
+      "id": "akademicheskaya",
+      "lat": 55.687,
+      "lon": 37.574,
+      "category": "tram_car_shared",
+      "jam_level": 3.0,
+      "notes": "Академическая"
+    },
+    {
+      "id": "krymskaya",
+      "lat": 55.689,
+      "lon": 37.604,
+      "category": "tram_car_shared",
+      "jam_level": 3.0,
+      "notes": "Крымская (Троицкая)"
+    },
+    {
+      "id": "nekrasovka",
+      "lat": 55.683,
+      "lon": 37.852,
+      "category": "tram_car_shared",
+      "jam_level": 2.0,
+      "notes": "Некрасовка (окраина)"
+    },
+    {
+      "id": "perovo",
+      "lat": 55.736,
+      "lon": 37.7855,
+      "category": "tram_car_shared",
+      "jam_level": 3.0,
+      "notes": "Перово"
+    }
+  ],
+  "rows_count": 41,
+  "generated_at": "2026-09-25T21:00:55+00:00",
+  "inputs": [
+    {
+      "path": "/home/maxbogus/Repositories/hackathon/data/external/traffic_osm_moscow.json",
+      "sha256": "6e04a632b054a6a4d7994770af0fad5bdb2e037c501428bcac472c1ac38dff02",
+      "rows": 41
+    }
+  ]
+}

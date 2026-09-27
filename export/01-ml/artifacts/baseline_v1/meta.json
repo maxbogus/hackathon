@@ -1,0 +1,25 @@
+{
+  "model_id": "baseline_v1",
+  "kind": "baseline",
+  "version": "v0.1.0",
+  "trained_at": "2026-09-23T12:27:48.279191+00:00",
+  "git_commit": "21d991a",
+  "train_data_hash": "da49b8e47ea4dbb6cee6b98a2ccf698d08ed588b52b38dcad5b8e8ea08404980",
+  "seed": 42,
+  "horizons": [
+    "day"
+  ],
+  "granularities": [
+    "hour"
+  ],
+  "metrics": {
+    "rmsle": 0.23351459655605825,
+    "mae": 3.5167002688172047,
+    "mape": 19.329503216542278,
+    "wape": 0.07275526945108726,
+    "wape_score": 0.9272447305489128
+  },
+  "files": {
+    "model": "model.pkl"
+  }
+}

@@ -1,0 +1,3036 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Transit-AI Backend",
+    "description": "Прогноз пассажиропотока трамваев Москвы (hackathon Transit-AI).",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/healthz": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Liveness probe",
+        "description": "Returns 200 unconditionally — process is alive.\n\nNo external dependencies are checked. Use `/readyz` for that.",
+        "operationId": "healthz_api_v1_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Healthz Api V1 Healthz Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/version": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Build info",
+        "description": "Returns app version + git commit hash.",
+        "operationId": "version_api_v1_version_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "type": "object",
+                  "title": "Response Version Api V1 Version Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/readyz": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Readiness probe",
+        "description": "Returns 200 only if DB and Redis are reachable.\n\nNote: actual DB/Redis clients will be wired in T-016 (SQLAlchemy) and T-018\n(Redis client). For now, returns \"ok\" with a placeholder structure so the\nendpoint exists for k8s probes.",
+        "operationId": "readyz_api_v1_readyz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Readyz Api V1 Readyz Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/stop/{stop_id}": {
+      "get": {
+        "tags": [
+          "predictions"
+        ],
+        "summary": "Get ridership predictions for a stop",
+        "description": "Return hourly predictions for [period_start, period_end] at one stop.\n\nReturns list of `{period_start, period_end, value, lower, upper, model_id}`.",
+        "operationId": "get_predictions_for_stop_api_v1_predictions_stop__stop_id__get",
+        "parameters": [
+          {
+            "name": "stop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Stop Id"
+            }
+          },
+          {
+            "name": "period_start",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Period Start"
+            }
+          },
+          {
+            "name": "period_end",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Period End"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Predictions For Stop Api V1 Predictions Stop  Stop Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/eta": {
+      "get": {
+        "tags": [
+          "predictions"
+        ],
+        "summary": "Get next N upcoming trams at a stop (ETA + predicted load)",
+        "description": "Return the next N trams calling at `stop_id`.\n\nUsed by the passenger-mode UI (T-129) to render the \"next trams\" cards\nwith ETA + predicted load. The response shape (`ETAResponse`) is\nkept in sync with `apps/frontend/src/lib/recommend.ts`.\n\nBehaviour:\n    - Reads the active model from `ArtifactLoader`.\n    - Predicts hourly ridership over the next 60 minutes.\n    - Distributes predictions across N equal-width buckets\n      (see `app.data.transit.compute_eta_predictions`).\n    - Returns an empty `trams` list when the stop is unknown\n      (UI shows \"no data\").\n\nErrors:\n    - 503: no active model artifact (consistent with /models/active).\n    - 501: active model is not yet wired into the predictor dispatcher.",
+        "operationId": "get_eta_predictions_api_v1_predictions_eta_get",
+        "parameters": [
+          {
+            "name": "stop_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Tram stop id (1..N).",
+              "title": "Stop Id"
+            },
+            "description": "Tram stop id (1..N)."
+          },
+          {
+            "name": "n",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Number of upcoming trams to return. Clamped to [1, 5].",
+              "default": 3,
+              "title": "N"
+            },
+            "description": "Number of upcoming trams to return. Clamped to [1, 5]."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ETAResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/models/active": {
+      "get": {
+        "tags": [
+          "predictions"
+        ],
+        "summary": "Get active model info",
+        "description": "Return metadata of the currently active model artifact.",
+        "operationId": "get_active_model_api_v1_models_active_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Active Model Api V1 Models Active Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/db/{route_id}": {
+      "get": {
+        "tags": [
+          "predictions-db"
+        ],
+        "summary": "Predictions for route (from DB with feature_set / zeros filters)",
+        "description": "Возвращает прогнозы из БД с фильтрацией.\n\nЕсли filters=None — использует дефолты из feature_toggles + zero_overrides.",
+        "operationId": "get_predictions_db_api_v1_predictions_db__route_id__get",
+        "parameters": [
+          {
+            "name": "route_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Route Id"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "title": "To"
+            }
+          },
+          {
+            "name": "model_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Model Id"
+            }
+          },
+          {
+            "name": "feature_set",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Feature Set"
+            }
+          },
+          {
+            "name": "zeros_applied",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Zeros Applied"
+            }
+          },
+          {
+            "name": "prefer_active",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "T-230: игнорировать coef/feature_set/zeros и взять параметры активного набора (фолбэк фронта, когда по слайдерам нет данных).",
+              "default": false,
+              "title": "Prefer Active"
+            },
+            "description": "T-230: игнорировать coef/feature_set/zeros и взять параметры активного набора (фолбэк фронта, когда по слайдерам нет данных)."
+          },
+          {
+            "name": "horizon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "day",
+                "month",
+                "year"
+              ],
+              "type": "string",
+              "default": "day",
+              "title": "Horizon"
+            }
+          },
+          {
+            "name": "granularity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "hour",
+                "day",
+                "month"
+              ],
+              "type": "string",
+              "default": "hour",
+              "title": "Granularity"
+            }
+          },
+          {
+            "name": "coef_weather",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 3,
+              "minimum": 0,
+              "default": 1.0,
+              "title": "Coef Weather"
+            }
+          },
+          {
+            "name": "coef_event",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 3,
+              "minimum": 0,
+              "default": 1.0,
+              "title": "Coef Event"
+            }
+          },
+          {
+            "name": "coef_season",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 3,
+              "minimum": 0,
+              "default": 1.0,
+              "title": "Coef Season"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictionsDBResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/export.csv": {
+      "get": {
+        "tags": [
+          "predictions-db"
+        ],
+        "summary": "Export predictions as CSV (default params = best submission)",
+        "description": "Возвращает CSV (route;date;hour;prediction).\n\nDefault params: zeros_applied=True, feature_set=with_all — соответствует\nbest submission (F-083: 0.83455 platform score).\n\nФормат совместим с submission pipeline (clinerule 23):\n  - separator `;`\n  - колонки: route, date (YYYY-MM-DD), hour (0-23), prediction\n  - header НЕ включён (для совместимости с ml platform scoring)\n\nВалидация (clinerule 23):\n  - coef_weather/event/season ∈ [0, 3] (FastAPI Query ge/le → 422)\n  - from_date < to_date (HTTPException 400)",
+        "operationId": "export_predictions_csv_api_v1_predictions_export_csv_get",
+        "parameters": [
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "default": "2025-11-01T00:00:00Z",
+              "title": "From Date"
+            }
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "default": "2025-12-31T23:00:00Z",
+              "title": "To Date"
+            }
+          },
+          {
+            "name": "model_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Model Id"
+            }
+          },
+          {
+            "name": "feature_set",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Feature Set"
+            }
+          },
+          {
+            "name": "zeros_applied",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Zeros Applied"
+            }
+          },
+          {
+            "name": "coef_weather",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 3,
+              "minimum": 0,
+              "default": 1.0,
+              "title": "Coef Weather"
+            }
+          },
+          {
+            "name": "coef_event",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 3,
+              "minimum": 0,
+              "default": 1.0,
+              "title": "Coef Event"
+            }
+          },
+          {
+            "name": "coef_season",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 3,
+              "minimum": 0,
+              "default": 1.0,
+              "title": "Coef Season"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/export.xlsx": {
+      "get": {
+        "tags": [
+          "predictions-db"
+        ],
+        "summary": "Export predictions as XLSX (T-206: альтернатива CSV для аналитиков)",
+        "description": "Возвращает XLSX (route, date, hour, prediction + coef колонки).\n\nУдобно для аналитиков, которые работают в Excel/LibreOffice.\nDefault params = best submission (F-083, 0.83455).",
+        "operationId": "export_predictions_xlsx_api_v1_predictions_export_xlsx_get",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "default": "2025-11-01T00:00:00Z",
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "default": "2025-12-31T23:00:00Z",
+              "title": "To"
+            }
+          },
+          {
+            "name": "model_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Model Id"
+            }
+          },
+          {
+            "name": "feature_set",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Feature Set"
+            }
+          },
+          {
+            "name": "zeros_applied",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Zeros Applied"
+            }
+          },
+          {
+            "name": "coef_weather",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 1.0,
+              "title": "Coef Weather"
+            }
+          },
+          {
+            "name": "coef_event",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 1.0,
+              "title": "Coef Event"
+            }
+          },
+          {
+            "name": "coef_season",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 1.0,
+              "title": "Coef Season"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/load": {
+      "get": {
+        "tags": [
+          "load-summary"
+        ],
+        "summary": "T-218: Summary predictions — avg load per route (block 'kak budet')",
+        "description": "Srednie boardings + load_pct za marshrutami (predictions).",
+        "operationId": "get_predictions_load_api_v1_predictions_load_get",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "name": "model_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Model Id"
+            }
+          },
+          {
+            "name": "feature_set",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Feature Set"
+            }
+          },
+          {
+            "name": "zeros_applied",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Zeros Applied"
+            }
+          },
+          {
+            "name": "horizon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "day",
+                "month",
+                "year"
+              ],
+              "type": "string",
+              "default": "day",
+              "title": "Horizon"
+            }
+          },
+          {
+            "name": "granularity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "hour",
+                "day",
+                "month"
+              ],
+              "type": "string",
+              "default": "hour",
+              "title": "Granularity"
+            }
+          },
+          {
+            "name": "tram_capacity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 50,
+              "default": 150,
+              "title": "Tram Capacity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RouteLoadListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/historical/load": {
+      "get": {
+        "tags": [
+          "load-summary"
+        ],
+        "summary": "T-218: Summary actuals — avg load per route (block 'kak bylo', fallback MAX period)",
+        "description": "Srednie boardings + load_pct za marshrutami (actuals).\n\nYesli from/to ne zadany → fallback na MAX(period_start) - 7d .. MAX.",
+        "operationId": "get_historical_load_api_v1_historical_load_get",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "name": "tram_capacity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 50,
+              "default": 150,
+              "title": "Tram Capacity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RouteLoadListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/historical/export.csv": {
+      "get": {
+        "tags": [
+          "historical"
+        ],
+        "summary": "Historical actuals as CSV (T-220)",
+        "description": "Единый формат с /predictions/export.csv: route;date;hour;value.\n\nИспользуется в PassengerMode (T-223) для прямой загрузки сырых CSV-данных.\nЗаменяет /historical/load (AVG-агрегат) на честный SUM за день по маршруту.",
+        "operationId": "get_historical_csv_api_v1_historical_export_csv_get",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Start date (inclusive).",
+              "title": "From"
+            },
+            "description": "Start date (inclusive)."
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "End date (exclusive).",
+              "title": "To"
+            },
+            "description": "End date (exclusive)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/historical/{route_id}": {
+      "get": {
+        "tags": [
+          "historical"
+        ],
+        "summary": "Historical boardings (actuals) for a route",
+        "description": "Возвращает исторические boardings из БД.\n\nEmpty list — нормально, если actuals пуста (dev-режим).\n\nF-097: ``from`` и ``to`` стали опциональными. Если оба опущены — берётся\nпоследние ``DEFAULT_HISTORICAL_DAYS`` дней. Нужен для PassengerMode\n(routeLoad.ts), который агрегирует «последний час» без явного диапазона.",
+        "operationId": "get_historical_api_v1_historical__route_id__get",
+        "parameters": [
+          {
+            "name": "route_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Route Id"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Start date (inclusive). Optional — default = to_date - 7 days (or now - 7 days if both are omitted).",
+              "title": "From"
+            },
+            "description": "Start date (inclusive). Optional — default = to_date - 7 days (or now - 7 days if both are omitted)."
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "End date (inclusive). Optional — default = from_date + 7 days (or now if both omitted).",
+              "title": "To"
+            },
+            "description": "End date (inclusive). Optional — default = from_date + 7 days (or now if both omitted)."
+          },
+          {
+            "name": "granularity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(hour|day)$",
+              "description": "Aggregation granularity: hour | day",
+              "default": "day",
+              "title": "Granularity"
+            },
+            "description": "Aggregation granularity: hour | day"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoricalResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/historical": {
+      "get": {
+        "tags": [
+          "historical"
+        ],
+        "summary": "List available routes with historical data",
+        "description": "Возвращает список route_id, для которых есть хотя бы 1 actual.",
+        "operationId": "list_routes_with_history_api_v1_historical_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response List Routes With History Api V1 Historical Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/models": {
+      "get": {
+        "tags": [
+          "models"
+        ],
+        "summary": "List all known ML artifacts",
+        "description": "Return metadata of every valid ML artifact on disk.\n\nThe `is_active` flag tells the UI which one is currently serving\npredictions. If `active.json` is missing or points to a broken\nartifact, `active_model_id` is null and every model reports\n`is_active=false` — the endpoint must still return successfully.",
+        "operationId": "list_models_api_v1_models_get",
+        "parameters": [
+          {
+            "name": "active_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "If true, return only the currently active model.",
+              "default": false,
+              "title": "Active Only"
+            },
+            "description": "If true, return only the currently active model."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response List Models Api V1 Models Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/insights/alerts": {
+      "get": {
+        "tags": [
+          "insights"
+        ],
+        "summary": "Get Overload Alerts",
+        "description": "Return sorted overload alerts for the upcoming horizon.\n\nF-097: добавлен параметр ``horizon=day|month|year`` (T-200). Раньше\nиспользовался только ``window_min`` (≤120), что блокировало UI с 3 кнопками\nhorizon. Теперь ``window_min`` ≤ 1440 покрывает day, а month/year\nдостигаются через ``n`` (количество ближайших трамваев) per horizon.",
+        "operationId": "get_overload_alerts_api_v1_insights_alerts_get",
+        "parameters": [
+          {
+            "name": "window_min",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1440,
+              "minimum": 1,
+              "description": "Look-ahead horizon in minutes. Defaults to 30 (current peak commute). Hard cap 1440 (24 hours) for dispatcher UI sanity. For longer horizons use ``horizon`` parameter below.",
+              "default": 30,
+              "title": "Window Min"
+            },
+            "description": "Look-ahead horizon in minutes. Defaults to 30 (current peak commute). Hard cap 1440 (24 hours) for dispatcher UI sanity. For longer horizons use ``horizon`` parameter below."
+          },
+          {
+            "name": "horizon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(day|month|year)$",
+              "description": "Forecast horizon (day | month | year). Determines how many upcoming trams are scored per route. Use the horizon toggle in the UI; this is the backend parameter for it.",
+              "default": "day",
+              "title": "Horizon"
+            },
+            "description": "Forecast horizon (day | month | year). Determines how many upcoming trams are scored per route. Use the horizon toggle in the UI; this is the backend parameter for it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverloadAlertsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/features": {
+      "get": {
+        "tags": [
+          "features"
+        ],
+        "summary": "List all feature toggles and zero overrides",
+        "description": "Возвращает текущее состояние ВСЕХ toggles + overrides из БД.",
+        "operationId": "list_features_api_v1_features_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeaturesListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/features/{name}/toggle": {
+      "post": {
+        "tags": [
+          "features"
+        ],
+        "summary": "Toggle a feature on/off",
+        "operationId": "toggle_feature_api_v1_features__name__toggle_post",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeatureToggleUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeatureToggleOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/zeros/{name}/toggle": {
+      "post": {
+        "tags": [
+          "features"
+        ],
+        "summary": "Toggle a zero override on/off",
+        "operationId": "toggle_zero_api_v1_zeros__name__toggle_post",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ZeroOverrideUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ZeroOverrideOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/geo/routes": {
+      "get": {
+        "tags": [
+          "geo"
+        ],
+        "summary": "T-227: Справочник остановок маршрутов (для карты)",
+        "description": "Остановки всех маршрутов хакатона с координатами.\n\nПустой `routes` — не ошибка: каталог `data/external/stops_routes.json`\nможет отсутствовать в demo-режиме (карта рендерит заглушку).",
+        "operationId": "get_geo_routes_api_v1_geo_routes_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeoRoutesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/status": {
+      "get": {
+        "tags": [
+          "predictions-status"
+        ],
+        "summary": "Predictions DB status (T-198)",
+        "description": "Возвращает dict с has_predictions, count, model_ids, running_pipeline.\n\nИспользуется UI чтобы решить: показывать EmptyPredictions или графики.\n\nПример:\n    GET /api/v1/predictions/status\n    → {\"has_predictions\": true, \"predictions_count\": 14640, ...}",
+        "operationId": "get_status_api_v1_predictions_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Status Api V1 Predictions Status Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pipeline/full": {
+      "post": {
+        "tags": [
+          "pipeline"
+        ],
+        "summary": "Trigger ml_pipeline.full_pipeline (T-198/T-230)",
+        "description": "Запускает Celery task full_pipeline (train + predict) с параметрами.",
+        "operationId": "trigger_pipeline_full_api_v1_pipeline_full_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PipelineFullBody"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Trigger Pipeline Full Api V1 Pipeline Full Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pipeline/status/{task_id}": {
+      "get": {
+        "tags": [
+          "pipeline"
+        ],
+        "summary": "Get Celery task status (T-198)",
+        "description": "Возвращает текущий статус Celery task.",
+        "operationId": "get_pipeline_status_api_v1_pipeline_status__task_id__get",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Pipeline Status Api V1 Pipeline Status  Task Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/regenerate": {
+      "post": {
+        "tags": [
+          "predictions-runs"
+        ],
+        "summary": "T-230: сгенерировать новый набор",
+        "description": "Запускает Celery-генерацию прогнозов с параметрами из UI/БД.",
+        "operationId": "regenerate_api_v1_predictions_regenerate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Regenerate Api V1 Predictions Regenerate Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/runs": {
+      "get": {
+        "tags": [
+          "predictions-runs"
+        ],
+        "summary": "T-230: список запусков генерации",
+        "description": "Последние запуски (новые сверху) + какой submission_id активен.",
+        "operationId": "list_runs_api_v1_predictions_runs_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictionRunListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "predictions-runs"
+        ],
+        "summary": "T-230: статус запуска + кандидат (при Celery SUCCESS)",
+        "description": "Статус запуска. Пока Celery работает — опрашиваем; при SUCCESS ищем CSV.",
+        "operationId": "get_run_api_v1_predictions_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictionRunOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/runs/{run_id}/ingest": {
+      "post": {
+        "tags": [
+          "predictions-runs"
+        ],
+        "summary": "T-230: загрузить CSV кандидата в БД (и опционально активировать)",
+        "description": "INSERT кандидата в `predictions`. Идемпотентность: повторный ingest → 409.",
+        "operationId": "ingest_run_api_v1_predictions_runs__run_id__ingest_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunActionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/runs/{run_id}/reject": {
+      "post": {
+        "tags": [
+          "predictions-runs"
+        ],
+        "summary": "T-230: отклонить кандидата (оставить эталон/текущий набор)",
+        "description": "Помечает кандидата `rejected`. Активный набор НЕ меняется.",
+        "operationId": "reject_run_api_v1_predictions_runs__run_id__reject_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunActionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/restore-etalon": {
+      "post": {
+        "tags": [
+          "predictions-runs"
+        ],
+        "summary": "T-230: вернуть эталонный набор как активный",
+        "description": "`UPDATE predictions SET is_active = is_etalon` (строки не удаляются).",
+        "operationId": "restore_etalon_endpoint_api_v1_predictions_restore_etalon_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunActionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/active": {
+      "get": {
+        "tags": [
+          "predictions-runs"
+        ],
+        "summary": "T-230: параметры активного набора (source of truth для UI)",
+        "description": "Что сейчас отдают чтения: submission_id, модель, фичи, zeros, coefs, строк.",
+        "operationId": "get_active_set_api_v1_predictions_active_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActiveSetResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Root",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Root  Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ActiveSetResponse": {
+        "properties": {
+          "submission_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submission Id"
+          },
+          "model_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Id"
+          },
+          "feature_set": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feature Set"
+          },
+          "zeros_applied": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zeros Applied"
+          },
+          "coef_weather": {
+            "type": "number",
+            "title": "Coef Weather",
+            "default": 1.0
+          },
+          "coef_event": {
+            "type": "number",
+            "title": "Coef Event",
+            "default": 1.0
+          },
+          "coef_season": {
+            "type": "number",
+            "title": "Coef Season",
+            "default": 1.0
+          },
+          "row_count": {
+            "type": "integer",
+            "title": "Row Count",
+            "default": 0
+          },
+          "is_etalon": {
+            "type": "boolean",
+            "title": "Is Etalon",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "ActiveSetResponse",
+        "description": "Параметры активного набора (source of truth для UI-подписи)."
+      },
+      "ActualPoint": {
+        "properties": {
+          "period_start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Period Start"
+          },
+          "period_end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Period End"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value",
+            "description": "Historical boardings count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period_start",
+          "period_end",
+          "value"
+        ],
+        "title": "ActualPoint",
+        "description": "Одна точка данных: route × datetime → value."
+      },
+      "ETAPrediction": {
+        "properties": {
+          "route_id": {
+            "type": "integer",
+            "title": "Route Id",
+            "description": "Numeric id of the route (e.g. 7)."
+          },
+          "route_name": {
+            "type": "string",
+            "title": "Route Name",
+            "description": "Human-readable label (e.g. '7', 'А'). May equal route_id as a string for numeric-only routes."
+          },
+          "eta_min": {
+            "type": "integer",
+            "maximum": 60.0,
+            "minimum": 0.0,
+            "title": "Eta Min",
+            "description": "Minutes until arrival. 0 = already at the stop / leaving now."
+          },
+          "predicted_load_pct": {
+            "type": "number",
+            "maximum": 150.0,
+            "minimum": 0.0,
+            "title": "Predicted Load Pct",
+            "description": "Predicted load as % of tram capacity. Clamped to [0, 150] — values >100 mean the tram is predicted to be overloaded (darkred on the colour scale)."
+          },
+          "model_id": {
+            "type": "string",
+            "title": "Model Id",
+            "description": "Id of the model that produced this prediction."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "route_id",
+          "route_name",
+          "eta_min",
+          "predicted_load_pct",
+          "model_id"
+        ],
+        "title": "ETAPrediction",
+        "description": "One tram approaching a stop.\n\nMirrors the TypeScript `ETAPrediction` interface in\n`apps/frontend/src/lib/recommend.ts` — do not rename fields without\nregenerating `apps/frontend/src/generated/api.ts`."
+      },
+      "ETAResponse": {
+        "properties": {
+          "stop_id": {
+            "type": "integer",
+            "title": "Stop Id",
+            "description": "Echo of the request's stop_id."
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At",
+            "description": "Server time when the response was assembled (ISO 8601)."
+          },
+          "horizon_minutes": {
+            "type": "integer",
+            "title": "Horizon Minutes",
+            "description": "How far into the future predictions were made.",
+            "default": 60
+          },
+          "n_requested": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "N Requested",
+            "description": "Number of trams requested (clamped to [1, 5])."
+          },
+          "trams": {
+            "items": {
+              "$ref": "#/components/schemas/ETAPrediction"
+            },
+            "type": "array",
+            "title": "Trams",
+            "description": "Sorted by eta_min ascending. Empty list = no data."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "stop_id",
+          "generated_at",
+          "n_requested"
+        ],
+        "title": "ETAResponse",
+        "description": "Response body of GET /api/v1/predictions/eta."
+      },
+      "FeatureToggleOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "is_default": {
+            "type": "boolean",
+            "title": "Is Default"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "enabled",
+          "is_default"
+        ],
+        "title": "FeatureToggleOut",
+        "description": "Один feature toggle."
+      },
+      "FeatureToggleUpdate": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "title": "FeatureToggleUpdate",
+        "description": "Запрос на переключение фичи."
+      },
+      "FeaturesListResponse": {
+        "properties": {
+          "feature_toggles": {
+            "items": {
+              "$ref": "#/components/schemas/FeatureToggleOut"
+            },
+            "type": "array",
+            "title": "Feature Toggles"
+          },
+          "zero_overrides": {
+            "items": {
+              "$ref": "#/components/schemas/ZeroOverrideOut"
+            },
+            "type": "array",
+            "title": "Zero Overrides"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feature_toggles",
+          "zero_overrides"
+        ],
+        "title": "FeaturesListResponse",
+        "description": "Ответ GET /features."
+      },
+      "GeoRoute": {
+        "properties": {
+          "route_id": {
+            "type": "integer",
+            "title": "Route Id"
+          },
+          "stops": {
+            "items": {
+              "$ref": "#/components/schemas/GeoStop"
+            },
+            "type": "array",
+            "title": "Stops"
+          },
+          "n_stops": {
+            "type": "integer",
+            "title": "N Stops"
+          }
+        },
+        "type": "object",
+        "required": [
+          "route_id",
+          "stops",
+          "n_stops"
+        ],
+        "title": "GeoRoute",
+        "description": "Маршрут = упорядоченный список остановок."
+      },
+      "GeoRoutesResponse": {
+        "properties": {
+          "routes": {
+            "items": {
+              "$ref": "#/components/schemas/GeoRoute"
+            },
+            "type": "array",
+            "title": "Routes"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "routes",
+          "count",
+          "source"
+        ],
+        "title": "GeoRoutesResponse",
+        "description": "Ответ GET /api/v1/geo/routes."
+      },
+      "GeoStop": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "lat": {
+            "type": "number",
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "title": "Lon"
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Order"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "lat",
+          "lon",
+          "order"
+        ],
+        "title": "GeoStop",
+        "description": "Одна остановка маршрута с координатами."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HistoricalResponse": {
+        "properties": {
+          "route_id": {
+            "type": "integer",
+            "title": "Route Id"
+          },
+          "from_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "From Date"
+          },
+          "to_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "To Date"
+          },
+          "granularity": {
+            "type": "string",
+            "title": "Granularity",
+            "description": "hour | day"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/ActualPoint"
+            },
+            "type": "array",
+            "title": "Points"
+          }
+        },
+        "type": "object",
+        "required": [
+          "route_id",
+          "from_date",
+          "to_date",
+          "granularity",
+          "points"
+        ],
+        "title": "HistoricalResponse",
+        "description": "Ответ /historical/{route_id}."
+      },
+      "IngestBody": {
+        "properties": {
+          "activate": {
+            "type": "boolean",
+            "title": "Activate",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "IngestBody",
+        "description": "Тело POST /predictions/runs/{id}/ingest."
+      },
+      "OverloadAlert": {
+        "properties": {
+          "stop_id": {
+            "type": "integer",
+            "title": "Stop Id",
+            "description": "Numeric stop id (mirrors app.data.transit.STOP_ROUTES)."
+          },
+          "route_id": {
+            "type": "integer",
+            "title": "Route Id",
+            "description": "Numeric route id."
+          },
+          "route_name": {
+            "type": "string",
+            "title": "Route Name",
+            "description": "Human-readable route label (e.g. '7', 'A', 'T1')."
+          },
+          "predicted_load_pct": {
+            "type": "number",
+            "maximum": 150.0,
+            "minimum": 75.0,
+            "title": "Predicted Load Pct",
+            "description": "Predicted load as % of tram capacity. Always >= 75 (the alert threshold) and <= 150 (the MAX_LOAD_PCT clamp). Server-side filtering has already removed sub-threshold predictions."
+          },
+          "time_to_overload_min": {
+            "type": "integer",
+            "maximum": 1440.0,
+            "minimum": 0.0,
+            "title": "Time To Overload Min",
+            "description": "ETA in minutes of the specific tram this alert refers to (minutes until the tram leaves this stop). Each alert card in the dispatcher UI is rendered against its own time-to-overload. Hard cap 1440 (=24h) mirrors backend's MAX_WINDOW_MIN."
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warning",
+              "critical"
+            ],
+            "title": "Severity",
+            "description": "Bucketed risk level. info in [75,90), warning in [90,110), critical >=110."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "stop_id",
+          "route_id",
+          "route_name",
+          "predicted_load_pct",
+          "time_to_overload_min",
+          "severity"
+        ],
+        "title": "OverloadAlert",
+        "description": "One actionable overload prediction for the dispatcher UI."
+      },
+      "OverloadAlertsResponse": {
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At",
+            "description": "Server-side UTC timestamp of the alert scan."
+          },
+          "window_min": {
+            "type": "integer",
+            "maximum": 1440.0,
+            "minimum": 1.0,
+            "title": "Window Min",
+            "description": "Look-ahead horizon used for this scan (minutes)."
+          },
+          "horizon": {
+            "type": "string",
+            "title": "Horizon",
+            "description": "Forecast horizon used to score alerts. One of ('day', 'month', 'year').",
+            "default": "day"
+          },
+          "alerts": {
+            "items": {
+              "$ref": "#/components/schemas/OverloadAlert"
+            },
+            "type": "array",
+            "title": "Alerts",
+            "description": "Sorted alerts: critical first, then warning, then info. Within a severity, by time_to_overload_min ascending."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "generated_at",
+          "window_min"
+        ],
+        "title": "OverloadAlertsResponse",
+        "description": "Response body for `GET /api/v1/insights/alerts`."
+      },
+      "PipelineFullBody": {
+        "properties": {
+          "submission_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submission Id"
+          },
+          "coef_weather": {
+            "type": "number",
+            "title": "Coef Weather",
+            "default": 1.0
+          },
+          "coef_event": {
+            "type": "number",
+            "title": "Coef Event",
+            "default": 1.0
+          },
+          "coef_season": {
+            "type": "number",
+            "title": "Coef Season",
+            "default": 1.0
+          },
+          "zeros": {
+            "type": "boolean",
+            "title": "Zeros",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "PipelineFullBody",
+        "description": "T-230: параметры генерации для POST /pipeline/full (все опциональны)."
+      },
+      "PredictionPointDB": {
+        "properties": {
+          "period_start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Period Start"
+          },
+          "period_end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Period End"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "lower": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lower"
+          },
+          "upper": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upper"
+          },
+          "horizon": {
+            "type": "string",
+            "title": "Horizon"
+          },
+          "granularity": {
+            "type": "string",
+            "title": "Granularity"
+          },
+          "feature_set": {
+            "type": "string",
+            "title": "Feature Set"
+          },
+          "zeros_applied": {
+            "type": "boolean",
+            "title": "Zeros Applied"
+          },
+          "coef_weather": {
+            "type": "number",
+            "title": "Coef Weather"
+          },
+          "coef_event": {
+            "type": "number",
+            "title": "Coef Event"
+          },
+          "coef_season": {
+            "type": "number",
+            "title": "Coef Season"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period_start",
+          "period_end",
+          "value",
+          "horizon",
+          "granularity",
+          "feature_set",
+          "zeros_applied",
+          "coef_weather",
+          "coef_event",
+          "coef_season"
+        ],
+        "title": "PredictionPointDB",
+        "description": "Одна точка прогноза из БД."
+      },
+      "PredictionRunListResponse": {
+        "properties": {
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/PredictionRunOut"
+            },
+            "type": "array",
+            "title": "Runs"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "active_submission_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Submission Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "runs",
+          "count"
+        ],
+        "title": "PredictionRunListResponse",
+        "description": "Список запусков + текущий активный набор."
+      },
+      "PredictionRunOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "celery_task_id": {
+            "type": "string",
+            "title": "Celery Task Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "submission_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submission Id"
+          },
+          "model_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Id"
+          },
+          "feature_set": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feature Set"
+          },
+          "pipeline_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pipeline Kind"
+          },
+          "row_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row Count"
+          },
+          "holdout_wape_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Holdout Wape Score"
+          },
+          "recommendation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendation"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "is_etalon": {
+            "type": "boolean",
+            "title": "Is Etalon",
+            "default": false
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": false
+          },
+          "csv_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Csv Filename"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "activated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "celery_task_id",
+          "status",
+          "started_at"
+        ],
+        "title": "PredictionRunOut",
+        "description": "Один запуск генерации (candidate lifecycle)."
+      },
+      "PredictionsDBResponse": {
+        "properties": {
+          "route_id": {
+            "type": "integer",
+            "title": "Route Id"
+          },
+          "from_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "From Date"
+          },
+          "to_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "To Date"
+          },
+          "model_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Id"
+          },
+          "feature_set": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feature Set"
+          },
+          "zeros_applied": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zeros Applied"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/PredictionPointDB"
+            },
+            "type": "array",
+            "title": "Points"
+          }
+        },
+        "type": "object",
+        "required": [
+          "route_id",
+          "from_date",
+          "to_date",
+          "points"
+        ],
+        "title": "PredictionsDBResponse",
+        "description": "Ответ /predictions/db/{route_id}."
+      },
+      "RegenerateRequest": {
+        "properties": {
+          "coef_weather": {
+            "type": "number",
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Coef Weather",
+            "default": 1.0
+          },
+          "coef_event": {
+            "type": "number",
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Coef Event",
+            "default": 1.0
+          },
+          "coef_season": {
+            "type": "number",
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Coef Season",
+            "default": 1.0
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date",
+            "description": "YYYY-MM-DD"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date",
+            "description": "YYYY-MM-DD"
+          },
+          "model_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Id"
+          },
+          "model_kind": {
+            "type": "string",
+            "pattern": "^(route_baseline|xgboost_route)$",
+            "title": "Model Kind",
+            "default": "xgboost_route"
+          },
+          "feature_set": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feature Set",
+            "description": "Если None — выводится из feature_toggles"
+          },
+          "zeros_applied": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zeros Applied",
+            "description": "Если None — выводится из zero_overrides"
+          }
+        },
+        "type": "object",
+        "title": "RegenerateRequest",
+        "description": "Параметры генерации нового набора прогнозов.\n\nВсё опционально: не заданные поля берутся из БД (feature_toggles /\nzero_overrides) и из `settings` (submission period)."
+      },
+      "RouteLoadItem": {
+        "properties": {
+          "route_id": {
+            "type": "integer",
+            "title": "Route Id"
+          },
+          "boardings_avg": {
+            "type": "number",
+            "title": "Boardings Avg"
+          },
+          "load_pct": {
+            "type": "number",
+            "title": "Load Pct"
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "green",
+              "yellow",
+              "red",
+              "darkred"
+            ],
+            "title": "Tier"
+          },
+          "period_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Start"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period End"
+          },
+          "sample_size": {
+            "type": "integer",
+            "title": "Sample Size",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "route_id",
+          "boardings_avg",
+          "load_pct",
+          "tier"
+        ],
+        "title": "RouteLoadItem",
+        "description": "Один маршрут — avg boardings + load_pct + tier."
+      },
+      "RouteLoadListResponse": {
+        "properties": {
+          "loads": {
+            "items": {
+              "$ref": "#/components/schemas/RouteLoadItem"
+            },
+            "type": "array",
+            "title": "Loads"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "from_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Date"
+          },
+          "to_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Date"
+          },
+          "used_fallback": {
+            "type": "boolean",
+            "title": "Used Fallback",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "loads",
+          "count",
+          "source"
+        ],
+        "title": "RouteLoadListResponse",
+        "description": "Ответ /predictions/load и /historical/load."
+      },
+      "RunActionResponse": {
+        "properties": {
+          "run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PredictionRunOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rows": {
+            "type": "integer",
+            "title": "Rows",
+            "default": 0
+          },
+          "active_submission_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Submission Id"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "RunActionResponse",
+        "description": "Ответ на ingest/reject/restore."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "ZeroOverrideOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "params": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Params"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "enabled",
+          "params"
+        ],
+        "title": "ZeroOverrideOut",
+        "description": "Один zero override."
+      },
+      "ZeroOverrideUpdate": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Params"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "title": "ZeroOverrideUpdate",
+        "description": "Запрос на переключение zero strategy."
+      }
+    }
+  }
+}

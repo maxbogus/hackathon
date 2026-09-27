@@ -161,3 +161,8 @@ site/
 
 # === TanStack Router (generated) ===
 apps/frontend/src/routeTree.gen.ts
+
+# export/: бинарные артефакты не в git (поставляются архивом)
+export/01-ml/artifacts/**/*.pkl
+export/dist/
+export/**/*.tar.gz

@@ -1,0 +1,51 @@
+{
+  "source": "calendar",
+  "holidays": [
+    "2025-01-01",
+    "2025-01-02",
+    "2025-01-03",
+    "2025-01-04",
+    "2025-01-05",
+    "2025-01-06",
+    "2025-01-07",
+    "2025-01-08",
+    "2025-02-23",
+    "2025-03-08",
+    "2025-05-01",
+    "2025-05-09",
+    "2025-06-12",
+    "2025-11-04"
+  ],
+  "school_breaks": [
+    [
+      "2025-01-01",
+      "2025-01-08"
+    ],
+    [
+      "2025-03-24",
+      "2025-03-31"
+    ],
+    [
+      "2025-10-27",
+      "2025-11-04"
+    ],
+    [
+      "2025-12-25",
+      "2026-01-08"
+    ]
+  ],
+  "rows_count": 18,
+  "generated_at": "2026-09-27T13:06:29+00:00",
+  "inputs": [
+    {
+      "path": "/home/maxbogus/Repositories/hackathon/data/external/holidays_ru_2025.json",
+      "sha256": "33f55ed24bed7ab81ba2fb53821683e93f60862050dfd81a9bc64f05b9ba374b",
+      "rows": 14
+    },
+    {
+      "path": "/home/maxbogus/Repositories/hackathon/data/external/school_breaks_2025.json",
+      "sha256": "718327632e655771a4804db64fc222dab8f0d56e09ba2ca6d09d5ac85d3e9d66",
+      "rows": 4
+    }
+  ]
+}

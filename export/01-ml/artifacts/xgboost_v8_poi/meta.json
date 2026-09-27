@@ -1,0 +1,25 @@
+{
+  "model_id": "xgboost_v8_poi",
+  "kind": "xgboost_route",
+  "trained_at": "2026-09-25T18:25:36.389064+00:00",
+  "git_commit": "66fe95a",
+  "seed": 42,
+  "train_data_hash": "pending",
+  "metrics": {
+    "rmsle": 0.4213611320492197,
+    "mae": 109.60961005688662,
+    "wape": 0.09725616879383692,
+    "wape_score": 0.9027438312061631
+  },
+  "hyperparams": {
+    "n_estimators": 200,
+    "max_depth": 6,
+    "learning_rate": 0.1
+  },
+  "horizons": [
+    "day"
+  ],
+  "granularities": [
+    "hour"
+  ]
+}

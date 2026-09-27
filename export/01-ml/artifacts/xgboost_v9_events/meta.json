@@ -1,0 +1,25 @@
+{
+  "model_id": "xgboost_v9_events",
+  "kind": "xgboost_route",
+  "trained_at": "2026-09-25T20:21:06.121534+00:00",
+  "git_commit": "0235325",
+  "seed": 42,
+  "train_data_hash": "pending",
+  "metrics": {
+    "rmsle": 0.3394425873184934,
+    "mae": 106.93770386483376,
+    "wape": 0.09488539711167579,
+    "wape_score": 0.9051146028883242
+  },
+  "hyperparams": {
+    "n_estimators": 200,
+    "max_depth": 6,
+    "learning_rate": 0.1
+  },
+  "horizons": [
+    "day"
+  ],
+  "granularities": [
+    "hour"
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "model_id": "baseline_v1",
+  "kind": "baseline",
+  "version": "v0.1.0",
+  "trained_at": "2026-09-23T12:27:48.279191+00:00",
+  "git_commit": "21d991a",
+  "train_data_hash": "da49b8e47ea4dbb6cee6b98a2ccf698d08ed588b52b38dcad5b8e8ea08404980",
+  "seed": 42,
+  "horizons": [
+    "day"
+  ],
+  "granularities": [
+    "hour"
+  ],
+  "metrics": {
+    "rmsle": 0.23351459655605825,
+    "mae": 3.5167002688172047,
+    "mape": 19.329503216542278,
+    "wape": 0.07275526945108726,
+    "wape_score": 0.9272447305489128
+  },
+  "dataset": {
+    "source": "RealSource (hackathon)",
+    "labels_dir": "data/real/labels",
+    "dataset_hash_sha256": "5134202bf4fe7d0f42b2fa7e3790b95d3aaaf9a4ee16f323ba180ea97b8d0e11",
+    "rows": 57551,
+    "total_boardings": 59667191,
+    "date_range": {
+      "min": "2025-01-01",
+      "max": "2025-10-31"
+    },
+    "missing_routes": [
+      5
+    ]
+  },
+  "thresholds": {
+    "rmsle_max": 0.5,
+    "mae_max": 15.0,
+    "mape_max_pct": 25.0,
+    "wape_score_min": 0.85
+  },
+  "all_thresholds_passed": true
+}

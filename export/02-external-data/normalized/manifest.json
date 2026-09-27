@@ -1,0 +1,125 @@
+{
+  "mode": "offline",
+  "generated_at": "2026-09-27T13:09:09+00:00",
+  "git_commit": "73f7251",
+  "out_dir": "/home/maxbogus/Repositories/hackathon/data/external/normalized",
+  "sources": {
+    "weather": {
+      "output_path": "/home/maxbogus/Repositories/hackathon/data/external/normalized/weather.json",
+      "output_sha256": "3785c77a89a173f5e8c5789d3b7a35acc077c902e29829b705d5b8375ec9e40d",
+      "rows_count": 365,
+      "generated_at": "2026-09-25T17:09:17+00:00",
+      "inputs": [
+        {
+          "path": "/home/maxbogus/Repositories/hackathon/data/external/weather_2025.csv",
+          "sha256": "08457b8bda4686f9032d20bedaeed8e212dadc77ab9b046e397ef7b9233214d3",
+          "rows": 365
+        }
+      ],
+      "warning": null
+    },
+    "traffic": {
+      "output_path": "/home/maxbogus/Repositories/hackathon/data/external/normalized/traffic.json",
+      "output_sha256": "39c1f06cb15b513769082479d4b6d6d9fadf0bb6b433c061891dec4ab987fb07",
+      "rows_count": 41,
+      "generated_at": "2026-09-25T21:00:55+00:00",
+      "inputs": [
+        {
+          "path": "/home/maxbogus/Repositories/hackathon/data/external/traffic_osm_moscow.json",
+          "sha256": "6e04a632b054a6a4d7994770af0fad5bdb2e037c501428bcac472c1ac38dff02",
+          "rows": 41
+        }
+      ],
+      "warning": null
+    },
+    "poi": {
+      "output_path": "/home/maxbogus/Repositories/hackathon/data/external/normalized/poi.json",
+      "output_sha256": "5b0057ff84021a90847b0af1478377d2d552d59b5ce2573bd2a1daf6fa232530",
+      "rows_count": 146,
+      "generated_at": "2026-09-25T18:12:24+00:00",
+      "inputs": [
+        {
+          "path": "/home/maxbogus/Repositories/hackathon/data/external/poi_moscow.json",
+          "sha256": "addb6390e96d92857c67b2e04235cd974ff01a30188dc24428aae9382f944265",
+          "rows": 146
+        }
+      ],
+      "warning": null
+    },
+    "events": {
+      "output_path": "/home/maxbogus/Repositories/hackathon/data/external/normalized/events.json",
+      "output_sha256": "3e99591447ae2047741fea5ebe859b543f75f4a457fce951caee2e232fac9ff2",
+      "rows_count": 8,
+      "generated_at": "2026-09-25T19:34:26+00:00",
+      "inputs": [
+        {
+          "path": "/home/maxbogus/Repositories/hackathon/data/external/events_moscow.json",
+          "sha256": "6ebd132811ad5a6e6d9a77a50c84d9222cccdd6a3167da0950fd3a675d6078dd",
+          "rows": 8
+        }
+      ],
+      "warning": null
+    },
+    "stops": {
+      "output_path": "/home/maxbogus/Repositories/hackathon/data/external/normalized/stops.json",
+      "output_sha256": "1a5286ed758220aeb0f3fe755dcaca732dfe5356fd2af3e4dccbaaa3c483a72e",
+      "rows_count": 142,
+      "generated_at": "2026-09-25T18:13:08+00:00",
+      "inputs": [
+        {
+          "path": "/home/maxbogus/Repositories/hackathon/data/external/stops_routes.json",
+          "sha256": "e54fd4ebd82541a35166cce5a9b4a1ba98c9adef2605e66f3d2dd05a73d7dc95",
+          "rows": 142
+        }
+      ],
+      "warning": null
+    },
+    "validators": {
+      "output_path": "/home/maxbogus/Repositories/hackathon/data/external/normalized/validators.json",
+      "output_sha256": "86a4b4a67cc57d446037b4cf102bf30f5872748fdf4b0fb81efce64948302b1d",
+      "rows_count": 1512,
+      "generated_at": "2026-09-25T17:13:11+00:00",
+      "inputs": [
+        {
+          "path": "/home/maxbogus/Repositories/hackathon/data/external/validators_lookup.csv",
+          "sha256": "a2ae0ecf2b43c093b54b1bc239cf0d53fc5babc11dd847fa44a33ad85985398e",
+          "rows": 1512
+        }
+      ],
+      "warning": null
+    },
+    "calendar": {
+      "output_path": "/home/maxbogus/Repositories/hackathon/data/external/normalized/calendar.json",
+      "output_sha256": "2c37b3a938967866450de58e0d2a9886d490418e8987373fed9010aceeccad0b",
+      "rows_count": 18,
+      "generated_at": "2026-09-27T13:06:29+00:00",
+      "inputs": [
+        {
+          "path": "/home/maxbogus/Repositories/hackathon/data/external/holidays_ru_2025.json",
+          "sha256": "33f55ed24bed7ab81ba2fb53821683e93f60862050dfd81a9bc64f05b9ba374b",
+          "rows": 14
+        },
+        {
+          "path": "/home/maxbogus/Repositories/hackathon/data/external/school_breaks_2025.json",
+          "sha256": "718327632e655771a4804db64fc222dab8f0d56e09ba2ca6d09d5ac85d3e9d66",
+          "rows": 4
+        }
+      ],
+      "warning": null
+    },
+    "user_routes": {
+      "output_path": "/home/maxbogus/Repositories/hackathon/data/external/normalized/user_routes.json",
+      "output_sha256": "2ef613a0e5903ff68b531c6f15b2c48c97b08782e54bac95c1df22264a554775",
+      "rows_count": 5,
+      "generated_at": "2026-09-25T16:43:47+00:00",
+      "inputs": [
+        {
+          "path": "/home/maxbogus/Repositories/hackathon/ml/transit_ai/data/_user_routes_2025.json",
+          "sha256": "a367951a4ae3eaa57afd5ef8fa935fd90cd0c0a406421170634128902bddea8f",
+          "rows": 5
+        }
+      ],
+      "warning": null
+    }
+  }
+}

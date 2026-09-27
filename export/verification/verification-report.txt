@@ -1,0 +1,45 @@
+=== Transit-AI verification: 2026-09-27T15:34:45Z ===
+repo: /home/maxbogus/Repositories/hackathon
+--- 1. Пререквизиты ---
+PASS  docker: /usr/bin/docker
+PASS  docker compose: 5.5.1
+PASS  uv (Python-раннер): /home/maxbogus/.local/bin/uv
+PASS  python3: 3.12.3
+PASS  mmdc (mermaid→png)
+--- 2. Wheels для offline-сборки образов ---
+PASS  wheels backend: 3.2G
+PASS  wheels harvester: 5.8M
+PASS  wheels ml_pipeline: 3.2G
+WARN  дубль каталога apps/ml-pipeline/ рядом с apps/ml_pipeline/
+--- 3. Внешние данные: raw → normalized JSON ---
+PASS  make external-gen (8 источников → data/external/normalized/)
+uv --directory apps/harvester run python -m app.build --verify
+OK: 8 источников проверено (sha256 + rows_count + schema) в /home/maxbogus/Repositories/hackathon/data/external/normalized
+PASS  make external-verify (sha256 + rows_count + JSON Schema)
+PASS  normalized/weather.json
+PASS  normalized/poi.json
+PASS  normalized/stops.json
+PASS  normalized/calendar.json
+PASS  normalized/validators.json
+PASS  normalized/traffic.json
+PASS  normalized/events.json
+PASS  normalized/user_routes.json
+--- 4. Стенд (docker compose) ---
+PASS  docker compose up -d
+PASS  backend /api/v1/healthz → ok (после ~0с)
+--- 5. API smoke ---
+PASS  GET /api/v1/models → 200
+PASS  GET /api/v1/geo/routes → 200
+PASS  GET /api/v1/predictions/load → 200
+PASS  GET /api/v1/historical/load → 200
+PASS  GET /api/v1/features → 200
+PASS  openapi.json: 31 путей
+PASS  GET /api/v1/predictions/export.csv → 200
+PASS  frontend :5173 → 200
+--- 6. Submission (CSV контракт) ---
+PASS  заголовок submission: route;date;hour;prediction
+PASS  строк в submission: 14641 (10 маршрутов × 61 день × 24 ч)
+--- 7. Нагрузочный тест (k6) ---
+WARN  make loadtest-smoke вернул ненулевой код, но прогон прошёл (см. summary)
+=== ИТОГ: FAIL=0 WARN=2 ===
+VERIFIED

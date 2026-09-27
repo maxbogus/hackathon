@@ -1,0 +1,230 @@
+# ============================================================================
+# Transit-AI — docker-compose для dev-окружения (T-198: полный стек по make up)
+# ----------------------------------------------------------------------------
+# R3 reproducible: все сервисы имеют resource limits (см. T-163).
+# R6 time limits: обучение не в Docker (см. clinerule 10).
+#
+# Сервисы (все поднимаются по `make up` без дополнительных профилей):
+#   postgres     — PostgreSQL 16 + TimescaleDB (гипертаблицы для predictions)
+#   redis        — кэш для API responses + Celery broker
+#   backend      — FastAPI :8000 (uvicorn через entrypoint.sh: alembic → seed → uvicorn)
+#   frontend     — Vite build → nginx :80 → проксирует /api/* на backend:8000
+#   harvester    — Celery worker: качает/нормализует data/external (R4 hackathon-rules)
+#   ml-pipeline  — Celery worker: train + predict → INSERT в predictions
+#   k6           — load tester (профиль loadtest, T-160)
+#
+# Resource limits используют top-level формат (mem_limit, cpus, pids_limit)
+# потому что docker compose v2 deploy.resources работает только в swarm mode.
+#
+# ML artefacts + data монтируются read-only из хоста (не в Docker — clinerule 10).
+#
+# Usage:
+#   make up            # поднять ВСЁ: postgres + redis + backend + frontend + harvester + ml-pipeline
+#   make up-minimal    # только postgres + redis + backend + frontend (без Celery)
+#   make up-loadtest   # + k6 контейнер для load testing
+#   make down          # остановить
+# ============================================================================
+
+name: transit-ai
+
+services:
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    restart: unless-stopped
+    # R3 reproducible: жёсткие лимиты ресурсов
+    mem_limit: 1g
+    mem_reservation: 512m
+    cpus: "1.0"
+    environment:
+      POSTGRES_DB: transit_dev
+      POSTGRES_USER: transit
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-transit_dev_only}
+    ports:
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U transit -d transit_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - transit-net
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    mem_limit: 256m
+    mem_reservation: 128m
+    cpus: "0.25"
+    ports:
+      - "${REDIS_HOST_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - transit-net
+
+  # === Backend (T-198) — FastAPI :8000 в compose-сети ===
+  # Поднимается по умолчанию через `make up`. entrypoint.sh делает:
+  #   alembic upgrade head → seed predictions → uvicorn.
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # async URL для приложения (FastAPI через asyncpg)
+      TRANSIT_AI_DATABASE_URL: postgresql+asyncpg://transit:${POSTGRES_PASSWORD:-transit_dev_only}@postgres:5432/transit_dev
+      # sync URL для alembic (psycopg2 — entrypoint.sh auto-derive)
+      ALEMBIC_SYNC_DATABASE_URL: postgresql+psycopg2://transit:${POSTGRES_PASSWORD:-transit_dev_only}@postgres:5432/transit_dev
+      TRANSIT_AI_REDIS_URL: redis://redis:6379/0
+      TRANSIT_AI_APP_ENV: dev
+      # T-198: seed скрипт читает из /app/data (mount volume)
+      SEED_DATA_DIR: /app/data
+      # По умолчанию делаем seed; SEED_SKIP=1 — пропустить
+      SEED_SKIP: ${SEED_SKIP:-0}
+      PYTHONPATH: /app
+    volumes:
+      # data: ro — только чтение CSV при seed
+      - ./data:/app/data:ro
+      # ml: rw — Celery tasks пишут артефакты (ml_pipeline)
+      - ./ml:/app/ml:rw
+      # predictions: rw — Celery tasks пишут submission.csv
+      - ./predictions:/app/predictions:rw
+      # F-096: docs/schemas/prediction_artifact.schema.json — ArtifactLoader читает в runtime
+      # ro поверх COPY из Dockerfile (для dev-итераций без пересборки образа)
+      - ./docs:/app/docs:ro
+    networks:
+      - transit-net
+    # Backend в compose: порт наружу — Swagger для жюри (:8000/docs) и k6 (localhost:8000).
+    # Внутри сети frontend ходит по имени сервиса (transit-net).
+    ports:
+      - "${BACKEND_HOST_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/api/v1/healthz').raise_for_status()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s  # alembic + seed могут занять время
+    mem_limit: 768m
+    mem_reservation: 256m
+    cpus: "0.5"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+      args:
+        # Vite API URL в Docker: nginx проксирует /api/* на backend:8000
+        VITE_API_URL: /api
+        VITE_MAP_IMPL: ${VITE_MAP_IMPL:-osm}
+        # T-122: ключ Яндекс.Карт (из корневого .env; пустой → карта на OSM).
+        # Vite инлайнит его в статику на build-time — см. args в Dockerfile.
+        VITE_YANDEX_MAPS_API_KEY: ${VITE_YANDEX_MAPS_API_KEY:-}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - transit-net
+    ports:
+      - "${FRONTEND_HOST_PORT:-5173}:80"
+    # nginx + static files — минимум ресурсов
+    mem_limit: 128m
+    mem_reservation: 32m
+    cpus: "0.25"
+
+  # === Load testing profile (T-160, T-162) ===
+  # Изолированный k6 контейнер с CPU pinning, чтобы наводящая нагрузка
+  # не влияла на измеряемый backend (T-163: cpuset "0,1" → ядра 0-1).
+  k6:
+    image: grafana/k6:0.54.0
+    container_name: transit-ai-k6
+    profiles: ["loadtest"]
+    network_mode: host  # Прямой доступ к localhost:8000 (где крутится backend)
+    # CPU pinning: k6 жмёт только ядра 0-1, backend не страдает от наводки
+    cpuset: "0,1"
+    mem_limit: 1g
+    mem_reservation: 512m
+    cpus: "2.0"
+    volumes:
+      - ./tests/load:/scripts:ro                                # k6 скрипты
+      - ./docs/load-profiles/reports:/reports:rw                # HTML + JSON отчёты
+    environment:
+      K6_WEB_DASHBOARD: "true"
+      K6_WEB_DASHBOARD_PORT: "5665"
+      K6_WEB_DASHBOARD_OPEN: "false"  # в headless Docker не пытаться открыть браузер
+    # command задаётся в Makefile (разный для каждого профиля нагрузки)
+
+  # === Harvester (T-193) — Celery worker: качает JSON во внешние источники ===
+  # local mode по умолчанию (R4 hackathon-rules).
+  harvester:
+    build:
+      context: .
+      dockerfile: apps/harvester/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      HARVESTER_MODE: ${HARVESTER_MODE:-local}
+      HARVESTER_CELERY_BROKER_URL: redis://redis:6379/1
+      HARVESTER_CELERY_RESULT_BACKEND: redis://redis:6379/2
+      HARVESTER_DATA_DIR: /app/data
+      HARVESTER_EXTERNAL_DIR: /app/data/external
+    volumes:
+      - ./data:/app/data:rw
+    networks:
+      - transit-net
+    mem_limit: 256m
+    mem_reservation: 128m
+    cpus: "0.5"
+
+  # === ML Pipeline (T-193) — Celery worker: train + predict ===
+  # Поднимается по умолчанию через `make up` (T-198).
+  ml-pipeline:
+    build:
+      context: .
+      dockerfile: apps/ml_pipeline/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      ML_PIPELINE_CELERY_BROKER_URL: redis://redis:6379/1
+      ML_PIPELINE_CELERY_RESULT_BACKEND: redis://redis:6379/2
+      ML_PIPELINE_DATABASE_URL: postgresql+psycopg2://transit:${POSTGRES_PASSWORD:-transit_dev_only}@postgres:5432/transit_dev
+      ML_PIPELINE_ML_ARTIFACTS_DIR: /app/ml/artifacts
+      ML_PIPELINE_PREDICTIONS_DIR: /app/predictions
+      ML_PIPELINE_DATA_DIR: /app/data
+      PYTHONPATH: /app
+    volumes:
+      - ./ml:/app/ml:rw
+      - ./predictions:/app/predictions:rw
+      - ./data:/app/data:ro
+    networks:
+      - transit-net
+    # R6 hackathon-rules: train ≤ 60 мин. CPU pinned чтобы не наводить на backend.
+    mem_limit: 1g
+    mem_reservation: 512m
+    cpus: "1.0"
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  transit-net:
+    driver: bridge
