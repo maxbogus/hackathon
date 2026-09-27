@@ -30,7 +30,7 @@ PREFERRED_COLUMNS = (
 
 def main() -> int:
     if not is_enabled():
-        print('MLflow недоступен/выключен. Запуск: make mlflow-runs (эфемерный env)')
+        print("MLflow недоступен/выключен. Запуск: make mlflow-runs (эфемерный env)")
         return 1
 
     import mlflow

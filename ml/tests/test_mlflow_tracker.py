@@ -181,10 +181,9 @@ def test_enabled_writes_run_to_file_store(
     artifact_paths = {a.path for a in client.list_artifacts(run.run_id)}
     assert "meta.json" in artifact_paths
 
+
 @pytest.mark.skipif(not HAS_MLFLOW, reason='нужен mlflow: uv run --with "mlflow>=2.16"')
-def test_run_name_is_user_provided(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_run_name_is_user_provided(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
     """track_run(name=...) сохраняет name как run_name, не затирает experiment_name (F-113)."""
     uri = f"sqlite:///{tmp_path / 'mlflow.db'}"
     monkeypatch.setenv("TRANSIT_AI_MLFLOW", "1")
@@ -203,4 +202,3 @@ def test_run_name_is_user_provided(
     client = MlflowClient(tracking_uri=uri)
     persisted = client.get_run(run.run_id)
     assert persisted.data.tags["mlflow.runName"] == custom_name
-

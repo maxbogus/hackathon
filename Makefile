@@ -43,6 +43,7 @@ REPO_ROOT := $(shell pwd)
         external-fetch external-gen external-verify external-show external-all \
         predictions-list predictions-activate predictions-restore-etalon predictions-ingest-csv \
         mlflow-probe mlflow-demo mlflow-runs mlflow-test mlflow-ui mlflow-server mlflow-run \
+        mlflow-ingest mlflow-ingest-only mlflow-leaderboard \
         lineage-snapshot-real lineage-snapshot lineage-verify lineage-test \
         db-upgrade db-downgrade db-revision db-current db-history
 
@@ -529,6 +530,15 @@ mlflow-server: ## Local tracking server (sqlite) -> MLFLOW_TRACKING_URI=http://1
 mlflow-run: ## Любой ml/-скрипт под tracking: make mlflow-run SCRIPT=scripts/train_xgboost.py ARGS="--model-id x"
 	@$(MLFLOW_HINT_ENV) $(UV) --directory ml run --with "$(MLFLOW_PKG)" python $(SCRIPT) $(ARGS)
 
+
+mlflow-ingest: ## Idempotent ingest 81 sources (23 artifacts + 53 manifests + 5 benchmarks)
+	@$(MLFLOW_HINT_ENV) $(UV) --directory ml run --with "$(MLFLOW_PKG)" python scripts/mlflow_ingest.py
+
+mlflow-ingest-only: ## Ingest only one kind: make mlflow-ingest-only KIND=artifacts|manifests|benchmarks
+	@$(MLFLOW_HINT_ENV) $(UV) --directory ml run --with "$(MLFLOW_PKG)" python scripts/mlflow_ingest.py --only $(KIND)
+
+mlflow-leaderboard: ## Drift-table: local holdout vs platform score, top-30 submissions
+	@$(MLFLOW_HINT_ENV) $(UV) --directory ml run --with "$(MLFLOW_PKG)" python scripts/mlflow_leaderboard.py --top 30
 # ---------------------------------------------------------------------------
 # MLOPS LAB: Lineage-lite (sha256 + manifest для 8 GB датасетов)
 # ---------------------------------------------------------------------------

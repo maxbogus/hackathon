@@ -27,7 +27,9 @@ from transit_ai.lineage.snapshot import capture, write  # noqa: E402
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Capture lineage snapshot for a data file")
+    parser = argparse.ArgumentParser(
+        description="Capture lineage snapshot for a data file"
+    )
     parser.add_argument(
         "--input",
         required=True,
@@ -66,7 +68,9 @@ def main() -> int:
     out = write(snap, args.output)
     if not args.quiet:
         print(f"sha256:   {snap.sha256}")
-        print(f"rows:     {snap.rows:,}" + (" (data, без header)" if skip_header else ""))
+        print(
+            f"rows:     {snap.rows:,}" + (" (data, без header)" if skip_header else "")
+        )
         print(f"size:     {snap.size_bytes:,} bytes")
         print(f"captured: {snap.captured_at}")
         print(f"output:   {out} ({out.stat().st_size:,} bytes)")

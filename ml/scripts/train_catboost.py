@@ -141,7 +141,10 @@ def _resolve_train_data_hash() -> str:
     """F-114: подтянуть sha256 train.csv из lineage snapshot."""
     snap_path = (
         Path(__file__).resolve().parents[2]
-        / "docs" / "lineage" / "datasets" / "real_ridership.json"
+        / "docs"
+        / "lineage"
+        / "datasets"
+        / "real_ridership.json"
     )
     if not snap_path.is_file():
         print(
@@ -151,6 +154,7 @@ def _resolve_train_data_hash() -> str:
         return "pending"
     try:
         from transit_ai.lineage.snapshot import read as _read_snapshot
+
         return _read_snapshot(snap_path).sha256
     except Exception as exc:
         print(f"WARN: snapshot read failed {snap_path}: {exc}")

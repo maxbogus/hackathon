@@ -53,7 +53,9 @@ def main() -> int:
     p.add_argument("--model-id", default="gru_v1")
     p.add_argument("--seq-len", type=int, default=168)
     p.add_argument("--hidden", type=int, default=64)
-    p.add_argument("--layers", type=int, default=2, help="Number of encoder layers (default=2)")
+    p.add_argument(
+        "--layers", type=int, default=2, help="Number of encoder layers (default=2)"
+    )
     p.add_argument("--epochs", type=int, default=10)
     p.add_argument(
         "--kind",
@@ -61,7 +63,9 @@ def main() -> int:
         default="gru",
         help="T-177-NEURAL-CONFIG: encoder kind (default=gru)",
     )
-    p.add_argument("--lr", type=float, default=3e-4, help="Learning rate (default=3e-4)")
+    p.add_argument(
+        "--lr", type=float, default=3e-4, help="Learning rate (default=3e-4)"
+    )
     args = p.parse_args()
 
     train_start = datetime.fromisoformat(args.start_date).replace(tzinfo=UTC)
@@ -150,7 +154,10 @@ def _resolve_train_data_hash() -> str:
     """F-114: подтянуть sha256 train.csv из lineage snapshot."""
     snap_path = (
         Path(__file__).resolve().parents[2]
-        / "docs" / "lineage" / "datasets" / "real_ridership.json"
+        / "docs"
+        / "lineage"
+        / "datasets"
+        / "real_ridership.json"
     )
     if not snap_path.is_file():
         print(
@@ -160,6 +167,7 @@ def _resolve_train_data_hash() -> str:
         return "pending"
     try:
         from transit_ai.lineage.snapshot import read as _read_snapshot
+
         return _read_snapshot(snap_path).sha256
     except Exception as exc:
         print(f"WARN: snapshot read failed {snap_path}: {exc}")

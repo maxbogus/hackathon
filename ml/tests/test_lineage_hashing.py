@@ -42,6 +42,7 @@ def test_streaming_sha256_uses_constant_memory(tmp_path: Path) -> None:
             f.write(chunk)
 
     import resource  # POSIX-only; на Linux OK
+
     rss_before = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     digest = lh.streaming_sha256(big)
     rss_after = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
