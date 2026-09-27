@@ -600,3 +600,32 @@ make audit-gigachat-full — прогнать ВСЕ 418 чанков (~14 ми�
 ## Замечание
 
 Predictions залиты как синтетика (shift test.csv). Для production нужно использовать ML pipeline make predict.
+
+---
+
+# 2026-09-27T16:15Z — Шаг 0: external ETL (T-231, D-043, F-109, F-110)
+
+## Что сделано (RED -> GREEN -> REFACTOR)
+
+- **RED:** `apps/harvester/tests/test_external_build.py` (16), `ml/tests/test_external_*.py` (14),
+  `apps/backend/tests/test_geo_routes_normalized.py` (3), `tests/test_external_makefile.py` (4) — коммит `c3aeb01`.
+- **GREEN:** `apps/harvester/app/build/{builders,pipeline,schema,cli}.py`; Celery-таски делегируют в ETL;
+  `make external-gen|verify|show|all|fetch`; `pipeline-fetch` без `[WIP]` — коммит `2f8cb59`.
+- ML-читатели (weather/traffic/poi/events/validators/calendar) и backend `geo.py`:
+  normalized первым, raw — фолбэк. Новые raw: `holidays_ru_2025.json`, `school_breaks_2025.json`.
+- Артефакты `data/external/normalized/*.json` + `manifest.json` теперь **коммитятся** (нужны жюри).
+- Документация: `docs/submission/EXTERNAL_DATA.md` + `docs/submission/diagrams/dfd_ru.{mmd,svg,png}`.
+
+## Метрики
+
+- `make external-all` -> OK: 8 источников (weather 365, traffic 41, poi 146, events 8,
+  stops 142, validators 1512, calendar 18, user_routes 5); `make external-verify` -> exit 0.
+- Детерминизм: два прогона -> идентичные `output_sha256`; verify ловит усечённый артефакт.
+- Тесты: harvester **22 passed**; ml **389 passed / 12 skipped**; backend **284 passed**;
+  root `test_external_makefile` 4 passed (6 pre-existing fail в `test_dockerfile_hardening`).
+- ruff + format чисто; mypy по `apps/harvester/app/build` чисто.
+
+## Следующая задача
+
+P0-сабмит: опубликовать backend `:8000` в `docker-compose.yml` -> `make loadtest-smoke` + `loadtest-baseline` ->
+обязательный блок производительности в README -> `docs/SUBMISSION.md` (6 пунктов формы, RU).

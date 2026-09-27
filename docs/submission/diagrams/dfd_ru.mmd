@@ -1,0 +1,47 @@
+flowchart LR
+    classDef ext fill:#e1f5ff,stroke:#0277bd,stroke-width:2px
+    classDef raw fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    classDef etl fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    classDef norm fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
+    classDef api fill:#ffccbc,stroke:#bf360c,stroke-width:2px
+    classDef ui fill:#fbf9f5,stroke:#6d4c41
+
+    subgraph SRC["Внешние источники"]
+        W["Open-Meteo<br/>погода (CC-BY)"]:::ext
+        T["OSM Overpass<br/>дороги / POI (ODbL)"]:::ext
+        K["Календарь РФ<br/>праздники, каникулы"]:::ext
+        E["KudaGo-дамп<br/>события (офлайн)"]:::ext
+    end
+
+    subgraph RAW["raw — снимок в git"]
+        RW["weather_2025.csv"]:::raw
+        RT["traffic_osm_moscow.json<br/>poi_moscow.json<br/>stops_routes.json"]:::raw
+        RK["holidays_ru_2025.json<br/>school_breaks_2025.json"]:::raw
+        RE["events_moscow.json"]:::raw
+    end
+
+    subgraph ETL["шаг 0: apps/harvester/app/build<br/>make external-gen / external-verify"]
+        B["builders ×8<br/>детерминированно"]:::etl
+        M["manifest.json<br/>sha256 + rows_count"]:::etl
+        V["verify: schema + sha256<br/>+ rows_count"]:::etl
+    end
+
+    subgraph NORM["data/external/normalized — training-ready, в git"]
+        N["weather · traffic · poi · stops ·<br/>events · calendar · validators · user_routes"]:::norm
+    end
+
+    subgraph CONS["Потребители"]
+        F["ML-признаки<br/>XGBoost-модель"]:::norm
+        A["FastAPI<br/>/api/v1/geo/routes"]:::api
+        U["Дашборд: карта Москвы,<br/>графики, экспорт CSV/XLSX"]:::ui
+    end
+
+    W --> RW --> B
+    T --> RT --> B
+    K --> RK --> B
+    E --> RE --> B
+    B --> N
+    B --> M --> V
+    N --> F --> A --> U
+    N --> A
+    N --> U
