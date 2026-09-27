@@ -268,11 +268,11 @@ mc-scenario: ## Run Monte Carlo scenario (1000 iterations)  [WIP]
 # ---------------------------------------------------------------------------
 
 api-gen: ## Export OpenAPI from backend → docs/api/openapi.json
-	cd apps/backend && $(UV) run python scripts/export_openapi.py
+	cd apps/backend && PYTHONPATH=. $(UV) run python scripts/export_openapi.py
 	@printf "\033[32m✓ OpenAPI exported\033[0m\n"
 
 api-check: ## Validate OpenAPI is up-to-date with backend code
-	cd apps/backend && $(UV) run python scripts/check_openapi.py
+	cd apps/backend && PYTHONPATH=. $(UV) run python scripts/check_openapi.py
 
 fe-gen: ## Generate TS types via Orval → apps/frontend/src/generated/
 	cd apps/frontend && $(YARN) orval --config orval.config.ts
@@ -283,8 +283,8 @@ lint-frontend-text: ## Grep guard: forbid hardcoded Cyrillic UI strings outside 
 		apps/frontend/src/components/ apps/frontend/src/pages/ apps/frontend/src/App.tsx 2>/dev/null \
 		| grep -v 'lib/i18n/' \
 		| grep -v '\.test\.' \
-		| grep -v '^\s*\*' \
-		| grep -v '// ' ; then \
+		| grep -vE ':[0-9]+:[[:space:]]*\*' \
+		| grep -vE ':[0-9]+:[[:space:]]*//' ; then \
 		echo "\033[31m✗ Hardcoded Cyrillic UI strings found -- use t() from lib/i18n (T-141, D-014)\033[0m" ; \
 		exit 1 ; \
 	else \
@@ -363,8 +363,8 @@ ticket: ## Create new ticket (make ticket ID=T-NNN TITLE="..." PHASE=1 PRIORITY=
 		exit 1 ; \
 	fi
 	$(UV) run python scripts/new_ticket.py \
-		--id $(ID) \
-		--title $(TITLE) \
+		--id "$(ID)" \
+		--title "$(TITLE)" \
 		--phase $(or $(PHASE),1) \
 		--priority $(or $(PRIORITY),P1) \
 		--effort $(or $(EFFORT),4) \

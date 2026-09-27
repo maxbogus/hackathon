@@ -63,7 +63,9 @@ fi
 # 5. Проверка что OpenAPI свежий (если менялся backend)
 if git diff --cached --name-only | grep -q '^apps/backend/app/.*\.py$'; then
   printf "${YELLOW}→ checking OpenAPI freshness...${NC}\n"
-  cd apps/backend && uv run python scripts/check_openapi.py 2>&1 || {
+  # F-103: PYTHONPATH=. обязателен — иначе `import app` резолвится в apps/assistant/app
+  # (editable .pth workspace) и проверка молча падает с ImportError.
+  cd apps/backend && PYTHONPATH=. uv run python scripts/check_openapi.py 2>&1 || {
     printf "${YELLOW}⚠ OpenAPI is stale. Run 'make api-gen' to refresh.${NC}\n"
     cd ../..
   }

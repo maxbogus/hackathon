@@ -1,7 +1,63 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-27T14:32:00Z
-> Обновлено: Cline (агент) — T-226 done: <HistoricalTable> + /historical вкладка, globalFilter удалён из <PredictionsTable> (F-101/D-039).
+> Последнее обновление: 2026-09-27T15:30:00Z
+> Обновлено: Cline (агент) — T-122 done + T-227 (backend geo routes): карта маршрутов на дашборде «Диспетчер» (D-041, F-102..F-105).
+
+## Мини-сессия 2026-09-27T15:30:00Z — T-122 карта маршрутов + T-227 backend гео-контракт
+
+**Контекст:** Пользователь попросил «вывести карту с точками маршрута, подсвеченную как карточки на вкладке дашборд», с ключом Яндекс.Карт из документации. План согласован: карта на `/passenger` (Диспетчер), цвет/толщина = tier и load_pct из `/predictions/load` (та же палитра, что у карточек), клик по карточке ↔ подсветка маршрута на карте. Согласовано: T-227 (backend-контракт) идёт первым (contract-first), OSM — дефолт, Yandex — по env.
+
+**Что сделано (RED→GREEN→REFACTOR):**
+
+*T-227 — backend гео-контракт (новый тикет → archive):*
+- `apps/backend/app/schemas/geo.py` — `GeoStop`/`GeoRoute`/`GeoRoutesResponse`.
+- `apps/backend/app/data/geo.py` — `load_route_geo(path)` (lru_cache) + `get_route_geo()`; парсер устойчив к битым строкам и `_comment`; отсутствие/битый каталог → `()`.
+- `apps/backend/app/api/geo.py` — `GET /api/v1/geo/routes` (tags=["geo"]); `main.py` — `include_router`.
+- `apps/backend/app/config.py` — `settings.data_dir` (REPO_ROOT/data; в Docker `/app/data`, volume уже смонтирован ro).
+- `apps/backend/tests/test_geo_routes_api.py` — **8 тестов** (парсер, order, bbox Москвы, graceful, API, 10 маршрутов/142 остановки).
+- `make api-gen` + `make fe-gen` → OpenAPI 24 paths (+`/api/v1/geo/routes`), TS `GeoRoutesResponse`.
+
+*T-122 — frontend карта (тикет → archive):*
+- `components/Map/mapStrategy.ts` — `selectMapImpl(impl, hasYandexKey)` (чистая функция; вынесена из MapProvider из-за `react-refresh/only-export-components` при `--max-warnings=0`).
+- `components/Map/mapColors.ts` — цвет = `loadTier.COLORS` (single source of truth), `polylineWeight` (∝ load_pct), `stopRadius`, `routeOpacity` (выбранный 1.0 / прочие 0.25).
+- `components/Map/LeafletMap.tsx` — OSM: `MapContainer`/`TileLayer`/`Polyline`/`CircleMarker`+`Tooltip`, `fitBounds` на выбранный маршрут, клик → `onSelectRoute`.
+- `components/Map/YandexMap.tsx` — `@pbe/react-yandex-maps` (JS API **2.1**, `apikey` + `lang=ru_RU`); без ключа — notice вместо карты.
+- `components/Map/MapProvider.tsx` — `<RouteMap>`: `React.lazy` на оба провайдера + `Suspense` + пустой каталог + предупреждение «Яндекс недоступен».
+- `components/Map/types.ts`, `README.md`, тесты: `mapColors` (9), `mapStrategy` (4), `MapProvider` (6).
+- `lib/geoRoutes.ts` (+`geoRoutes.test.ts`, 9 тестов) — `fetchRouteGeo` (graceful `[]`), `mergeRouteTiers`, `computeCenter`.
+- `pages/PassengerMode.tsx` — карта над гридами, `selectedRouteId` (toggle), параллельный fetch гео+load.
+- `components/Passenger/RouteLoadCard.tsx` — `selected`/`onSelect` (role=button + Enter/Space, `data-selected`), подсветка выбранного.
+- i18n: блок `map.*` в `ru-RU.ts` + строка в `MIGRATION.md` + snapshot в `t.test.ts`.
+- `vite.config.ts` — `envDir` = корень репо (ключ один на Vite/compose/backend); `Dockerfile` — `ARG/ENV VITE_MAP_IMPL` + `VITE_YANDEX_MAPS_API_KEY`; `docker-compose.yml` — build-arg ключа.
+
+*Tooling-фиксы (без них `make check-all` не проходит):*
+- `F-103`: `PYTHONPATH=.` в целях `api-gen`/`api-check` — editable `.pth` от `apps/assistant` перехватывал пакет `app` при запуске скриптов.
+- `F-104`: гейт `frontend-text-check` не мог отфильтровать JSDoc (`grep -r` печатает `file:line:`, шаблон `^\s*\*` не совпадал) → исправлен на `:[0-9]+:[[:space:]]*`.
+- `F-105`: `make ledger-list` падал с `KeyError: 'ts'` (F-096/F-097 без `ts`) → `ts_raw = rec.get('ts')` + бэкфилл дат из git-истории.
+- `make ticket` не квотил `$(ID)`/`$(TITLE)` → кавычки добавлены.
+
+**Метрики:**
+- backend: `uv run pytest tests/ -q --no-cov` → **255 passed** (было 247 + 8 новых).
+- frontend: `yarn test:run` → 223 passed, 2 failed — **pre-existing** падения в `routeCsv.test.ts` (T-221).
+- `yarn typecheck` → 0 ошибок в файлах T-122; 2 pre-existing в `lib/routeCsv.ts`.
+- `yarn lint` → 8 pre-existing (downloadCsv.ts, HorizonToggle.tsx); мои файлы чисто.
+- `yarn docker-build` (vite build) → ✅, `LeafletMap-*.js` и `YandexMap-*.js` — отдельные lazy-чанки.
+- `make frontend-text-check` → ✓ (впервые зелёный), `make api-check` → in sync (24 paths).
+- root tests: 6 failed — **pre-existing** (backend Dockerfile без multi-stage/`pids_limit`, проверено на HEAD).
+
+**Артефакты:**
+- Backend: `app/{schemas,data,api}/geo.py`, `config.py`, `main.py`, `tests/test_geo_routes_api.py`.
+- Frontend: `components/Map/{MapProvider,LeafletMap,YandexMap,mapColors,mapStrategy,types}.tsx|ts` + `README.md` + 3 тест-файла; `lib/geoRoutes.{ts,test.ts}`; правки `PassengerMode.tsx`, `RouteLoadCard.tsx`, `ru-RU.ts`, `MIGRATION.md`, `t.test.ts`, `config.test.ts`, `vite.config.ts`.
+- Контракт: `docs/api/openapi.json`, `apps/frontend/src/generated/{api.ts,api.schemas.ts}`.
+- Тикеты: `docs/backlog/archive/T-227-backend-geo-routes-endpoint.md`, `.../T-122-frontend-map-provider-osm-yandex-strategy.md`.
+- Ledger: **D-041**, **F-102**, **F-103**, **F-104**, **F-105**.
+
+**Что осталось / Известные ограничения:**
+- ⚠️ Живой браузерный smoke не делался: нужно поднять `make up` → `http://localhost:5173/passenger` и глазами проверить тайлы OSM.
+- ⚠️ Ключ Яндекс.Карт лежит в корневом `.env` (не в git) + для включения нужен `VITE_MAP_IMPL=yandex`. Пакет грузит **JS API 2.1** — если ключ выпущен только под v3, карта не поднимется (тогда отдельный лоадер v3, см. `components/Map/README.md`).
+- ⚠️ `yarn build` (с `tsc`) остаётся красным из-за 2 pre-existing TS-ошибок `lib/routeCsv.ts` → T-221. Проверял сборку через `yarn docker-build`.
+- ⚠️ `make handoff-update` **перезаписывает** HANDOFF.md компактным шаблоном (F-106) — не запускать, иначе теряется этот журнал; дописывать секции вручную.
+- Вне скоупа T-122: временной слайдер по часам (нет per-stop источника загрузки), дорожная polyline (нет геометрии, вне R4).
 
 ## Мини-сессия 2026-09-27T14:13:00Z — T-226 HistoricalTable + вкладка /historical
 

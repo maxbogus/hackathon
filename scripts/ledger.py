@@ -84,11 +84,15 @@ def cmd_list(args: argparse.Namespace) -> int:
                 rec = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            ts = datetime.fromisoformat(rec["ts"])
-            if ts < cutoff:
+            # F-105: запись без "ts" (ручная правка ledger) не должна ронять
+            # команду — показываем её вне зависимости от окна.
+            ts_raw = rec.get("ts")
+            ts = datetime.fromisoformat(ts_raw) if ts_raw else None
+            if ts is not None and ts < cutoff:
                 continue
             total += 1
-            print(f"\n{rec['id']} [{rec['ts']}] {rec['title']}")
+            stamp = ts_raw if ts_raw else "ts: —"
+            print(f"\n{rec['id']} [{stamp}] {rec.get('title', '(без title)')}")
             for k in ("decision", "context", "evidence", "impact"):
                 if k in rec:
                     val = rec[k][:120] + "..." if len(rec[k]) > 120 else rec[k]
