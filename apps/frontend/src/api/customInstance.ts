@@ -8,12 +8,16 @@
  * endpoint — перегенерируйте через `make fe-gen`.
  */
 
-const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
+// Orval генерит URL уже с префиксом /api/v1/... (из OpenAPI paths в docs/api/openapi.json).
+// Раньше тут было '/api' — это склеивалось с URL из Orval и давало /api/api/v1/... → 404 на nginx.
+// VITE_API_URL остался для override в проде (например "https://api.example.com/api").
+const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 
 export interface CustomRequestInit extends Omit<RequestInit, 'body'> {
   url: string;
   params?: Record<string, string | number | boolean | undefined>;
   body?: unknown;
+  data?: unknown;  // orval генерит data: для POST/PUT bodies
   responseType?: 'json' | 'text';
 }
 
