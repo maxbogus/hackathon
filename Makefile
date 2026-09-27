@@ -44,6 +44,7 @@ REPO_ROOT := $(shell pwd)
         predictions-list predictions-activate predictions-restore-etalon predictions-ingest-csv \
         mlflow-probe mlflow-demo mlflow-runs mlflow-test mlflow-ui mlflow-server mlflow-run \
         mlflow-ingest mlflow-ingest-only mlflow-leaderboard \
+        mlops-probe mlops-compare \
         lineage-snapshot-real lineage-snapshot lineage-verify lineage-test \
         dvc-probe dvc-init dvc-add-smoke dvc-add-real dvc-add-artifacts \
         dvc-status dvc-cache-size dvc-test \
@@ -535,6 +536,12 @@ mlflow-server: ## Local tracking server (sqlite) -> MLFLOW_TRACKING_URI=http://1
 
 mlflow-run: ## Любой ml/-скрипт под tracking: make mlflow-run SCRIPT=scripts/train_xgboost.py ARGS="--model-id x"
 	@$(MLFLOW_HINT_ENV) $(UV) --directory ml run --with "$(MLFLOW_PKG)" python $(SCRIPT) $(ARGS)
+
+mlops-probe: ## Probe all 4 MLOps tools ephemerally (versions + filesystem support)
+	@bash $(REPO_ROOT)/mlops/probes/dvc_probe.sh
+
+mlops-compare: ## Show MLOPS_LAB.md (the comparison report)
+	@cat $(REPO_ROOT)/mlops/MLOPS_LAB.md
 
 
 mlflow-ingest: ## Idempotent ingest 81 sources (23 artifacts + 53 manifests + 5 benchmarks)
