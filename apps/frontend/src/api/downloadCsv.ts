@@ -30,14 +30,14 @@ function buildQuery(p: DownloadCsvParams): string {
   const usp = new URLSearchParams();
   usp.set('from', p.from);
   usp.set('to', p.to);
-  if (p.modelId !== null) usp.set('model_id', p.modelId);
-  if (p.featureSet !== null) usp.set('feature_set', p.featureSet);
-  if (p.zerosApplied !== null) {
+  if (p.modelId != null) usp.set('model_id', p.modelId);
+  if (p.featureSet != null) usp.set('feature_set', p.featureSet);
+  if (p.zerosApplied != null) {
     usp.set('zeros_applied', p.zerosApplied ? 'true' : 'false');
   }
-  if (p.coefWeather !== null) usp.set('coef_weather', String(p.coefWeather));
-  if (p.coefEvent !== null) usp.set('coef_event', String(p.coefEvent));
-  if (p.coefSeason !== null) usp.set('coef_season', String(p.coefSeason));
+  if (p.coefWeather != null) usp.set('coef_weather', String(p.coefWeather));
+  if (p.coefEvent != null) usp.set('coef_event', String(p.coefEvent));
+  if (p.coefSeason != null) usp.set('coef_season', String(p.coefSeason));
   return usp.toString();
 }
 
