@@ -1,10 +1,10 @@
 /**
- * TanStack Router file-based routing — root route.
+ * TanStack Router file-based routing - root route.
  *
  * T-135: this is now the app shell.
  *   - Header (title + tagline + role-switcher with 4 URL <Link>s).
  *   - <Outlet /> renders the matched child route (passenger, dispatcher,
- *     analyst, planner). The role lives in the URL — browser back/forward
+ *     analyst, planner). The role lives in the URL - browser back/forward
  *     and reload all work for free.
  *
  * Required by @tanstack/router-vite-plugin (F-009): the plugin refuses
@@ -14,9 +14,16 @@
  *   The URL is the source of truth. `useRouterState` reads it on every
  *   render, so a deep link to /dispatcher paints the dispatcher tab as
  *   active without any state plumbing.
+ *
+ * QueryClientProvider (T-AUDIT-FIX): TanStack Query hooks (useQuery in
+ * AnalystDashboard, AlertsPanel, FiltersPanel, HistoricalChart, etc.)
+ * throw "No QueryClient set" without this. useState factory keeps it
+ * StrictMode-safe (fresh client on every dev double-render).
  */
 
+import { useState } from 'react';
 import { Outlet, createRootRoute, useRouterState } from '@tanstack/react-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { RoleSwitcherNav } from '@/components/Layout/RoleSwitcherNav';
 import { t } from '@/lib/i18n/t';
@@ -27,6 +34,26 @@ export const Route = createRootRoute({
 });
 
 function RootShell(): JSX.Element {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            refetchOnWindowFocus: false,
+            retry: 1,
+            staleTime: 30_000,
+          },
+        },
+      }),
+  );
+  return (
+    <QueryClientProvider client={queryClient}>
+      <RootShellInner />
+    </QueryClientProvider>
+  );
+}
+
+function RootShellInner(): JSX.Element {
   const pathname = useRouterState({
     select: (s) => s.location.pathname,
   });
