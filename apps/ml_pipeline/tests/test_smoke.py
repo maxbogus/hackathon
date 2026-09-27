@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from app.celery_app import celery_app
-from app.tasks import _persist_predictions_to_db, _run_uv_script
+from app.tasks import _find_manifest, _run_uv_script
 
 
 def test_celery_app_has_tasks() -> None:
@@ -26,7 +26,7 @@ def test_run_uv_script_returns_tuple() -> None:
     assert isinstance(err, str)
 
 
-def test_persist_predictions_to_db_stub(tmp_path) -> None:
-    res = _persist_predictions_to_db(tmp_path / "nope.parquet", "xgboost_v1")
-    assert res["status"] == "skipped"
-    assert "T-194" in res["reason"]
+def test_find_manifest_returns_none_without_submission_id() -> None:
+    """T-230: без submission_id искать нечего → None (не падаем)."""
+    assert _find_manifest(None) is None
+    assert _find_manifest("") is None

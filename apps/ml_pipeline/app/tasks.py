@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -16,6 +17,12 @@ import subprocess
 from celery import shared_task
 
 from app.config import settings
+from app.ml_cli import (
+    build_flags_payload,
+    build_predict_args,
+    build_zero_args,
+    write_flags_file,
+)
 
 
 def _now_iso() -> str:
@@ -83,32 +90,55 @@ def predict_window_task(
     coef_event: float = 1.0,
     coef_season: float = 1.0,
     zeros: bool = False,
+    feature_flags: dict | None = None,
+    zero_overrides: dict | None = None,
+    model_kind: str = "xgboost_route",
 ) -> dict:
     """Generate predictions for [start_date, end_date] using given model.
 
-    Пишет в predictions/<unique>.csv + manifest.json.
-    Параметры:
+    Пишет в predictions/<unique>.csv + manifest.json (clinerule 23).
+
+    Параметры (T-229 — «параметры генерации» из UI):
+      - feature_flags: {use_poi: bool, ...} → flags.yaml (T-174)
+      - zero_overrides: {zero_route_5: {}, zero_night_pred_cap: {pred_cap, hours}} → CLI
       - coef_weather/event/season: корректирующие коэффициенты (clinerule 24)
-      - zeros: применить zero-strategy (route 5 + night hours)
+      - zeros: legacy-флаг (--apply-zeros), используется если zero_overrides пуст
     """
-    args = [
-        "--model-id",
-        model_id,
-        "--start-date",
-        start_date.replace("-", ""),
-        "--end-date",
-        end_date.replace("-", ""),
-        "--coef-weather",
-        str(coef_weather),
-        "--coef-event",
-        str(coef_event),
-        "--coef-season",
-        str(coef_season),
-    ]
-    if zeros:
-        args.append("--apply-zeros")
-    if submission_id:
-        args += ["--submission-id", submission_id]
+    flags_file = None
+    payload = build_flags_payload(feature_flags)
+    if payload is not None:
+        flags_file = write_flags_file(
+            settings.repo_root / "ml" / "tmp" / f"flags_{submission_id or 'adhoc'}.yaml",
+            payload,
+        )
+
+    zero_args = build_zero_args(zero_overrides)
+    if not zero_args and zeros:
+        zero_args = [
+            "--zero-route",
+            "5",
+            "--pred-cap",
+            "55",
+            "--cap-hours",
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+        ]
+
+    args = build_predict_args(
+        model_id=model_id,
+        start_date=start_date,
+        end_date=end_date,
+        submission_id=submission_id,
+        coef_weather=coef_weather,
+        coef_event=coef_event,
+        coef_season=coef_season,
+        model_kind=model_kind,
+        flags_file=flags_file,
+        zero_args=zero_args,
+    )
     rc, out, err = _run_uv_script("scripts/make_submission.py", *args)
     if rc != 0:
         return {
@@ -118,13 +148,31 @@ def predict_window_task(
             "stdout": out[-2000:],
             "ts": _now_iso(),
         }
+    manifest_path = _find_manifest(submission_id)
     return {
         "status": "ok",
         "model_id": model_id,
         "submission_id": submission_id,
+        "manifest_path": str(manifest_path) if manifest_path else None,
+        "csv_path": str(manifest_path.with_suffix(".csv")) if manifest_path else None,
         "stdout_tail": out[-1000:],
         "ts": _now_iso(),
     }
+
+
+def _find_manifest(submission_id: str | None) -> Path | None:
+    """Самый новый manifest кандидата (backend затем читает его же)."""
+    if not submission_id:
+        return None
+    candidates: list[tuple[float, Path]] = []
+    for path in settings.predictions_dir.glob("*.json"):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            continue
+        if isinstance(data, dict) and data.get("submission_id") == submission_id:
+            candidates.append((path.stat().st_mtime, path))
+    return max(candidates)[1] if candidates else None
 
 
 # ─────────────────────────── Pipeline (all-in-one) ─────────────────────
@@ -140,6 +188,9 @@ def full_pipeline(
     coef_event: float = 1.0,
     coef_season: float = 1.0,
     zeros: bool = False,
+    feature_flags: dict | None = None,
+    zero_overrides: dict | None = None,
+    model_kind: str = "xgboost_route",
 ) -> dict:
     """train → predict, последовательно. Возвращает агрегированный результат."""
     train_res = train_xgboost_task()
@@ -154,6 +205,9 @@ def full_pipeline(
         coef_event=coef_event,
         coef_season=coef_season,
         zeros=zeros,
+        feature_flags=feature_flags,
+        zero_overrides=zero_overrides,
+        model_kind=model_kind,
     )
     return {
         "status": "ok" if pred_res["status"] == "ok" else "partial",
@@ -163,18 +217,6 @@ def full_pipeline(
     }
 
 
-# ─────────────────────────── Persistence to DB ─────────────────────────
-
-
-def _persist_predictions_to_db(parquet_path: Path, model_id: str) -> dict:
-    """Best-effort: read parquet и INSERT в predictions table (если доступна).
-
-    Заглушка: реальный insert будет добавлен после T-194 (DB schema + alembic).
-    Сейчас возвращает {'status': 'skipped', 'reason': 'no DB schema yet'}.
-    """
-    return {
-        "status": "skipped",
-        "reason": "T-194 (DB schema) not yet implemented",
-        "parquet_path": str(parquet_path),
-        "model_id": model_id,
-    }
+# Примечание (T-230): persistence кандидата в `predictions` делает BACKEND
+# (app/predictions_active.py) из shared volume predictions/ — worker только
+# генерирует CSV+manifest (clinerule 10: ML не знает про схему БД).

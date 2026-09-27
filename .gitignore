@@ -84,6 +84,8 @@ data/validation_reports/*.json
 ml/artifacts/*/
 ml/artifacts/active.json
 !ml/artifacts/.gitkeep
+# T-229: сгенерированные flags.yaml для UI-генерации (worker пишет во время прогона)
+ml/tmp/
 ml/predictions/*
 !ml/predictions/.gitkeep
 predictions/*.parquet
