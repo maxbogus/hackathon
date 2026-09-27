@@ -1,13 +1,14 @@
 /**
- * T-135: TanStack Router — header role-switcher is rendered by the root
- * route and each role link activates the corresponding page via URL.
+ * T-135 / T-200: TanStack Router — header role-switcher is rendered by the
+ * root route and each role link activates the corresponding page via URL.
  *
  * What we assert:
- *   1. The header shows 4 <Link>s pointing to /passenger, /dispatcher,
- *      /analyst, /planner.
+ *   1. The header shows 3 <Link>s pointing to /passenger, /dispatcher,
+ *      /analyst (T-200: planner tab was removed — it was a placeholder
+ *      with no real dashboard).
  *   2. The currently active link carries aria-pressed="true".
  *   3. The <Outlet /> renders the component for the active route
- *      (PassengerMode, AlertsPanel, PlaceholderPanel).
+ *      (PassengerMode, AlertsPanel, AnalystDashboard).
  *
  * Why MemoryHistory: tests need a deterministic URL that doesn't depend on
  * jsdom's window.location (which jsdom sets to "about:blank" by default).
@@ -53,7 +54,7 @@ async function renderAt(pathname: string): Promise<void> {
  * of the full route tree — we only care that <Link>s render with the
  * right hrefs and aria-pressed flags.
  */
-function renderNav(activeRole: 'passenger' | 'dispatcher' | 'analyst' | 'planner'): void {
+function renderNav(activeRole: 'passenger' | 'dispatcher' | 'analyst'): void {
   const RootRoute = createRootRoute({
     component: () => (
       <div>
@@ -75,15 +76,17 @@ function renderNav(activeRole: 'passenger' | 'dispatcher' | 'analyst' | 'planner
 }
 
 describe('<RoleSwitcherNav>', () => {
-  it('renders four role links pointing to /passenger, /dispatcher, /analyst, /planner', async () => {
+  it('renders three role links pointing to /passenger, /dispatcher, /analyst (no /planner — T-200)', async () => {
     renderNav('passenger');
     const nav = await screen.findByLabelText(/переключатель ролей/i);
     const links = within(nav).getAllByRole('link');
-    expect(links).toHaveLength(4);
+    expect(links).toHaveLength(3);
     const hrefs = links.map((l) => l.getAttribute('href'));
     expect(hrefs).toEqual(
-      expect.arrayContaining(['/passenger', '/dispatcher', '/analyst', '/planner']),
+      expect.arrayContaining(['/passenger', '/dispatcher', '/analyst']),
     );
+    // Planner was a placeholder (T-200 / D-027) — its link must be gone.
+    expect(hrefs).not.toContain('/planner');
   });
 
   it('marks the active role link with aria-pressed=true and others with aria-pressed=false', async () => {
@@ -119,14 +122,19 @@ describe('router outlet', () => {
     });
   });
 
-  it('renders the analyst placeholder at /analyst', async () => {
+  it('renders the analyst dashboard at /analyst', async () => {
     await renderAt('/analyst');
-    // PlaceholderPanel shows the role label as an <h2>.
-    expect(await screen.findByRole('heading', { name: /аналитик/i })).toBeInTheDocument();
+    // AnalystDashboard (T-196) renders an <h1> with "📊 Аналитик — данные и прогнозы".
+    expect(
+      await screen.findByRole('heading', { name: /аналитик.*данные и прогнозы/i }),
+    ).toBeInTheDocument();
   });
 
-  it('renders the planner placeholder at /planner', async () => {
-    await renderAt('/planner');
-    expect(await screen.findByRole('heading', { name: /планировщик/i })).toBeInTheDocument();
+  it('does not render a planner tab (T-200: tab was removed)', async () => {
+    await renderAt('/analyst');
+    const nav = await screen.findByLabelText(/переключатель ролей/i);
+    const links = within(nav).getAllByRole('link');
+    // No link to /planner — we removed the placeholder tab.
+    expect(links.find((l) => l.getAttribute('href') === '/planner')).toBeUndefined();
   });
 });

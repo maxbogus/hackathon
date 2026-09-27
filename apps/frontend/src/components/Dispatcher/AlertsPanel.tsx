@@ -1,7 +1,9 @@
 /**
  * AlertsPanel -- dispatcher overload alerts with 60s auto-refresh.
  *
- * T-131: replaces the `PlaceholderPanel` for the dispatcher role.
+ * T-131 / T-200: dispatcher role — the alerts panel is now one of three
+ * working dashboards (passenger, dispatcher, analyst). The placeholder
+ * `PlaceholderPanel` is gone.
  *
  * Polling: TanStack Query's `refetchInterval` does the same job as the
  * `streamlit-autorefresh` snippet in the original AC.

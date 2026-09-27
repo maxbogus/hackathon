@@ -1,10 +1,14 @@
 /**
- * T-135: Pure data for the four role personas.
+ * T-135 / T-200: Pure data for the three role personas.
  *
  * Extracted from App.tsx so that the file-based route components
- * (passenger.tsx, dispatcher.tsx, analyst.tsx, planner.tsx) and the
- * RoleSwitcherNav in the root layout can both reference the same
- * dispatch table without re-implementing it.
+ * (passenger.tsx, dispatcher.tsx, analyst.tsx) and the RoleSwitcherNav in
+ * the root layout can both reference the same dispatch table without
+ * re-implementing it.
+ *
+ * T-200 / D-027: the `planner` role was removed (was a placeholder tab
+ * with no real dashboard). Only the three roles with working dashboards
+ * remain. When Monte Carlo scenarios (T-036) land, this entry returns.
  *
  * Why a separate module (and no JSX here):
  *   - Pure data, no React, no router — easy to unit-test.
@@ -15,11 +19,11 @@
  *     shape for "pure dispatch table" — clearer at a glance.
  *
  * The `placeholderKey` is intentionally shared (`app.rolePassenger.placeholder`
- * in ru-RU.ts) because all four placeholders render the same "coming soon"
- * copy today. If the copy diverges later, split into per-role keys.
+ * in ru-RU.ts) — kept for parity with future roles that may need a
+ * "coming soon" copy.
  */
 
-export type RoleId = 'passenger' | 'dispatcher' | 'analyst' | 'planner';
+export type RoleId = 'passenger' | 'dispatcher' | 'analyst';
 
 export interface RoleDef {
   /** URL slug, used as the route path. */
@@ -30,14 +34,12 @@ export interface RoleDef {
   readonly labelKey:
     | 'app.rolePassenger.label'
     | 'app.roleDispatcher.label'
-    | 'app.roleAnalyst.label'
-    | 'app.rolePlanner.label';
+    | 'app.roleAnalyst.label';
   /** TKey whose value is the description shown in the placeholder panel. */
   readonly descriptionKey:
     | 'app.rolePassenger.description'
     | 'app.roleDispatcher.description'
-    | 'app.roleAnalyst.description'
-    | 'app.rolePlanner.description';
+    | 'app.roleAnalyst.description';
   /** Shared "coming soon" body. See file header for rationale. */
   readonly placeholderKey: 'app.rolePassenger.placeholder';
 }
@@ -62,13 +64,6 @@ export const ROLES: ReadonlyArray<RoleDef> = [
     emoji: '📊',
     labelKey: 'app.roleAnalyst.label',
     descriptionKey: 'app.roleAnalyst.description',
-    placeholderKey: 'app.rolePassenger.placeholder',
-  },
-  {
-    id: 'planner',
-    emoji: '🔮',
-    labelKey: 'app.rolePlanner.label',
-    descriptionKey: 'app.rolePlanner.description',
     placeholderKey: 'app.rolePassenger.placeholder',
   },
 ];

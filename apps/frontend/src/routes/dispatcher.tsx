@@ -1,5 +1,5 @@
 /**
- * T-135: "/dispatcher" → <AlertsPanel />.
+ * T-135 / T-200: "/dispatcher" → <AlertsPanel />.
  *
  * T-131: replaces the old PlaceholderPanel for the dispatcher role.
  * TanStack Query's `refetchInterval` does the polling (D-013).

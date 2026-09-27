@@ -44,7 +44,7 @@ describe('t() — static lookups', () => {
     expect(t('app.rolePassenger.label')).toBe('Пассажир');
     expect(t('app.roleDispatcher.label')).toBe('Диспетчер');
     expect(t('app.roleAnalyst.label')).toBe('Аналитик');
-    expect(t('app.rolePlanner.label')).toBe('Планировщик');
+    // T-200 / D-027: planner tab was removed — no rolePlanner key anymore.
   });
 
   it('returns deep-nested placeholders', () => {
@@ -101,8 +101,6 @@ describe('t() — type safety (compile-time)', () => {
       'app.roleDispatcher.description',
       'app.roleAnalyst.label',
       'app.roleAnalyst.description',
-      'app.rolePlanner.label',
-      'app.rolePlanner.description',
       'dispatcher.alerts.title',
       'dispatcher.alerts.loading',
       'dispatcher.alerts.errorPrefix',

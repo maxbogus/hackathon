@@ -41,10 +41,7 @@ export const TEXTS = {
       label: 'Аналитик',
       description: 'Графики и метрики (T-035/037)',
     },
-    rolePlanner: {
-      label: 'Планировщик',
-      description: 'Monte Carlo сценарии (T-036)',
-    },
+    // T-200 / D-027: planner tab was removed — no rolePlanner key anymore.
   },
 
   dispatcher: {
