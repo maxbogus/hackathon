@@ -47,6 +47,7 @@ REPO_ROOT := $(shell pwd)
         lineage-snapshot-real lineage-snapshot lineage-verify lineage-test \
         dvc-probe dvc-init dvc-add-smoke dvc-add-real dvc-add-artifacts \
         dvc-status dvc-cache-size dvc-test \
+        optuna-probe optuna-smoke optuna-run optuna-test \
         dvc-probe dvc-init dvc-add-smoke dvc-add-real dvc-add-artifacts \
         dvc-status dvc-cache-size dvc-test \
         db-upgrade db-downgrade db-revision db-current db-history
@@ -614,6 +615,29 @@ dvc-cache-size: ## DVC cache size (close to 0 if hardlink works)
 
 dvc-test: ## DVC probe tests (script exists + version >= 3.0)
 	$(UV) run --with pytest --with pytest-asyncio python -m pytest ml/tests/test_dvc_probe.py -q
+
+
+# ---------------------------------------------------------------------------
+# MLOPS LAB: Optuna (TPE hyperparameter search, sqlite storage)
+# ---------------------------------------------------------------------------
+# Optuna is NOT in uv.lock: installed ephemerally via uv run --with optuna.
+# Study storage: sqlite at mlops/optuna/studies/xgboost_route.db (gitignored).
+# R6 budget: n_trials=15, timeout=1800s. Smoke: 2 trials, <5 sec.
+# Surrogate objective for smoke; real objective via build_real_objective(df).
+
+optuna-probe: ## Optuna version ephemerally
+	@$(UV) run --with optuna python -c "import optuna; print('optuna', optuna.__version__)"
+
+optuna-smoke: ## 2-trial smoke (CI, <5s, deterministic seed=42)
+	@cd $(REPO_ROOT) && $(UV) run --with optuna python -c \
+		"from mlops.optuna.study_xgboost import create_study; s = create_study(n_trials=2); print(f\"smoke OK: best={s.best_value:.4f}, n_trials={len(s.trials)}\")"
+
+optuna-run: ## 15-trial TPE run (~30 sec on real XGBoost, R6 budget)
+	@cd $(REPO_ROOT) && $(UV) run --with optuna --with xgboost --with polars python -c \
+		"from mlops.optuna.study_xgboost import create_study; s = create_study(n_trials=15, timeout=1800); print(f\"best={s.best_value:.4f}, params={s.best_params}\")"
+
+optuna-test: ## Optuna tests (storage, determinism, smoke)
+	$(UV) run --with pytest --with pytest-asyncio --with optuna python -m pytest ml/tests/test_optuna_objective.py -q
 
 # CI gate (расширенный): все проверки включая структурный анализ
 # ---------------------------------------------------------------------------
