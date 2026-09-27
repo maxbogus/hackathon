@@ -178,6 +178,8 @@ describe('TEXTS — locked snapshot', () => {
       'dispatcher',
       // T-226: новая вкладка /historical с TanStack Table v8 (actuals).
       'historical',
+      // T-122/T-227: блок map.* — карта маршрутов (Leaflet/Yandex).
+      'map',
       'passenger',
       // T-222 follow-up: новая вкладка /predictions с TanStack Table v8.
       'predictions',

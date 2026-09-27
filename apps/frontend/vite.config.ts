@@ -11,6 +11,12 @@ export default defineConfig({
     TanStackRouterVite({ target: 'react', autoCodeSplitting: true }),
     react(),
   ],
+  // T-122: Vite по умолчанию ищет .env в корне проекта (apps/frontend), но
+  // ключ Яндекс.Карт и VITE_MAP_IMPL живут в КОРНЕВОМ .env — там же, откуда их
+  // читают backend (pydantic-settings) и docker compose (build-args). Один
+  // источник правды вместо дублирования ключа в apps/frontend/.env.local.
+  // В Docker путь ведёт в / (там .env нет) — переменные приходят из build-args.
+  envDir: path.resolve(__dirname, '../..'),
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

@@ -16,9 +16,30 @@
  */
 
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import { PassengerMode } from './PassengerMode';
+
+/**
+ * T-122: карта мокается — Leaflet/Yandex не рендерятся в jsdom
+ * (см. components/Map/README.md). Проверяем проводку: геометрия из
+ * /geo/routes доехала до карты, а выбор синхронизирован с карточками.
+ */
+vi.mock('@/components/Map/MapProvider', () => ({
+  RouteMap: ({
+    routes,
+    selectedRouteId,
+  }: {
+    routes: readonly { routeId: number }[];
+    selectedRouteId?: number | null;
+  }) => (
+    <div
+      data-testid="route-map-stub"
+      data-routes={routes.length}
+      data-selected={selectedRouteId === null || selectedRouteId === undefined ? '' : String(selectedRouteId)}
+    />
+  ),
+}));
 
 const ROUTES = [1, 7, 11, 12, 17, 25, 26, 28, 50];
 const ACTIVE_MODEL_PAYLOAD = {
@@ -36,12 +57,14 @@ function mockLoadApi(opts: {
   modelPayload?: object | null;
   actualsEmpty?: boolean;
   predictionsEmpty?: boolean;
+  geoEmpty?: boolean;
 } = {}): void {
   const actualsByRoute = opts.actualsByRoute ?? {};
   const predictionsByRoute = opts.predictionsByRoute ?? {};
   const modelPayload = opts.modelPayload ?? ACTIVE_MODEL_PAYLOAD;
   const actualsEmpty = !!opts.actualsEmpty;
   const predictionsEmpty = !!opts.predictionsEmpty;
+  const geoEmpty = !!opts.geoEmpty;
 
   global.fetch = vi.fn(async (input: RequestInfo | URL) => {
     const url = typeof input === 'string' ? input : input.toString();
@@ -90,6 +113,27 @@ function mockLoadApi(opts: {
           loads,
           count: loads.length,
           source: 'predictions',
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      );
+    }
+
+    if (url.includes('/api/v1/geo/routes')) {
+      const routes = geoEmpty
+        ? []
+        : ROUTES.map((rid) => ({
+            route_id: rid,
+            n_stops: 2,
+            stops: [
+              { name: `Остановка ${rid}-1`, lat: 55.8, lon: 37.7, order: 0 },
+              { name: `Остановка ${rid}-2`, lat: 55.81, lon: 37.71, order: 1 },
+            ],
+          }));
+      return new Response(
+        JSON.stringify({
+          routes,
+          count: routes.length,
+          source: 'external/stops_routes.json',
         }),
         { status: 200, headers: { 'content-type': 'application/json' } },
       );
@@ -252,6 +296,84 @@ describe('<PassengerMode> — два блока actuals+predictions', () => {
     await waitFor(() => {
       expect(screen.getByText(/как было/i)).toBeInTheDocument();
       expect(screen.getByText(/как будет/i)).toBeInTheDocument();
+    });
+  });
+});
+
+/**
+ * T-122: карта маршрутов + синхронизация с карточками.
+ *
+ * Провайдер мокается (jsdom не рендерит Leaflet/Yandex) — проверяем контракт:
+ * геометрия из /geo/routes доехала, выбор ходит в обе стороны.
+ */
+describe('<PassengerMode> — карта маршрутов (T-122)', () => {
+  it('passes the route geometry from /geo/routes to the map', async () => {
+    mockLoadApi();
+    render(<PassengerMode />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('route-map-stub')).toHaveAttribute(
+        'data-routes',
+        String(ROUTES.length),
+      );
+    });
+  });
+
+  it('keeps rendering the map section when geometry is unavailable', async () => {
+    mockLoadApi({ geoEmpty: true });
+    render(<PassengerMode />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('route-map-stub')).toHaveAttribute('data-routes', '0');
+    });
+  });
+
+  it('clicking a prediction card selects that route on the map', async () => {
+    mockLoadApi({ predictionsByRoute: { 7: 90 } });
+    render(<PassengerMode />);
+
+    await waitFor(() => expect(screen.getByTestId('route-map-stub')).toBeInTheDocument());
+
+    const card = cardByRoute('predictions-grid', 7);
+    expect(card).toBeDefined();
+    fireEvent.click(card as HTMLElement);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('route-map-stub')).toHaveAttribute('data-selected', '7');
+      expect(cardByRoute('predictions-grid', 7)?.getAttribute('data-selected')).toBe('true');
+      expect(cardByRoute('predictions-grid', 1)?.getAttribute('data-selected')).toBe('false');
+    });
+  });
+
+  it('clicking the same card twice clears the selection (toggle)', async () => {
+    mockLoadApi();
+    render(<PassengerMode />);
+
+    await waitFor(() => expect(screen.getByTestId('route-map-stub')).toBeInTheDocument());
+
+    const card = cardByRoute('actuals-grid', 11) as HTMLElement;
+    fireEvent.click(card);
+    await waitFor(() =>
+      expect(screen.getByTestId('route-map-stub')).toHaveAttribute('data-selected', '11'),
+    );
+
+    fireEvent.click(card);
+    await waitFor(() =>
+      expect(screen.getByTestId('route-map-stub')).toHaveAttribute('data-selected', ''),
+    );
+  });
+
+  it('selection is shared between both grids (same routeId)', async () => {
+    mockLoadApi();
+    render(<PassengerMode />);
+
+    await waitFor(() => expect(screen.getByTestId('route-map-stub')).toBeInTheDocument());
+
+    fireEvent.click(cardByRoute('actuals-grid', 25) as HTMLElement);
+
+    await waitFor(() => {
+      expect(cardByRoute('actuals-grid', 25)?.getAttribute('data-selected')).toBe('true');
+      expect(cardByRoute('predictions-grid', 25)?.getAttribute('data-selected')).toBe('true');
     });
   });
 });

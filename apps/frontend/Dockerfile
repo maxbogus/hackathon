@@ -6,6 +6,14 @@ FROM node:20-slim AS builder
 ENV YARN_VERSION=4.5.0
 RUN corepack enable && corepack prepare yarn@4.5.0 --activate
 
+# T-122: провайдер карты и ключ Яндекс.Карт. Vite инлайнит VITE_* на этапе
+# сборки, поэтому передаём через build-args (см. docker-compose.yml frontend.build.args).
+# Без ключа карта работает на Leaflet/OSM (VITE_MAP_IMPL=osm по умолчанию).
+ARG VITE_MAP_IMPL=osm
+ARG VITE_YANDEX_MAPS_API_KEY=""
+ENV VITE_MAP_IMPL=$VITE_MAP_IMPL
+ENV VITE_YANDEX_MAPS_API_KEY=$VITE_YANDEX_MAPS_API_KEY
+
 WORKDIR /app
 
 COPY apps/frontend/package.json apps/frontend/yarn.lock* ./

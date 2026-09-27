@@ -42,6 +42,10 @@ describe('loadConfig() — структура', () => {
   });
 
   it('map.impl дефолтит в osm при отсутствии env', () => {
+    // T-122: Vite читает КОРНЕВОЙ .env (envDir в vite.config.ts), где в дев-режиме
+    // может стоять VITE_MAP_IMPL=yandex. «Отсутствие значения» моделируем явной
+    // пустой строкой, чтобы тест не зависел от локального .env разработчика.
+    vi.stubEnv('VITE_MAP_IMPL', '');
     expect(loadConfig().map.impl).toBe('osm');
   });
 

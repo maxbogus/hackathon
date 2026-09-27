@@ -1,8 +1,8 @@
 /**
  * T-218: карточка маршрута для пассажирского экрана.
  *
- * Variant 'actual' → block "Как было" (actuals).
- * Variant 'prediction' → block "Как будет" (predictions).
+ * Variant 'actual' → блок факта (actuals).
+ * Variant 'prediction' → блок прогноза (predictions).
  *
  * T-218+ (отзыв пользователя, см. clinerule 31):
  *   Показываем абсолютное число пассажиров + отклонение actual vs prediction.
@@ -38,6 +38,10 @@ export interface RouteLoadCardProps {
   /** raw load_pct (для tier-цвета если tier не передан). */
   readonly loadPct?: number | null;
   readonly variant?: RouteLoadVariant;
+  /** T-122: выбранный маршрут — подсвечен (синхронизация с картой). */
+  readonly selected?: boolean;
+  /** T-122: клик/Enter/Space по карточке → выбрать маршрут на карте. */
+  readonly onSelect?: (routeId: number) => void;
 }
 
 const SIDE_TEXT: Readonly<Record<'over' | 'under' | 'normal' | 'unknown', string>> = {
@@ -67,6 +71,8 @@ export function RouteLoadCard({
   tier: tierProp,
   loadPct,
   variant,
+  selected = false,
+  onSelect,
 }: RouteLoadCardProps): JSX.Element {
   const cardStyle: React.CSSProperties = {
     borderRadius: 6,
@@ -79,6 +85,8 @@ export function RouteLoadCard({
     gap: 4,
   };
 
+  const interaction = interactionProps(routeId, selected, onSelect);
+
   // Нет данных — серая карточка.
   if (boardings === null) {
     return (
@@ -87,11 +95,16 @@ export function RouteLoadCard({
         data-side="unknown"
         data-route-id={routeId}
         data-variant={variant ?? 'prediction'}
+        data-selected={selected ? 'true' : 'false'}
         style={{
           ...cardStyle,
           background: '#f5f5f5',
           borderTop: '4px solid #9e9e9e',
+          cursor: onSelect ? 'pointer' : 'default',
+          outline: selected ? '2px solid #1f2937' : 'none',
+          outlineOffset: 1,
         }}
+        {...interaction}
       >
         <div style={{ fontSize: 13, color: '#555' }}>{tfRouteLabel(routeId)}</div>
         <div style={{ fontSize: 22, color: '#9e9e9e' }}>—</div>
@@ -150,11 +163,16 @@ export function RouteLoadCard({
       data-tier={tierAttr}
       data-route-id={routeId}
       data-variant={variant ?? 'prediction'}
+      data-selected={selected ? 'true' : 'false'}
       style={{
         ...cardStyle,
         background: bgColor,
         borderTop: `4px solid ${borderColor}`,
+        cursor: onSelect ? 'pointer' : 'default',
+        outline: selected ? '2px solid #1f2937' : 'none',
+        outlineOffset: 1,
       }}
+      {...interaction}
     >
       <div style={{ fontSize: 13, color: '#555' }}>{tfRouteLabel(routeId)}</div>
       <div
@@ -182,4 +200,32 @@ export function RouteLoadCard({
 
 function tfRouteLabel(routeId: number): string {
   return `Маршрут ${routeId}`;
+}
+
+/**
+ * T-122: интерактивность карточки (выбор маршрута для карты).
+ *
+ * Разметка без `<button>`: карточка — `article` с фиксированным testid и
+ * data-атрибутами, которые читают существующие тесты. Если `onSelect` не
+ * передан — никаких role/tabIndex (карточка не становится «кнопкой» молча).
+ */
+function interactionProps(
+  routeId: number,
+  selected: boolean,
+  onSelect?: (routeId: number) => void,
+): React.HTMLAttributes<HTMLElement> {
+  if (!onSelect) return {};
+
+  return {
+    role: 'button',
+    tabIndex: 0,
+    'aria-pressed': selected,
+    onClick: () => onSelect(routeId),
+    onKeyDown: (event: React.KeyboardEvent<HTMLElement>) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        onSelect(routeId);
+      }
+    },
+  };
 }
