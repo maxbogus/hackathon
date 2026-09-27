@@ -166,3 +166,13 @@ apps/frontend/src/routeTree.gen.ts
 export/01-ml/artifacts/**/*.pkl
 export/dist/
 export/**/*.tar.gz
+
+# === MLOps lab (MLflow / Optuna / Airflow / DVC) ===
+# Локальные store'ы лаборатории: не в git (эфемерные, восстанавливаются прогоном).
+mlruns/
+mlruns.db
+mlartifacts/
+mlops/airflow_home/
+mlops/optuna/studies/
+mlops/dvc-cache/
+.dvc/cache/

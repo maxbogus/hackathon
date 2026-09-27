@@ -42,6 +42,7 @@ REPO_ROOT := $(shell pwd)
         pipeline-up pipeline-down pipeline-logs pipeline-fetch pipeline-train pipeline-predict pipeline-full pipeline-status pipeline-test \
         external-fetch external-gen external-verify external-show external-all \
         predictions-list predictions-activate predictions-restore-etalon predictions-ingest-csv \
+        mlflow-probe mlflow-demo mlflow-runs mlflow-test mlflow-ui mlflow-server mlflow-run \
         db-upgrade db-downgrade db-revision db-current db-history
 
 # ---------------------------------------------------------------------------
@@ -492,6 +493,40 @@ benchmark-compare: ## Compare N benchmark reports → leaderboard
 
 run-benchmark: ## Generic benchmark entry (delegates to ml.transit_ai.benchmark.cli)
 	$(UV) run python scripts/run_benchmark.py
+
+# ---------------------------------------------------------------------------
+# MLOPS LAB: MLflow tracking (observability, НЕ источник истины)
+# ---------------------------------------------------------------------------
+# MLflow НЕ в uv.lock и НЕ в Docker: ставится эфемерно через `uv run --with`.
+# Store по умолчанию: sqlite:///<repo>/mlruns.db (file-store в MLflow 3 переведён
+# в maintenance mode и падает без MLFLOW_ALLOW_FILE_STORE=true — см. F-112).
+# Артефакты: file:<repo>/mlartifacts. Контракты (JSON Schema, ml/artifacts/*/meta.json,
+# predictions/*.json) остаются источником истины. См. docs/MLFLOW.md.
+
+MLFLOW_PKG      ?= mlflow>=2.16
+MLFLOW_PORT     ?= 5000
+MLFLOW_HINT_ENV  = MLFLOW_DISABLE_AGENT_HINT=1
+
+mlflow-probe: ## Версия MLflow (эфемерная установка, uv.lock не трогаем)
+	@$(MLFLOW_HINT_ENV) $(UV) run --with "$(MLFLOW_PKG)" python -c "import importlib.metadata as m; print('mlflow', m.version('mlflow'))"
+
+mlflow-demo: ## Демо tracking: 3 конфига x 4 fold -> раны в mlruns.db
+	@$(MLFLOW_HINT_ENV) $(UV) run --with "$(MLFLOW_PKG)" python ml/scripts/mlflow_demo.py
+
+mlflow-runs: ## Список ранов из локального store (LIMIT=N)
+	@$(MLFLOW_HINT_ENV) $(UV) run --with "$(MLFLOW_PKG)" python ml/scripts/mlflow_runs.py
+
+mlflow-test: ## Тесты трекера в MLflow-режиме (pytest + mlflow эфемерно)
+	@$(MLFLOW_HINT_ENV) $(UV) run --with pytest --with pytest-asyncio --with "$(MLFLOW_PKG)" python -m pytest ml/tests/test_mlflow_tracker.py -q
+
+mlflow-ui: ## MLflow UI -> http://127.0.0.1:$(MLFLOW_PORT) (sqlite store)
+	@$(MLFLOW_HINT_ENV) $(UV) run --with "$(MLFLOW_PKG)" mlflow ui --backend-store-uri "sqlite:///$(REPO_ROOT)/mlruns.db" --port $(MLFLOW_PORT)
+
+mlflow-server: ## Local tracking server (sqlite) -> MLFLOW_TRACKING_URI=http://127.0.0.1:$(MLFLOW_PORT)
+	@$(MLFLOW_HINT_ENV) $(UV) run --with "$(MLFLOW_PKG)" mlflow server --host 127.0.0.1 --port $(MLFLOW_PORT) --backend-store-uri "sqlite:///$(REPO_ROOT)/mlruns.db" --default-artifact-root "file:$(REPO_ROOT)/mlartifacts"
+
+mlflow-run: ## Любой ml/-скрипт под tracking: make mlflow-run SCRIPT=scripts/train_xgboost.py ARGS="--model-id x"
+	@$(MLFLOW_HINT_ENV) $(UV) --directory ml run --with "$(MLFLOW_PKG)" python $(SCRIPT) $(ARGS)
 
 # ---------------------------------------------------------------------------
 # CI gate (расширенный): все проверки включая структурный анализ
