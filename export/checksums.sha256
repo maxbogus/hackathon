@@ -45,6 +45,9 @@ a62db5cd6f1e1c4e34f19b713219c31797116e2ba5c195f5b190cc19f10e648f  ./03-service/e
 68b47a27d264eba353a4a32009c6eefbb5b4e01559e1cb92d7b6a698fb75c95e  ./04-architecture/dfd_ru.mmd
 6260ed667f667da9a387a19ae3d7b1ea6df3001cd1c031fc3a35ec5bb01968bc  ./04-architecture/dfd_ru.png
 10dad15df9fe33c6e7c32e075ab1843769d2d51b57a18b12abd3730864756370  ./04-architecture/dfd_ru.svg
+91d1b141acb82ea21fb4d6fefdf2ceaa9fbc910c9092ada40dd9368cd12afdd8  ./04-architecture/erd.dot
+4b89161bf8f186e00a4bfc966390109fc2135b4c3e61c824e449e04a354ea307  ./04-architecture/erd.png
+0318ff97e2bc9c71c8fafce7fe12633fb7d94daa66461920496c598510d2a9dd  ./04-architecture/erd.svg
 db194a75244ddb4933c7f701e1736f066f253827958e663014cb15078e2ac0dd  ./04-architecture/EXTERNAL_DATA.md
 1437ea0364b66ae93a07da93417fe4341b518c837f6014fcc23aed3b7e392c8a  ./04-architecture/EXTERNAL_SOURCES.md
 0043134ef9647482a0a889342686ebb899db853d4712499d6d7435cee9ccdf15  ./04-architecture/MODEL_DOMAIN.md
@@ -55,6 +58,6 @@ ea4500aa7b2c356c9d8449a1e4962af9bd20ea3a70fda090380b3d3f27803d5c  ./05-performan
 cbe94d8c6cab02b9639550be6d59bbcf6ff156cf1c884f937ae44caf5ac8a5d1  ./06-limitations-roadmap/BACKLOG.md
 51c5cbb5608a8ebf8d607c599c0195d7f55a4e18c86791903f9af40c1ce2ebe1  ./06-limitations-roadmap/BUSINESS_VALUE.md
 fd9487f92fcbc50157ef4d42214a3044ce9a0300d77c9a29e9c2938084a942ed  ./README_form.md
-a9892689c60ba25041f5995e8c16469e3b9836f21b01e2973a7a1ce7401a3aff  ./README.md
+d7c745bb9e8faf04e6451eedc799de88e97c4536887252a97bd729c493456167  ./README.md
 40bde3384391c11d18c91b5a58cc580ae2d0faa0b8a402523660c6152d18fdcd  ./verification/verification-report.txt
 f6166cc81b8830299fd4dba6f70d1261348764afd637cb90915443cd84fe4182  ./verification/verify_install.sh

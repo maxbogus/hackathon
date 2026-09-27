@@ -17,6 +17,27 @@
 | — | Готовый текст формы | `README_form.md` | 6 полей, RU, со ссылками |
 | — | Проверка установки/запуска | `verification/` | `verify_install.sh`, `verification-report.txt` |
 
+```
+export/04-architecture/
+├── erd.svg          # ERD из schema.dbml (dbml-renderer) — открывается в браузере
+├── erd.png          # ERD в PNG (schema.dbml → dot → graphviz `dot -Tpng`)
+├── erd.dot          # промежуточный Graphviz DOT (для своих стилей)
+├── schema.dbml      # source of truth (генерируется из SQLAlchemy: make arch-dbml)
+└── schema-tables.md # таблица таблиц + privacy hints
+```
+
+## Как пересобрать схему БД и ERD
+
+```bash
+make arch-dbml                                     # SQLAlchemy → docs/architecture/schema.dbml
+dbml-renderer -i docs/architecture/schema.dbml -f svg -o docs/architecture/schema_erd.svg
+dbml-renderer -i docs/architecture/schema.dbml -f dot -o /tmp/erd.dot
+dot -Tpng -Gdpi=140 /tmp/erd.dot -o docs/architecture/schema_erd.png
+```
+
+Требуется глобальный CLI `dbml-renderer` (`npm install -g @softwaretechnik/dbml-renderer`)
+и Graphviz (`dot`). Альтернатива без установки — вставить `schema.dbml` на https://dbdiagram.io.
+
 ## Быстрый старт для жюри
 
 ```bash
@@ -54,8 +75,8 @@ make export-verify       # обязательные файлы + sha256 (см. c
 
 ## Известные пробелы (добить при наличии времени)
 
-- [ ] **ERD-картинка** (`erd.png`) из SQLAlchemy-моделей: `dbml-renderer` не установлен —
-      сейчас `schema.dbml` приложен как есть (визуализация: вставить файл на https://dbdiagram.io).
+- [x] **ERD-картинка** (`erd.svg` / `erd.png`) — собрана через
+      `dbml-renderer` (@softwaretechnik/dbml-renderer) + Graphviz; см. раздел выше.
 - [ ] **10 слайдов питча**: в репозитории только `slide_01_pain_points.md`.
 - [ ] **k6 HTML/JSON-отчёты**: в headless Docker не сохраняются (F-111) — в
       `05-performance/` приложен консольный summary.
