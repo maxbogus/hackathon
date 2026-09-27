@@ -117,7 +117,7 @@ def main() -> int:
         "trained_at": datetime.now(UTC).isoformat(),
         "git_commit": git_commit_short(),
         "seed": 42,
-        "train_data_hash": "pending",
+        "train_data_hash": _resolve_train_data_hash(),
         "metrics": metrics,
         "hyperparams": {
             "iterations": args.iterations,
@@ -135,6 +135,26 @@ def main() -> int:
     print(f"Holdout WAPE-score = {metrics['wape_score']:.4f}")
     print("Run make submission or scripts/blend.py для генерации CSV")
     return 0
+
+
+def _resolve_train_data_hash() -> str:
+    """F-114: подтянуть sha256 train.csv из lineage snapshot."""
+    snap_path = (
+        Path(__file__).resolve().parents[2]
+        / "docs" / "lineage" / "datasets" / "real_ridership.json"
+    )
+    if not snap_path.is_file():
+        print(
+            f"WARN: lineage snapshot не найден ({snap_path}); "
+            "train_data_hash='pending'. Снять: make lineage-snapshot-real"
+        )
+        return "pending"
+    try:
+        from transit_ai.lineage.snapshot import read as _read_snapshot
+        return _read_snapshot(snap_path).sha256
+    except Exception as exc:
+        print(f"WARN: snapshot read failed {snap_path}: {exc}")
+        return "pending"
 
 
 if __name__ == "__main__":

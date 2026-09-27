@@ -23,9 +23,14 @@ from transit_ai.data.real import RealSource
 from transit_ai.models.xgboost_route import XGBoostRoutePredictor
 from transit_ai.reports.metrics import compute_metrics
 
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 ML_DIR = SCRIPT_DIR.parent
 REPO_ROOT = ML_DIR.parent
+
+DEFAULT_TRAIN_SNAPSHOT = (
+    REPO_ROOT / "docs" / "lineage" / "datasets" / "real_ridership.json"
+)
 DEFAULT_TRAIN_START = datetime(2025, 1, 1, tzinfo=UTC)
 DEFAULT_TRAIN_END = datetime(2025, 8, 31, tzinfo=UTC)
 DEFAULT_HOLDOUT_START = datetime(2025, 9, 1, tzinfo=UTC)
@@ -115,7 +120,7 @@ def main() -> int:
         "trained_at": datetime.now(UTC).isoformat(),
         "git_commit": git_commit_short(),
         "seed": model.seed,
-        "train_data_hash": "pending",  # TODO: sha256 от parquet
+        "train_data_hash": _resolve_train_data_hash(),
         "metrics": {
             "rmsle": metrics["rmsle"],
             "mae": metrics["mae"],
@@ -144,6 +149,30 @@ def main() -> int:
     )
 
     return 0
+
+
+def _resolve_train_data_hash() -> str:
+    """Подтянуть sha256 train.csv из lineage snapshot (если есть).
+
+    F-114: snapshot уже снят в docs/lineage/datasets/real_ridership.json — это
+    ОДИН источник правды для train_data_hash. Если snapshot не существует
+    (первый прогон на новой машине) — оставляем "pending" и печатаем warning.
+    """
+    from transit_ai.lineage.snapshot import read as _read_snapshot  # lazy import
+
+    snap_path = DEFAULT_TRAIN_SNAPSHOT
+    if not snap_path.is_file():
+        print(
+            f"WARN: lineage snapshot не найден ({snap_path}); "
+            "train_data_hash останется 'pending'. Снять: make lineage-snapshot-real"
+        )
+        return "pending"
+    try:
+        snap = _read_snapshot(snap_path)
+        return snap.sha256
+    except Exception as exc:
+        print(f"WARN: не удалось прочитать snapshot {snap_path}: {exc}")
+        return "pending"
 
 
 if __name__ == "__main__":

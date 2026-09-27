@@ -43,6 +43,7 @@ REPO_ROOT := $(shell pwd)
         external-fetch external-gen external-verify external-show external-all \
         predictions-list predictions-activate predictions-restore-etalon predictions-ingest-csv \
         mlflow-probe mlflow-demo mlflow-runs mlflow-test mlflow-ui mlflow-server mlflow-run \
+        lineage-snapshot-real lineage-snapshot lineage-verify lineage-test \
         db-upgrade db-downgrade db-revision db-current db-history
 
 # ---------------------------------------------------------------------------
@@ -529,6 +530,41 @@ mlflow-run: ## Любой ml/-скрипт под tracking: make mlflow-run SCRI
 	@$(MLFLOW_HINT_ENV) $(UV) --directory ml run --with "$(MLFLOW_PKG)" python $(SCRIPT) $(ARGS)
 
 # ---------------------------------------------------------------------------
+# MLOPS LAB: Lineage-lite (sha256 + manifest для 8 GB датасетов)
+# ---------------------------------------------------------------------------
+# Streaming sha256 (1 MB chunks) — заменяет hash_dataframe() из training.registry.py,
+# который pickle'ит DataFrame в RAM и OOM-ит на 8 GB train.csv.
+# Snapshot пишется в docs/lineage/datasets/*.json (маленький, коммитится в git).
+# train_xgboost/gru/catboost.py подтягивают sha256 из snapshot в meta.json.
+
+LINEAGE_DATASET ?= $(REPO_ROOT)/data/real/train.csv
+LINEAGE_OUTPUT ?= $(REPO_ROOT)/docs/lineage/datasets/real_ridership.json
+
+lineage-snapshot-real: ## sha256+size+mtime+rows для data/real/train.csv (8 GB, ~23 сек)
+	$(UV) run --directory ml python scripts/lineage_snapshot.py \
+		--input $(LINEAGE_DATASET) --output $(LINEAGE_OUTPUT)
+
+lineage-snapshot: ## Снять snapshot для произвольного файла: make lineage-snapshot INPUT=... OUTPUT=...
+	$(UV) run --directory ml python scripts/lineage_snapshot.py --input $(INPUT) --output $(OUTPUT)
+
+lineage-verify: ## Проверить целостность: sha256 в meta.json всех артефактов == snapshot (если есть)
+	@echo "lineage-verify: проверка, что train_data_hash в ml/artifacts/*/meta.json == sha256 в snapshot"
+	@if [ ! -f $(LINEAGE_OUTPUT) ]; then echo "ERROR: snapshot $(LINEAGE_OUTPUT) missing"; exit 1; fi
+	@EXPECTED=$$($(UV) run --directory ml python -c "import json; print(json.load(open('$(LINEAGE_OUTPUT)'))['sha256'])") \
+	&& echo "expected=$$EXPECTED" \
+	&& HIT=0; TOTAL=0; \
+	for meta in $(REPO_ROOT)/ml/artifacts/*/meta.json; do \
+		  [ -f $$meta ] || continue; \
+		  TOTAL=$$((TOTAL+1)); \
+		  ACTUAL=$$($(UV) run --directory ml python -c "import json,sys; print(json.load(open('$$meta')).get('train_data_hash',''))"); \
+		  if [ "$$ACTUAL" = "$$EXPECTED" ]; then HIT=$$((HIT+1)); \
+		  else echo "  $$meta: $$ACTUAL (≠ expected)"; fi; \
+	done; \
+	echo "matched=$$HIT/$$TOTAL (остальные имеют train_data_hash='pending' — не обучены на этой версии train.csv)"
+
+lineage-test: ## Тесты lineage пакета (hashing + snapshot, +pytest эфемерно)
+	$(UV) run --directory ml --with pytest --with pytest-asyncio python -m pytest tests/test_lineage_hashing.py tests/test_lineage_snapshot.py -q
+
 # CI gate (расширенный): все проверки включая структурный анализ
 # ---------------------------------------------------------------------------
 

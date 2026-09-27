@@ -1,0 +1,9 @@
+{
+  "captured_at": "2026-09-27T17:17:07.109671+00:00",
+  "mtime_ns": 1789376648000000000,
+  "path": "/home/maxbogus/Repositories/hackathon/data/real/test.csv",
+  "rows": 13391572,
+  "sha256": "d58523f79b0d47d72eafe0da9a0c72fb8b472bf4b74e68a4e9f789bd6656557a",
+  "size_bytes": 2231502820,
+  "skip_header": false
+}
