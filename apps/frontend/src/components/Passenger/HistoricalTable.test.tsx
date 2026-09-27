@@ -136,6 +136,64 @@ describe('<HistoricalTable>', () => {
     const header = screen.getByTestId('historical-table-header');
     expect(header).toBeInTheDocument();
     // Конкретное значение, не just truthy — это контракт между header и data rows.
-    expect(header.getAttribute('data-grid-template-columns')).toBe('110px 120px 60px 1fr');
+    // T-232: route-колонка 110px → 140px, чтобы «Маршрут» + « ▲» не резались.
+    expect(header.getAttribute('data-grid-template-columns')).toBe('140px 120px 60px 1fr');
+  });
+
+  // ── T-232: полная высота + вертикальные разделители колонок ──────────
+
+  it('без fillHeight scroll-контейнер сохраняет фиксированную высоту 400px', () => {
+    render(<HistoricalTable rows={ROWS_ALL} />);
+    const scroll = screen.getByTestId('historical-table-scroll');
+    expect(scroll.style.height).toBe('400px');
+    expect(scroll.style.flex).toBe('');
+  });
+
+  it('fillHeight: scroll-контейнер растягивается (flex 1 1 0), корень — flex-колонка', () => {
+    render(<HistoricalTable rows={ROWS_ALL} fillHeight />);
+    const scroll = screen.getByTestId('historical-table-scroll');
+    // jsdom нормализует shorthand `flex: 1 1 0` → `1 1 0px`, поэтому
+    // проверяем longhands (стабильно между версиями jsdom).
+    expect(scroll.style.flexGrow).toBe('1');
+    expect(scroll.style.flexShrink).toBe('1');
+    expect(scroll.style.flexBasis).toBe('0px');
+    expect(scroll.style.height).toBe('');
+    expect(scroll.style.minHeight).toBe('0');
+
+    const root = screen.getByTestId('historical-table');
+    expect(root.style.display).toBe('flex');
+    expect(root.style.flexDirection).toBe('column');
+  });
+
+  it('вертикальные разделители: у первых трёх columnheader border-right, у последней — none', () => {
+    render(<HistoricalTable rows={ROWS_ALL} />);
+    const headers = screen.getAllByRole('columnheader');
+    expect(headers).toHaveLength(4);
+    // jsdom нормализует цвет в rgb(...) — проверяем longhands: у трёх первых
+    // колонок линия есть, у последней (`value`, 1fr) — нет.
+    expect(headers[0]?.style.borderRightStyle).toBe('solid');
+    expect(headers[0]?.style.borderRightWidth).toBe('1px');
+    expect(headers[1]?.style.borderRightStyle).toBe('solid');
+    expect(headers[2]?.style.borderRightStyle).toBe('solid');
+    expect(headers[3]?.style.borderRightStyle).toBe('');
+    expect(headers[3]?.style.borderRightWidth).toBe('');
+  });
+
+  it('колонки «по всей высоте»: разделители продублированы фоном scroll-контейнера', () => {
+    render(<HistoricalTable rows={ROWS_ALL} />);
+    const scroll = screen.getByTestId('historical-table-scroll');
+    expect(scroll.style.backgroundSize).toBe('100% 100%');
+    expect(scroll.style.backgroundRepeat).toBe('no-repeat');
+    // 3 слоя-градиента: вертикальные линии на x = 140 / 260 / 320px
+    // (границы route/date/hour из GRID_TEMPLATE_COLUMNS).
+    expect(scroll.style.backgroundImage).toContain(
+      'transparent 139px, #e5e7eb 139px 140px, transparent 140px',
+    );
+    expect(scroll.style.backgroundImage).toContain(
+      'transparent 259px, #e5e7eb 259px 260px, transparent 260px',
+    );
+    expect(scroll.style.backgroundImage).toContain(
+      'transparent 319px, #e5e7eb 319px 320px, transparent 320px',
+    );
   });
 });

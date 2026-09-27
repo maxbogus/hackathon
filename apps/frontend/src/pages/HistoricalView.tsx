@@ -32,19 +32,23 @@ export function HistoricalView(): JSX.Element {
   });
 
   const rows = data ?? [];
-  const errMessage = error
-    ? error instanceof Error
-      ? error.message
-      : String(error)
-    : null;
+  const errMessage = error ? (error instanceof Error ? error.message : String(error)) : null;
 
   return (
-    <main
+    /*
+     * T-232: полная ширина и высота (зеркало PredictionsView). `maxWidth: 1400 +
+     * margin auto` убран; `flex:1 + minHeight:0` в колонке __root отдаёт таблице
+     * всю высоту за вычетом заголовка/фильтров/footer. `<main>` → `<section>`.
+     */
+    <section
       data-testid="historical-view"
       style={{
+        flex: 1,
+        minHeight: 0,
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
         padding: '16px 24px',
-        maxWidth: 1400,
-        margin: '0 auto',
       }}
     >
       <header style={{ marginBottom: 16 }}>
@@ -54,7 +58,7 @@ export function HistoricalView(): JSX.Element {
         </p>
       </header>
 
-      <HistoricalTable rows={rows} isLoading={isLoading} error={errMessage} />
-    </main>
+      <HistoricalTable rows={rows} isLoading={isLoading} error={errMessage} fillHeight />
+    </section>
   );
 }

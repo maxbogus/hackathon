@@ -1,7 +1,61 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-27T19:17:32Z
-> Обновлено: Cline (агент) — T-231: ревизия текстов интерфейса (4 экрана) по требованиям Департамента транспорта (D-045, F-120, clinerule 32).
+> Последнее обновление: 2026-09-27T19:30:30Z
+> Обновлено: Cline (агент) — T-232: таблицы historical/predictions на всю ширину и высоту, «Маршрут» целиком, вертикальные разделители колонок (F-121, clinerule 32 R5).
+
+## Сессия 2026-09-27T19:30:30Z — T-232: таблицы на всю ширину/высоту + разделители колонок
+
+**Контекст:** заказчик открыл `/predictions` и `/historical` и вернул 4 замечания:
+(1) таблица не на всю ширину (`maxWidth: 1400, margin: '0 auto'`),
+(2) не на всю высоту (`height: 400px` в `scrollContainerStyle`),
+(3) заголовок «Маршрут» всё ещё режется при крупном шрифте,
+(4) нужны вертикальные разделители колонок, идущие по всей высоте.
+
+**Что сделано (RED→GREEN→REFACTOR):**
+- `routes/__root.tsx` — высотная flex-цепочка: обёртка `minHeight: '100vh'` +
+  `display: flex; flexDirection: column` (именно `minHeight`, поэтому длинные
+  `/passenger` и `/analyst` не обрезаются), `<main>` → `flex: 1; minHeight: 0;
+  display: flex; flexDirection: column`.
+- `pages/PredictionsView.tsx`, `pages/HistoricalView.tsx` — убраны
+  `maxWidth: 1400` / `margin: '0 auto'`; страница → flex-колонка
+  (`flex:1; minHeight:0; width:'100%'`); `<main>` → `<section>` (уровень main
+  уже даёт `__root`, вложенный main — невалидная семантика); таблице
+  передаётся `fillHeight`.
+- `components/Passenger/{PredictionsTable,HistoricalTable}.tsx`:
+  - `GRID_TEMPLATE_COLUMNS`: route `110px` → `140px`; у `thStyle` сняты
+    `overflow: hidden` + `textOverflow: ellipsis` → «Маршрут» не режется
+    (у `tdStyle` ellipsis оставлен — там даты/числа фиксированной длины);
+  - новый проп `fillHeight?: boolean` (default `false` — standalone-рендер и
+    тесты сохраняют 400px): корень таблицы → flex-колонка, scroll-контейнер →
+    `flex: 1 1 0; minHeight: 0` вместо `height: 400`;
+  - вертикальные разделители: `borderRight` у ячеек (кроме последней, `1fr`) +
+    фон-линии scroll-контейнера на тех же x
+    (`linear-gradient(to right, transparent 139px, #e5e7eb 139px 140px, transparent 140px)`
+    × {140, 260, 320}) — линии идут до низа контейнера даже при малом числе
+    строк. Позиция зашита в градиент, а не в multi-layer `background-position`,
+    который не поддерживает jsdom/cssstyle.
+- Тесты: по 4 новых теста на таблицу (`fillHeight` вкл/выкл, разделители
+  ячеек, фон-линии) + шаблон колонок в ассертах → `140px 120px 60px 1fr`.
+- Документы: `.clinerules/32-ui-copy-standards.md` R5 (140px + требование
+  фиксированных ширин: каждый virtualized-ряд — отдельный grid), тикет `T-232`,
+  находка `F-121`.
+
+**Метрики:** frontend: `283 passed / 2 failed` (те же 2 pre-existing
+`routeCsv.test.ts`), typecheck — только 2 pre-existing ошибки `routeCsv.ts`,
+eslint — только pre-existing (`downloadCsv.ts` eqeqeq, `HorizonToggle` warning),
+`make frontend-text-check` — чисто.
+
+**Как проверить вживую:** `make up` → `/predictions` и `/historical`: таблица на
+всю ширину окна и до низа экрана, «Маршрут» целиком, вертикальные линии между
+колонками тянутся на всю высоту, шапка sticky при скролле.
+
+**Артефакты:** `apps/frontend/src/routes/__root.tsx`,
+`apps/frontend/src/pages/{HistoricalView,PredictionsView}.tsx`,
+`apps/frontend/src/components/Passenger/{HistoricalTable,PredictionsTable}.tsx`
+(+ их `*.test.tsx`), `.clinerules/32-ui-copy-standards.md`,
+`docs/backlog/archive/T-232-tables-full-width-height.md`, ledger `F-121`.
+
+---
 
 ## Сессия 2026-09-27T19:17:32Z — T-231: department-grade UI copy (без идентификаторов, официальный тон)
 

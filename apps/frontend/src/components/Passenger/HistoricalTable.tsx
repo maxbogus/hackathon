@@ -40,8 +40,22 @@ const VIRTUAL_OVERSCAN = 10;
 /**
  * T-226: тот же шаблон колонок, что и PredictionsTable (route/date/hour/value).
  * CSS Grid делит один шаблон между header и всеми data rows, включая virtualized.
+ *
+ * T-232: route-колонка расширена 110px → 140px — «Маршрут» + стрелка сортировки
+ * « ▲» перестают урезаться в «Мар…» (clinerule 32 R5). Ширины фиксированные:
+ * каждый virtualized-ряд — отдельный grid, `max-content` разъехал бы колонки.
  */
-const GRID_TEMPLATE_COLUMNS = '110px 120px 60px 1fr';
+const GRID_TEMPLATE_COLUMNS = '140px 120px 60px 1fr';
+
+/**
+ * T-232: вертикальные разделители колонок. `COLUMN_BOUNDARIES_PX` — правые
+ * границы route/date/hour (совпадают с `GRID_TEMPLATE_COLUMNS`): по ним
+ * рисуются линии на всю высоту контейнера, те же x использует `borderRight`
+ * у ячеек, поэтому линии не удваиваются.
+ */
+const DIVIDER_COLOR = '#e5e7eb';
+const CELL_DIVIDER = `1px solid ${DIVIDER_COLOR}`;
+const COLUMN_BOUNDARIES_PX: readonly number[] = [140, 260, 320];
 
 const fieldsetStyle = {
   border: '1px solid #cbd5e1',
@@ -71,13 +85,57 @@ const buttonStyle = {
   fontSize: 13,
 } as const;
 
-const scrollContainerStyle = {
-  height: VIRTUAL_CONTAINER_HEIGHT_PX,
-  overflow: 'auto',
-  border: '1px solid #e5e7eb',
-  borderRadius: 4,
-  background: '#fff',
-  position: 'relative' as const,
+/**
+ * T-232: контейнер скролла. При `fillHeight=true` растягивается на остаток
+ * высоты страницы (`flex: 1 1 0` + `minHeight: 0`) — без магических
+ * `calc(100vh - Npx)`: высота автоматически учитывает заголовок, фильтры и
+ * footer. Иначе — прежние фиксированные 400px (standalone-рендер, тесты).
+ *
+ * Вертикальные разделители колонок рисуются фоном самого контейнера: фон
+ * скролл-контейнера не уезжает при прокрутке контента (привязан к padding
+ * box), поэтому линии идут на всю высоту — даже если строк меньше, чем места.
+ */
+function scrollContainerStyle(fillHeight: boolean): {
+  readonly overflow: 'auto';
+  readonly border: string;
+  readonly borderRadius: number;
+  readonly background: string;
+  readonly position: 'relative';
+  readonly backgroundImage: string;
+  readonly backgroundSize: string;
+  readonly backgroundRepeat: 'no-repeat';
+  readonly flex?: string;
+  readonly minHeight?: number;
+  readonly height?: number;
+} {
+  return {
+    ...(fillHeight ? { flex: '1 1 0', minHeight: 0 } : { height: VIRTUAL_CONTAINER_HEIGHT_PX }),
+    overflow: 'auto' as const,
+    border: '1px solid #e5e7eb',
+    borderRadius: 4,
+    background: '#fff',
+    position: 'relative' as const,
+    // Позиция линии зашита в сам градиент (`transparent → цвет → transparent`),
+    // поэтому multi-layer background-position не нужен: его не поддерживает
+    // jsdom/cssstyle (в тестах дал бы ''), а браузер — да.
+    backgroundImage: COLUMN_BOUNDARIES_PX.map(
+      (x) =>
+        `linear-gradient(to right, transparent ${x - 1}px, ${DIVIDER_COLOR} ${x - 1}px ${x}px, transparent ${x}px)`,
+    ).join(', '),
+    backgroundSize: '100% 100%',
+    backgroundRepeat: 'no-repeat' as const,
+  };
+}
+
+/**
+ * T-232: корень таблицы в режиме `fillHeight` — flex-колонка, чтобы
+ * scroll-контейнер забрал всю высоту, оставшуюся от h2/фильтров/footer.
+ */
+const rootFillStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  flex: '1 1 0',
+  minHeight: 0,
 } as const;
 
 /**
@@ -109,6 +167,13 @@ const headerRowStyle = {
   borderBottom: '2px solid #e5e7eb',
 } as const;
 
+/**
+ * T-232: у заголовков убраны `overflow: hidden` + `textOverflow: ellipsis` —
+ * «Маршрут» не должен резаться в «Мар…» ни при каком шрифте/зуме
+ * (clinerule 32 R5: расширять колонку, а не сокращать слово).
+ * `whiteSpace: nowrap` остаётся: заголовок не переносится, но и не обрезается.
+ * У ячеек данных ellipsis сохраняется — там даты/числа фиксированной длины.
+ */
 const thStyle = {
   padding: '8px 12px',
   textAlign: 'left' as const,
@@ -116,8 +181,6 @@ const thStyle = {
   userSelect: 'none' as const,
   fontWeight: 600,
   whiteSpace: 'nowrap' as const,
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
 } as const;
 
 const tdStyle = {
@@ -127,6 +190,17 @@ const tdStyle = {
   overflow: 'hidden',
   textOverflow: 'ellipsis',
 } as const;
+
+/**
+ * T-232: вертикальный разделитель колонки. У последней колонки (`value`, 1fr)
+ * разделителя нет — правый край даёт border самого scroll-контейнера.
+ */
+function withColumnDivider<T extends Record<string, unknown>>(
+  base: T,
+  isLast: boolean,
+): T & { borderRight: string } {
+  return { ...base, borderRight: isLast ? 'none' : CELL_DIVIDER };
+}
 
 /**
  * Inline-style для virtualized row: absolute positioning с translateY,
@@ -160,6 +234,12 @@ export interface HistoricalTableProps {
   readonly isLoading?: boolean;
   readonly error?: string | null;
   readonly availableRoutes?: readonly number[];
+  /**
+   * T-232: `true` — таблица забирает всю высоту, оставшуюся от заголовков,
+   * фильтров и footer (используется страницей /historical). `false` (default)
+   * — фиксированные 400px, как раньше (standalone-рендер, тесты).
+   */
+  readonly fillHeight?: boolean;
 }
 
 export function HistoricalTable({
@@ -167,6 +247,7 @@ export function HistoricalTable({
   isLoading = false,
   error = null,
   availableRoutes,
+  fillHeight = false,
 }: HistoricalTableProps): JSX.Element {
   if (isLoading) {
     return (
@@ -189,15 +270,19 @@ export function HistoricalTable({
       </p>
     );
   }
-  return <HistoricalTableInner rows={rows} availableRoutes={availableRoutes} />;
+  return (
+    <HistoricalTableInner rows={rows} availableRoutes={availableRoutes} fillHeight={fillHeight} />
+  );
 }
 
 function HistoricalTableInner({
   rows,
   availableRoutes,
+  fillHeight,
 }: {
   readonly rows: readonly PredictionRow[];
   readonly availableRoutes?: readonly number[];
+  readonly fillHeight: boolean;
 }): JSX.Element {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [showAllRoutes, setShowAllRoutes] = useState(false);
@@ -280,6 +365,7 @@ function HistoricalTableInner({
       data-testid="historical-table"
       role="region"
       aria-label={t('passenger.historicalTable.title')}
+      style={fillHeight ? rootFillStyle : undefined}
     >
       <h2 style={{ marginTop: 0 }}>{t('passenger.historicalTable.title')}</h2>
 
@@ -332,7 +418,7 @@ function HistoricalTableInner({
       <div
         ref={parentRef}
         data-testid="historical-table-scroll"
-        style={scrollContainerStyle}
+        style={scrollContainerStyle(fillHeight)}
       >
         {/*
           CSS Grid <div role="table"> wrapper. Header и data rows используют
@@ -351,7 +437,8 @@ function HistoricalTableInner({
                 data-grid-template-columns={GRID_TEMPLATE_COLUMNS}
                 style={headerRowStyle}
               >
-                {hg.headers.map((header) => {
+                {hg.headers.map((header, headerIndex) => {
+                  const lastHeaderIndex = hg.headers.length - 1;
                   const sortDir = header.column.getIsSorted();
                   const sortAttr =
                     sortDir === 'asc'
@@ -365,14 +452,11 @@ function HistoricalTableInner({
                       role="columnheader"
                       data-sort={sortAttr}
                       onClick={header.column.getToggleSortingHandler()}
-                      style={thStyle}
+                      style={withColumnDivider(thStyle, headerIndex === lastHeaderIndex)}
                     >
                       {header.isPlaceholder
                         ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
+                        : flexRender(header.column.columnDef.header, header.getContext())}
                       {sortDir === 'asc' ? ' ▲' : sortDir === 'desc' ? ' ▼' : ''}
                     </div>
                   );
@@ -399,8 +483,12 @@ function HistoricalTableInner({
                   data-grid-template-columns={GRID_TEMPLATE_COLUMNS}
                   style={virtualRowStyle(vr.start)}
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <div role="cell" key={cell.id} style={tdStyle}>
+                  {row.getVisibleCells().map((cell, cellIndex, cells) => (
+                    <div
+                      role="cell"
+                      key={cell.id}
+                      style={withColumnDivider(tdStyle, cellIndex === cells.length - 1)}
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </div>
                   ))}

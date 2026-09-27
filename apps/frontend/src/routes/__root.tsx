@@ -63,7 +63,22 @@ function RootShellInner(): JSX.Element {
   const activeRole = roleFromPathname(pathname);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#fafafa' }}>
+    /*
+     * T-232: высотная flex-цепочка. Контейнер — колонка с min-height 100vh
+     * (именно min-height, а не height: длинные страницы /passenger и /analyst
+     * растут как раньше и не обрезаются). <main> растягивается на свободное
+     * место (flex:1) и тоже становится колонкой, чтобы страницы-таблицы
+     * (/predictions, /historical) могли отдать таблице всю оставшуюся высоту
+     * без магических `calc(100vh - Npx)`.
+     */
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        background: '#fafafa',
+      }}
+    >
       <header
         style={{
           padding: '16px 24px',
@@ -77,7 +92,14 @@ function RootShellInner(): JSX.Element {
         <RoleSwitcherNav activeRole={activeRole.id} />
       </header>
 
-      <main>
+      <main
+        style={{
+          flex: 1,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
         <Outlet />
       </main>
     </div>

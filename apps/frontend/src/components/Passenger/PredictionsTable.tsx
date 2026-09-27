@@ -42,13 +42,25 @@ const VIRTUAL_OVERSCAN = 10;
  * including virtualized.
  *
  * Empirical column widths (chosen by content):
- *   route  — 'Маршрут' (7 chars, bold) needs ~110px, otherwise CSS ellipsis
- *            turns the header into «Мар…» (T-231)
+ *   route  — 'Маршрут' (7 chars, bold) + стрелка сортировки « ▲» → 140px.
+ *            T-232: было 110px — при крупном шрифте слово резалось в «Мар…».
+ *            Фиксированные px обязательны: каждый virtualized-ряд — отдельный
+ *            grid, поэтому max-content разъехал бы колонки между рядами.
  *   date   — 'YYYY-MM-DD' (10 chars) → 120px
  *   hour   — '0'..'23' → 60px
  *   value  — '1234.56' (7 chars) → 1fr (fills remainder)
  */
-const GRID_TEMPLATE_COLUMNS = '110px 120px 60px 1fr';
+const GRID_TEMPLATE_COLUMNS = '140px 120px 60px 1fr';
+
+/**
+ * T-232: вертикальные разделители колонок. `COLUMN_BOUNDARIES_PX` — правые
+ * границы route/date/hour (совпадают с `GRID_TEMPLATE_COLUMNS`), по ним
+ * рисуются линии на всю высоту контейнера; те же x использует `borderRight`
+ * у ячеек, поэтому линии совпадают и не удваиваются.
+ */
+const DIVIDER_COLOR = '#e5e7eb';
+const CELL_DIVIDER = `1px solid ${DIVIDER_COLOR}`;
+const COLUMN_BOUNDARIES_PX: readonly number[] = [140, 260, 320];
 
 const fieldsetStyle = {
   border: '1px solid #cbd5e1',
@@ -78,13 +90,58 @@ const buttonStyle = {
   fontSize: 13,
 } as const;
 
-const scrollContainerStyle = {
-  height: VIRTUAL_CONTAINER_HEIGHT_PX,
-  overflow: 'auto',
-  border: '1px solid #e5e7eb',
-  borderRadius: 4,
-  background: '#fff',
-  position: 'relative' as const,
+/**
+ * T-232: контейнер скролла. При `fillHeight=true` растягивается на остаток
+ * высоты страницы (`flex: 1 1 0` + `minHeight: 0`) — без магических
+ * `calc(100vh - Npx)`, поэтому высота автоматически учитывает заголовок,
+ * фильтры и footer. Иначе — прежние фиксированные 400px (standalone-рендер).
+ *
+ * Вертикальные разделители колонок рисуются фоном самого контейнера: фон
+ * скролл-контейнера не уезжает при прокрутке контента (он привязан к
+ * padding box), поэтому линии идут на всю высоту — даже если строк меньше,
+ * чем места. Те же x-координаты использует `borderRight` у ячеек.
+ */
+function scrollContainerStyle(fillHeight: boolean): {
+  readonly overflow: 'auto';
+  readonly border: string;
+  readonly borderRadius: number;
+  readonly background: string;
+  readonly position: 'relative';
+  readonly backgroundImage: string;
+  readonly backgroundSize: string;
+  readonly backgroundRepeat: 'no-repeat';
+  readonly flex?: string;
+  readonly minHeight?: number;
+  readonly height?: number;
+} {
+  return {
+    ...(fillHeight ? { flex: '1 1 0', minHeight: 0 } : { height: VIRTUAL_CONTAINER_HEIGHT_PX }),
+    overflow: 'auto' as const,
+    border: '1px solid #e5e7eb',
+    borderRadius: 4,
+    background: '#fff',
+    position: 'relative' as const,
+    // Позиция линии зашита в сам градиент (`transparent → цвет → transparent`),
+    // поэтому multi-layer background-position не нужен: его не поддерживает
+    // jsdom/cssstyle (в тестах дал бы ''), а браузер — да.
+    backgroundImage: COLUMN_BOUNDARIES_PX.map(
+      (x) =>
+        `linear-gradient(to right, transparent ${x - 1}px, ${DIVIDER_COLOR} ${x - 1}px ${x}px, transparent ${x}px)`,
+    ).join(', '),
+    backgroundSize: '100% 100%',
+    backgroundRepeat: 'no-repeat' as const,
+  };
+}
+
+/**
+ * T-232: корень таблицы в режиме `fillHeight` — flex-колонка, чтобы
+ * scroll-контейнер забрал всю высоту, оставшуюся от h2/фильтров/footer.
+ */
+const rootFillStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  flex: '1 1 0',
+  minHeight: 0,
 } as const;
 
 /**
@@ -117,6 +174,13 @@ const headerRowStyle = {
   borderBottom: '2px solid #e5e7eb',
 } as const;
 
+/**
+ * T-232: у заголовков убраны `overflow: hidden` + `textOverflow: ellipsis` —
+ * «Маршрут» не должен резаться в «Мар…» ни при каком шрифте/зуме
+ * (clinerule 32 R5: расширять колонку, а не сокращать слово).
+ * `whiteSpace: nowrap` остаётся: заголовок не переносится, но и не обрезается.
+ * У ячеек данных ellipsis сохраняется — там даты/числа фиксированной длины.
+ */
 const thStyle = {
   padding: '8px 12px',
   textAlign: 'left' as const,
@@ -124,8 +188,6 @@ const thStyle = {
   userSelect: 'none' as const,
   fontWeight: 600,
   whiteSpace: 'nowrap' as const,
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
 } as const;
 
 const tdStyle = {
@@ -135,6 +197,17 @@ const tdStyle = {
   overflow: 'hidden',
   textOverflow: 'ellipsis',
 } as const;
+
+/**
+ * T-232: вертикальный разделитель колонки. У последней колонки (`value`, 1fr)
+ * разделителя нет — правый край даёт border самого scroll-контейнера.
+ */
+function withColumnDivider<T extends Record<string, unknown>>(
+  base: T,
+  isLast: boolean,
+): T & { borderRight: string } {
+  return { ...base, borderRight: isLast ? 'none' : CELL_DIVIDER };
+}
 
 /**
  * Inline-style для virtualized row: absolute positioning с translateY,
@@ -161,11 +234,18 @@ function virtualRowStyle(startPx: number): {
     gridTemplateColumns: GRID_TEMPLATE_COLUMNS,
     height: ROW_HEIGHT_PX,
   };
-}export interface PredictionsTableProps {
+}
+export interface PredictionsTableProps {
   readonly rows: readonly PredictionRow[];
   readonly isLoading?: boolean;
   readonly error?: string | null;
   readonly availableRoutes?: readonly number[];
+  /**
+   * T-232: `true` — таблица забирает всю высоту, оставшуюся от заголовков,
+   * фильтров и footer (используется страницей /predictions). `false` (default)
+   * — фиксированные 400px, как раньше (standalone-рендер, тесты).
+   */
+  readonly fillHeight?: boolean;
 }
 
 export function PredictionsTable({
@@ -173,6 +253,7 @@ export function PredictionsTable({
   isLoading = false,
   error = null,
   availableRoutes,
+  fillHeight = false,
 }: PredictionsTableProps): JSX.Element {
   if (isLoading) {
     return (
@@ -195,13 +276,19 @@ export function PredictionsTable({
       </p>
     );
   }
-  return <PredictionsTableInner rows={rows} availableRoutes={availableRoutes} />;
+  return (
+    <PredictionsTableInner rows={rows} availableRoutes={availableRoutes} fillHeight={fillHeight} />
+  );
+}
+
 function PredictionsTableInner({
   rows,
   availableRoutes,
+  fillHeight,
 }: {
   readonly rows: readonly PredictionRow[];
   readonly availableRoutes?: readonly number[];
+  readonly fillHeight: boolean;
 }): JSX.Element {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [showAllRoutes, setShowAllRoutes] = useState(false);
@@ -217,10 +304,7 @@ function PredictionsTableInner({
   }, [rows, availableRoutes]);
 
   const visibleRoutes = useMemo<readonly number[]>(
-    () =>
-      showAllRoutes
-        ? allRouteIds
-        : allRouteIds.filter((r) => selectedRoutes.has(r)),
+    () => (showAllRoutes ? allRouteIds : allRouteIds.filter((r) => selectedRoutes.has(r))),
     [allRouteIds, showAllRoutes, selectedRoutes],
   );
 
@@ -284,11 +368,12 @@ function PredictionsTableInner({
     });
   };
 
-return (
+  return (
     <div
       data-testid="predictions-table"
       role="region"
       aria-label={t('passenger.predictionsTable.title')}
+      style={fillHeight ? rootFillStyle : undefined}
     >
       <h2 style={{ marginTop: 0 }}>{t('passenger.predictionsTable.title')}</h2>
 
@@ -338,10 +423,10 @@ return (
         </fieldset>
       </div>
 
-<div
+      <div
         ref={parentRef}
         data-testid="predictions-table-scroll"
-        style={scrollContainerStyle}
+        style={scrollContainerStyle(fillHeight)}
       >
         {/*
           T-222 follow-up: <table>/<thead>/<tbody> заменены на семантический
@@ -361,7 +446,8 @@ return (
                 data-grid-template-columns={GRID_TEMPLATE_COLUMNS}
                 style={headerRowStyle}
               >
-                {hg.headers.map((header) => {
+                {hg.headers.map((header, headerIndex) => {
+                  const lastHeaderIndex = hg.headers.length - 1;
                   const sortDir = header.column.getIsSorted();
                   const sortAttr =
                     sortDir === 'asc'
@@ -375,14 +461,11 @@ return (
                       role="columnheader"
                       data-sort={sortAttr}
                       onClick={header.column.getToggleSortingHandler()}
-                      style={thStyle}
+                      style={withColumnDivider(thStyle, headerIndex === lastHeaderIndex)}
                     >
                       {header.isPlaceholder
                         ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
+                        : flexRender(header.column.columnDef.header, header.getContext())}
                       {sortDir === 'asc' ? ' ▲' : sortDir === 'desc' ? ' ▼' : ''}
                     </div>
                   );
@@ -409,8 +492,12 @@ return (
                   data-grid-template-columns={GRID_TEMPLATE_COLUMNS}
                   style={virtualRowStyle(vr.start)}
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <div role="cell" key={cell.id} style={tdStyle}>
+                  {row.getVisibleCells().map((cell, cellIndex, cells) => (
+                    <div
+                      role="cell"
+                      key={cell.id}
+                      style={withColumnDivider(tdStyle, cellIndex === cells.length - 1)}
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </div>
                   ))}
@@ -431,7 +518,4 @@ return (
       </p>
     </div>
   );
-}
-
-
 }

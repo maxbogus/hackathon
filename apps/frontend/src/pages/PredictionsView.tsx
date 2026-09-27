@@ -52,12 +52,22 @@ export function PredictionsView(): JSX.Element {
     : null;
 
   return (
-    <main
+    /*
+     * T-232: полная ширина и высота. `maxWidth: 1400 + margin auto` убран —
+     * таблица занимает всю ширину окна; `flex:1 + minHeight:0` в колонке
+     * __root отдаёт таблице всю высоту за вычетом заголовка/фильтров/footer.
+     * `<main>` → `<section>`: уровень main уже даёт каркас (__root.tsx),
+     * вложенный main был невалидной семантикой.
+     */
+    <section
       data-testid="predictions-view"
       style={{
+        flex: 1,
+        minHeight: 0,
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
         padding: '16px 24px',
-        maxWidth: 1400,
-        margin: '0 auto',
       }}
     >
       <header style={{ marginBottom: 16 }}>
@@ -76,7 +86,7 @@ export function PredictionsView(): JSX.Element {
         </p>
       )}
 
-      <PredictionsTable rows={rows} isLoading={isLoading} error={errMessage} />
-    </main>
+      <PredictionsTable rows={rows} isLoading={isLoading} error={errMessage} fillHeight />
+    </section>
   );
 }
