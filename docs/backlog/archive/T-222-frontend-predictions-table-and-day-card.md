@@ -44,25 +44,25 @@ D-038.2: кэш через TanStack Query (5 min) — отдельным helper'
 
 ## Acceptance Criteria
 
-- [ ] `apps/frontend/src/components/Passenger/PredictionsTable.tsx` создан
-- [ ] `apps/frontend/src/components/Passenger/PredictionsTable.test.tsx` создан
-- [ ] `apps/frontend/src/lib/predictionsTable.ts` создан (TanStack Query helper)
-- [ ] `apps/frontend/src/lib/predictionsTable.test.ts` создан
-- [ ] `apps/frontend/src/components/Passenger/index.ts` создан (barrel export)
-- [ ] Таблица рендерит `<table>` с 4 колонками: route / date / hour / value
-- [ ] Header'ы через `t(...)` (ru-RU.ts), все строки — без хардкода
-- [ ] Сортировка по любой колонке (клик по header → `data-sort` атрибут)
-- [ ] `globalFilter` — input с placeholder «Поиск...», фильтрует по всем колонкам
-- [ ] Multi-select маршрутов: по умолчанию {1, 7, 17, 25}, кнопка «Показать все»
-- [ ] `@tanstack/react-virtual` — таблица не лагает на 14640 строках
-- [ ] Loading state — `{t('common.loading')}` (handles `isLoading` prop)
-- [ ] Error state — `<Alert severity="warning">` (handles `error` prop)
-- [ ] Empty state — friendly «Нет данных»
-- [ ] Footer: «N строк · M маршрутов»
-- [ ] vitest 8+ passed
-- [ ] `yarn typecheck` 0 errors
-- [ ] `yarn lint` без новых ошибок
-- [ ] `make frontend-text-check` PASS
+- [x] `apps/frontend/src/components/Passenger/PredictionsTable.tsx` создан
+- [x] `apps/frontend/src/components/Passenger/PredictionsTable.test.tsx` создан
+- [x] `apps/frontend/src/lib/predictionsTable.ts` создан (TanStack Query helper)
+- [x] `apps/frontend/src/lib/predictionsTable.test.ts` создан
+- [x] `apps/frontend/src/components/Passenger/index.ts` создан (barrel export)
+- [x] Таблица рендерит `<table>` с 4 колонками: route / date / hour / value
+- [x] Header'ы через `t(...)` (ru-RU.ts), все строки — без хардкода
+- [x] Сортировка по любой колонке (клик по header → `data-sort` атрибут)
+- [x] `globalFilter` — input с placeholder «Поиск...», фильтрует по всем колонкам
+- [x] Multi-select маршрутов: по умолчанию {1, 7, 17, 25}, кнопка «Показать все»
+- [x] `@tanstack/react-virtual` — таблица не лагает на 14640 строках
+- [x] Loading state — `{t('common.loading')}` (handles `isLoading` prop)
+- [x] Error state — `<Alert severity="warning">` (handles `error` prop)
+- [x] Empty state — friendly «Нет данных»
+- [x] Footer: «N строк · M маршрутов»
+- [x] vitest 8+ passed
+- [x] `yarn typecheck` 0 errors
+- [x] `yarn lint` без новых ошибок
+- [x] `make frontend-text-check` PASS
 
 ## RED (apps/frontend/src/components/Passenger/PredictionsTable.test.tsx)
 
