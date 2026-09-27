@@ -26,6 +26,7 @@ import { useEffect, useState } from 'react';
 import { t, tf } from '@/lib/i18n/t';
 
 import { Alert } from '@/lib/Alert';
+import { fetchActiveModel, formatWapeScore, type ActiveModelInfo } from '@/lib/activeModel';
 import { getEta, getStops, type Stop } from '@/lib/etaClient';
 import { EtaCard } from '@/lib/EtaCard';
 import { recommend, type ETAPrediction } from '@/lib/recommend';
@@ -34,6 +35,7 @@ export function PassengerMode(): JSX.Element {
   const [stops, setStops] = useState<Stop[]>([]);
   const [stopId, setStopId] = useState<number | null>(null);
   const [eta, setEta] = useState<ETAPrediction[]>([]);
+  const [activeModel, setActiveModel] = useState<ActiveModelInfo | null>(null);
   const [loadingStops, setLoadingStops] = useState(true);
   const [loadingEta, setLoadingEta] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +58,22 @@ export function PassengerMode(): JSX.Element {
       })
       .finally(() => {
         if (!cancelled) setLoadingStops(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // T-201: load active model from /api/v1/models/active on mount. Failure
+  // is silent — the footer just falls back to "Model: <eta[0].model_id>".
+  useEffect(() => {
+    let cancelled = false;
+    fetchActiveModel()
+      .then((info) => {
+        if (!cancelled) setActiveModel(info);
+      })
+      .catch(() => {
+        // Silent — keep current behaviour (no model badge).
       });
     return () => {
       cancelled = true;
@@ -97,7 +115,16 @@ export function PassengerMode(): JSX.Element {
   //    `recommend` is pure, so calling it directly inside the render body
   //    is fine — it's cheaper than memoising for an array of at most 3 items.
   const recommendation = recommend(eta);
-  const modelId = eta[0]?.model_id ?? '—';
+
+  // T-201: prefer the active model from /api/v1/models/active (more
+  // accurate: backend picks the active artifact), fall back to the
+  // model_id from the first ETA prediction if the endpoint is down.
+  const activeModelId = activeModel?.model_id ?? eta[0]?.model_id ?? '—';
+  const wapeLabel = formatWapeScore(activeModel?.wape_score ?? null);
+  const footerText =
+    wapeLabel !== null
+      ? tf('passenger.activeModelFooter', activeModelId, wapeLabel)
+      : tf('passenger.modelFooter', activeModelId);
 
   return (
     <section style={{ padding: '16px 24px', fontFamily: 'system-ui, sans-serif' }}>
@@ -168,7 +195,7 @@ export function PassengerMode(): JSX.Element {
               </div>
 
               <p style={{ marginTop: 16, color: '#888', fontSize: 12 }}>
-                {tf('passenger.modelFooter', modelId)}
+                {footerText}
               </p>
             </>
           )}

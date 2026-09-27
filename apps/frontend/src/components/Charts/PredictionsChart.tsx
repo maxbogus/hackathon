@@ -40,6 +40,8 @@ interface PredictionsChartProps {
   routeId: number;
   fromDate: string;
   toDate: string;
+  horizon: 'day' | 'month' | 'year';
+  granularity: 'hour' | 'day' | 'month';
   coefWeather: number;
   coefEvent: number;
   coefSeason: number;
@@ -49,16 +51,29 @@ export function PredictionsChart({
   routeId,
   fromDate,
   toDate,
+  horizon,
+  granularity,
   coefWeather,
   coefEvent,
   coefSeason,
 }: PredictionsChartProps) {
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['predictions-db', routeId, fromDate, toDate, coefWeather, coefEvent, coefSeason],
+    queryKey: [
+      'predictions-db',
+      routeId,
+      fromDate,
+      toDate,
+      horizon,
+      granularity,
+      coefWeather,
+      coefEvent,
+      coefSeason,
+    ],
     queryFn: async () => {
       const response = await customInstance<PredictionsResponse>({
         url:
           `/api/v1/predictions/db/${routeId}?from=${fromDate}&to=${toDate}` +
+          `&horizon=${horizon}&granularity=${granularity}` +
           `&coef_weather=${coefWeather}&coef_event=${coefEvent}&coef_season=${coefSeason}`,
         method: 'GET',
       });

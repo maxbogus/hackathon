@@ -18,6 +18,11 @@ import { t, tf } from '@/lib/i18n/t';
 import { HistoricalChart } from '@/components/Charts/HistoricalChart';
 import { PredictionsChart } from '@/components/Charts/PredictionsChart';
 import { FiltersPanel } from '@/components/Filters/FiltersPanel';
+import {
+  HorizonGranularity,
+  type Horizon,
+  type Granularity,
+} from '@/components/Filters/HorizonGranularity';
 
 import {
   downloadPredictionsCsv,
@@ -36,6 +41,12 @@ export function AnalystDashboard(): JSX.Element {
   const [coefWeather, setCoefWeather] = useState(1.0);
   const [coefEvent, setCoefEvent] = useState(1.0);
   const [coefSeason, setCoefSeason] = useState(1.0);
+
+  // T-203: horizon + granularity selectors. The backend
+  // /api/v1/predictions/db/{route_id} (T-195) supports these — the
+  // frontend was just hard-coded to (day, hour) until now.
+  const [horizon, setHorizon] = useState<Horizon>('day');
+  const [granularity, setGranularity] = useState<Granularity>('hour');
 
   const [csvStatus, setCsvStatus] = useState<string>('');
 
@@ -117,10 +128,23 @@ export function AnalystDashboard(): JSX.Element {
 
         <HistoricalChart routeId={routeId} fromDate={DEFAULT_FROM} toDate={DEFAULT_TO} />
 
+        <div style={{ margin: '16px 0' }}>
+          <HorizonGranularity
+            horizon={horizon}
+            granularity={granularity}
+            onChange={(next) => {
+              setHorizon(next.horizon);
+              setGranularity(next.granularity);
+            }}
+          />
+        </div>
+
         <PredictionsChart
           routeId={routeId}
           fromDate={SUBMISSION_FROM}
           toDate={SUBMISSION_TO}
+          horizon={horizon}
+          granularity={granularity}
           coefWeather={coefWeather}
           coefEvent={coefEvent}
           coefSeason={coefSeason}

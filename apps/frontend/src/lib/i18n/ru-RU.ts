@@ -77,6 +77,8 @@ export const TEXTS = {
     etaLoading: 'Загрузка прогнозов…',
     etaError: (msg: string) => `Ошибка загрузки данных: ${msg}`,
     modelFooter: (modelId: string) => `Модель: ${modelId} · обновлено только что`,
+    activeModelFooter: (modelId: string, wape: string) =>
+      `Модель: ${modelId} · WAPE-score ${wape} · обновлено только что`,
     /* EtaCard.tsx — small visual primitives */
     etaCard: {
       departed: '🚉 Ушёл',
@@ -101,8 +103,14 @@ export const TEXTS = {
     routeLabel: 'Маршрут',
     fromLabel: 'Период с',
     toLabel: 'Период по',
+    horizonLabel: 'Горизонт',
+    granularityLabel: 'Детализация',
+    horizonDay: 'День',
+    horizonMonth: 'Месяц',
+    horizonYear: 'Год',
     granularityDay: 'По дням',
     granularityHour: 'По часам',
+    granularityMonth: 'По месяцам',
     historicalChartTitle: 'Исторические данные (boardings)',
     predictionsChartTitle: 'Прогноз (с учётом коэффициентов)',
     noData: 'Нет данных за выбранный период',

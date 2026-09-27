@@ -90,4 +90,31 @@ describe('<PassengerMode>', () => {
       expect(screen.getByText(/нет данных/i)).toBeInTheDocument();
     });
   });
+
+  it('shows the active model id from /api/v1/models/active in the footer (T-201)', async () => {
+    // Mock fetch for /models/active (T-201: replace hard-coded "—" with
+    // the active model id + WAPE-score fetched on mount).
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url.includes('/api/v1/models/active')) {
+        return new Response(
+          JSON.stringify({ model_id: 'baseline_v1', wape_score: 0.9272 }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        );
+      }
+      return originalFetch(input);
+    }) as typeof global.fetch;
+
+    try {
+      render(<PassengerMode />);
+      await waitFor(() => {
+        expect(screen.getByText(/baseline_v1/i)).toBeInTheDocument();
+      });
+      // Footer should mention WAPE-score when available.
+      expect(screen.getByText(/0\.9272|0\.93/i)).toBeInTheDocument();
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
 });
