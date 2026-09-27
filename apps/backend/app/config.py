@@ -63,6 +63,14 @@ class Settings(BaseSettings):
         default=REPO_ROOT / "docs" / "schemas" / "prediction_artifact.schema.json"
     )
 
+    # --- Static reference data (T-227) ---
+    # В Docker тот же путь: ./data монтируется в /app/data (docker-compose),
+    # а REPO_ROOT внутри образа = /app.
+    data_dir: Path = Field(
+        default=REPO_ROOT / "data",
+        description="Static reference data root (external catalogs, geo, POI).",
+    )
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

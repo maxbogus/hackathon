@@ -23,6 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import __version__
 from app.api.alerts import router as alerts_router
 from app.api.features import router as features_router
+from app.api.geo import router as geo_router  # T-227: /geo/routes (карта)
 from app.api.health import router as health_router
 from app.api.historical import router as historical_router
 from app.api.load import router as load_router  # T-218: summary /load endpoints
@@ -84,6 +85,7 @@ def create_app() -> FastAPI:
     app.include_router(models_router)
     app.include_router(alerts_router)
     app.include_router(features_router)  # T-195: /features, /zeros/toggle
+    app.include_router(geo_router)  # T-227: /geo/routes (остановки для карты)
     app.include_router(predictions_status_router)  # T-198: /predictions/status
     app.include_router(
         pipeline_router

@@ -922,6 +922,71 @@
         }
       }
     },
+    "/api/v1/historical/export.csv": {
+      "get": {
+        "tags": [
+          "historical"
+        ],
+        "summary": "Historical actuals as CSV (T-220)",
+        "description": "Единый формат с /predictions/export.csv: route;date;hour;value.\n\nИспользуется в PassengerMode (T-223) для прямой загрузки сырых CSV-данных.\nЗаменяет /historical/load (AVG-агрегат) на честный SUM за день по маршруту.",
+        "operationId": "get_historical_csv_api_v1_historical_export_csv_get",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Start date (inclusive).",
+              "title": "From"
+            },
+            "description": "Start date (inclusive)."
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "End date (exclusive).",
+              "title": "To"
+            },
+            "description": "End date (exclusive)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/historical/{route_id}": {
       "get": {
         "tags": [
@@ -1275,6 +1340,28 @@
         }
       }
     },
+    "/api/v1/geo/routes": {
+      "get": {
+        "tags": [
+          "geo"
+        ],
+        "summary": "T-227: Справочник остановок маршрутов (для карты)",
+        "description": "Остановки всех маршрутов хакатона с координатами.\n\nПустой `routes` — не ошибка: каталог `data/external/stops_routes.json`\nможет отсутствовать в demo-режиме (карта рендерит заглушку).",
+        "operationId": "get_geo_routes_api_v1_geo_routes_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeoRoutesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/predictions/status": {
       "get": {
         "tags": [
@@ -1581,6 +1668,90 @@
         ],
         "title": "FeaturesListResponse",
         "description": "Ответ GET /features."
+      },
+      "GeoRoute": {
+        "properties": {
+          "route_id": {
+            "type": "integer",
+            "title": "Route Id"
+          },
+          "stops": {
+            "items": {
+              "$ref": "#/components/schemas/GeoStop"
+            },
+            "type": "array",
+            "title": "Stops"
+          },
+          "n_stops": {
+            "type": "integer",
+            "title": "N Stops"
+          }
+        },
+        "type": "object",
+        "required": [
+          "route_id",
+          "stops",
+          "n_stops"
+        ],
+        "title": "GeoRoute",
+        "description": "Маршрут = упорядоченный список остановок."
+      },
+      "GeoRoutesResponse": {
+        "properties": {
+          "routes": {
+            "items": {
+              "$ref": "#/components/schemas/GeoRoute"
+            },
+            "type": "array",
+            "title": "Routes"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "routes",
+          "count",
+          "source"
+        ],
+        "title": "GeoRoutesResponse",
+        "description": "Ответ GET /api/v1/geo/routes."
+      },
+      "GeoStop": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "lat": {
+            "type": "number",
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "title": "Lon"
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Order"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "lat",
+          "lon",
+          "order"
+        ],
+        "title": "GeoStop",
+        "description": "Одна остановка маршрута с координатами."
       },
       "HTTPValidationError": {
         "properties": {

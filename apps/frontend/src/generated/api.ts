@@ -31,9 +31,11 @@ import type {
   FeatureToggleOut,
   FeatureToggleUpdate,
   FeaturesListResponse,
+  GeoRoutesResponse,
   GetActiveModelApiV1ModelsActiveGet200,
   GetEtaPredictionsApiV1PredictionsEtaGetParams,
   GetHistoricalApiV1HistoricalRouteIdGetParams,
+  GetHistoricalCsvApiV1HistoricalExportCsvGetParams,
   GetHistoricalLoadApiV1HistoricalLoadGetParams,
   GetOverloadAlertsApiV1InsightsAlertsGetParams,
   GetPipelineStatusApiV1PipelineStatusTaskIdGet200,
@@ -1163,6 +1165,104 @@ export function useGetHistoricalLoadApiV1HistoricalLoadGet<TData = Awaited<Retur
 
 
 /**
+ * Единый формат с /predictions/export.csv: route;date;hour;value.
+
+Используется в PassengerMode (T-223) для прямой загрузки сырых CSV-данных.
+Заменяет /historical/load (AVG-агрегат) на честный SUM за день по маршруту.
+ * @summary Historical actuals as CSV (T-220)
+ */
+export const getHistoricalCsvApiV1HistoricalExportCsvGet = (
+    params?: GetHistoricalCsvApiV1HistoricalExportCsvGetParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<void>(
+      {url: `/api/v1/historical/export.csv`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getGetHistoricalCsvApiV1HistoricalExportCsvGetQueryKey = (params?: GetHistoricalCsvApiV1HistoricalExportCsvGetParams,) => {
+    return [
+    `/api/v1/historical/export.csv`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getGetHistoricalCsvApiV1HistoricalExportCsvGetQueryOptions = <TData = Awaited<ReturnType<typeof getHistoricalCsvApiV1HistoricalExportCsvGet>>, TError = HTTPValidationError>(params?: GetHistoricalCsvApiV1HistoricalExportCsvGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistoricalCsvApiV1HistoricalExportCsvGet>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHistoricalCsvApiV1HistoricalExportCsvGetQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHistoricalCsvApiV1HistoricalExportCsvGet>>> = ({ signal }) => getHistoricalCsvApiV1HistoricalExportCsvGet(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHistoricalCsvApiV1HistoricalExportCsvGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
+}
+
+export type GetHistoricalCsvApiV1HistoricalExportCsvGetQueryResult = NonNullable<Awaited<ReturnType<typeof getHistoricalCsvApiV1HistoricalExportCsvGet>>>
+export type GetHistoricalCsvApiV1HistoricalExportCsvGetQueryError = HTTPValidationError
+
+
+export function useGetHistoricalCsvApiV1HistoricalExportCsvGet<TData = Awaited<ReturnType<typeof getHistoricalCsvApiV1HistoricalExportCsvGet>>, TError = HTTPValidationError>(
+ params: undefined |  GetHistoricalCsvApiV1HistoricalExportCsvGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistoricalCsvApiV1HistoricalExportCsvGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getHistoricalCsvApiV1HistoricalExportCsvGet>>,
+          TError,
+          Awaited<ReturnType<typeof getHistoricalCsvApiV1HistoricalExportCsvGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+export function useGetHistoricalCsvApiV1HistoricalExportCsvGet<TData = Awaited<ReturnType<typeof getHistoricalCsvApiV1HistoricalExportCsvGet>>, TError = HTTPValidationError>(
+ params?: GetHistoricalCsvApiV1HistoricalExportCsvGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistoricalCsvApiV1HistoricalExportCsvGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getHistoricalCsvApiV1HistoricalExportCsvGet>>,
+          TError,
+          Awaited<ReturnType<typeof getHistoricalCsvApiV1HistoricalExportCsvGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+export function useGetHistoricalCsvApiV1HistoricalExportCsvGet<TData = Awaited<ReturnType<typeof getHistoricalCsvApiV1HistoricalExportCsvGet>>, TError = HTTPValidationError>(
+ params?: GetHistoricalCsvApiV1HistoricalExportCsvGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistoricalCsvApiV1HistoricalExportCsvGet>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+/**
+ * @summary Historical actuals as CSV (T-220)
+ */
+
+export function useGetHistoricalCsvApiV1HistoricalExportCsvGet<TData = Awaited<ReturnType<typeof getHistoricalCsvApiV1HistoricalExportCsvGet>>, TError = HTTPValidationError>(
+ params?: GetHistoricalCsvApiV1HistoricalExportCsvGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHistoricalCsvApiV1HistoricalExportCsvGet>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+
+  const queryOptions = getGetHistoricalCsvApiV1HistoricalExportCsvGetQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
+/**
  * Возвращает исторические boardings из БД.
 
 Empty list — нормально, если actuals пуста (dev-режим).
@@ -1790,6 +1890,103 @@ export const useToggleZeroApiV1ZerosNameTogglePost = <TError = HTTPValidationErr
       return useMutation(mutationOptions, queryClient);
     }
     
+/**
+ * Остановки всех маршрутов хакатона с координатами.
+
+Пустой `routes` — не ошибка: каталог `data/external/stops_routes.json`
+может отсутствовать в demo-режиме (карта рендерит заглушку).
+ * @summary T-227: Справочник остановок маршрутов (для карты)
+ */
+export const getGeoRoutesApiV1GeoRoutesGet = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<GeoRoutesResponse>(
+      {url: `/api/v1/geo/routes`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getGetGeoRoutesApiV1GeoRoutesGetQueryKey = () => {
+    return [
+    `/api/v1/geo/routes`
+    ] as const;
+    }
+
+    
+export const getGetGeoRoutesApiV1GeoRoutesGetQueryOptions = <TData = Awaited<ReturnType<typeof getGeoRoutesApiV1GeoRoutesGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGeoRoutesApiV1GeoRoutesGet>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGeoRoutesApiV1GeoRoutesGetQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGeoRoutesApiV1GeoRoutesGet>>> = ({ signal }) => getGeoRoutesApiV1GeoRoutesGet(signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGeoRoutesApiV1GeoRoutesGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
+}
+
+export type GetGeoRoutesApiV1GeoRoutesGetQueryResult = NonNullable<Awaited<ReturnType<typeof getGeoRoutesApiV1GeoRoutesGet>>>
+export type GetGeoRoutesApiV1GeoRoutesGetQueryError = unknown
+
+
+export function useGetGeoRoutesApiV1GeoRoutesGet<TData = Awaited<ReturnType<typeof getGeoRoutesApiV1GeoRoutesGet>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGeoRoutesApiV1GeoRoutesGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getGeoRoutesApiV1GeoRoutesGet>>,
+          TError,
+          Awaited<ReturnType<typeof getGeoRoutesApiV1GeoRoutesGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+export function useGetGeoRoutesApiV1GeoRoutesGet<TData = Awaited<ReturnType<typeof getGeoRoutesApiV1GeoRoutesGet>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGeoRoutesApiV1GeoRoutesGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getGeoRoutesApiV1GeoRoutesGet>>,
+          TError,
+          Awaited<ReturnType<typeof getGeoRoutesApiV1GeoRoutesGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+export function useGetGeoRoutesApiV1GeoRoutesGet<TData = Awaited<ReturnType<typeof getGeoRoutesApiV1GeoRoutesGet>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGeoRoutesApiV1GeoRoutesGet>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+/**
+ * @summary T-227: Справочник остановок маршрутов (для карты)
+ */
+
+export function useGetGeoRoutesApiV1GeoRoutesGet<TData = Awaited<ReturnType<typeof getGeoRoutesApiV1GeoRoutesGet>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGeoRoutesApiV1GeoRoutesGet>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+
+  const queryOptions = getGetGeoRoutesApiV1GeoRoutesGetQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
 /**
  * Возвращает dict с has_predictions, count, model_ids, running_pipeline.
 

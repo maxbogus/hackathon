@@ -88,6 +88,35 @@ export interface FeaturesListResponse {
   zero_overrides: ZeroOverrideOut[];
 }
 
+/**
+ * Маршрут = упорядоченный список остановок.
+ */
+export interface GeoRoute {
+  route_id: number;
+  stops: GeoStop[];
+  n_stops: number;
+}
+
+/**
+ * Ответ GET /api/v1/geo/routes.
+ */
+export interface GeoRoutesResponse {
+  routes: GeoRoute[];
+  count: number;
+  source: string;
+}
+
+/**
+ * Одна остановка маршрута с координатами.
+ */
+export interface GeoStop {
+  name: string;
+  lat: number;
+  lon: number;
+  /** @minimum 0 */
+  order: number;
+}
+
 export interface HTTPValidationError {
   detail?: ValidationError[];
 }
@@ -432,6 +461,17 @@ to?: string | null;
  * @maximum 500
  */
 tram_capacity?: number;
+};
+
+export type GetHistoricalCsvApiV1HistoricalExportCsvGetParams = {
+/**
+ * Start date (inclusive).
+ */
+from?: string | null;
+/**
+ * End date (exclusive).
+ */
+to?: string | null;
 };
 
 export type GetHistoricalApiV1HistoricalRouteIdGetParams = {
