@@ -83,7 +83,7 @@ ignore = [
 "**/tests/**/*.py" = ["ANN", "PLR2004", "S101", "RUF002", "RUF003", "B011"]  # вложенные tests/ (ml/tests, mlops/tests, apps/*/tests)
 "mlops/**/*.py" = ["RUF002", "RUF003"]  # эфемерная лаборатория: кириллица в docstrings (как в остальном проекте)
 "scripts/test_distribution.py" = ["ANN", "PLR2004", "S101", "RUF002", "RUF003", "B011"]  # distribution tests OK
-"**/scripts/**/*.py" = ["T201", "PLR2004"]   # print() в скриптах OK
+"**/scripts/**/*.py" = ["T201", "PLR2004", "RUF002", "RUF003"]   # print() + кириллица в docstrings/комментариях — норма для скриптов
 "__init__.py" = ["F401", "F403"]             # re-exports OK
 # T-193: harvester + ml_pipeline workers — кириллица в docstrings, type hints в tests
 "apps/harvester/**/*.py" = ["RUF002", "RUF003", "ANN", "ANN101", "ANN102", "ARG001", "ARG002", "PLR0913"]

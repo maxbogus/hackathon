@@ -40,13 +40,18 @@ class _FakeCelery:
     """Минимальный Celery-двойник: пишет вызовы и отдаёт AsyncResult."""
 
     def __init__(self, states: list[str] | None = None, result: Any = None) -> None:
-        self.sent: list[tuple[str, dict[str, Any] | None]] = []
+        self.sent: list[tuple[str, dict[str, Any] | None, str | None]] = []
         self._states = states or ["SUCCESS"]
         self._result = result
         self.last_task_id = ""
 
-    def send_task(self, name: str, kwargs: dict[str, Any] | None = None) -> Any:
-        self.sent.append((name, kwargs))
+    def send_task(
+        self,
+        name: str,
+        kwargs: dict[str, Any] | None = None,
+        queue: str | None = None,
+    ) -> Any:
+        self.sent.append((name, kwargs, queue))
         self.last_task_id = f"fake-{len(self.sent)}"
         return type("_AR", (), {"id": self.last_task_id})()
 
@@ -107,8 +112,14 @@ def test_send_uses_task_name_and_passes_kwargs() -> None:
     assert handle.task_name == "ml_pipeline.predict_window"
     assert handle.task_id == "fake-1"
     assert client.sent == [
-        ("ml_pipeline.predict_window", {"model_id": "xgboost_v11_traffic"}),
+        ("ml_pipeline.predict_window", {"model_id": "xgboost_v11_traffic"}, "ml_pipeline"),
     ]
+
+
+def test_queue_for_derives_worker_queue() -> None:
+    """F-141: очередь = префикс модуля, чтобы задача не ушла чужому воркеру."""
+    assert cc.queue_for("ml_pipeline.predict_window") == "ml_pipeline"
+    assert cc.queue_for("harvester.fetch_all") == "harvester"
 
 
 def test_send_without_kwargs_passes_none() -> None:
@@ -116,7 +127,15 @@ def test_send_without_kwargs_passes_none() -> None:
 
     cc.send("train_xgboost", client=client)
 
-    assert client.sent == [("ml_pipeline.train_xgboost", None)]
+    assert client.sent == [("ml_pipeline.train_xgboost", None, "ml_pipeline")]
+
+
+def test_send_harvester_task_goes_to_harvester_queue() -> None:
+    client = _FakeCelery()
+
+    cc.send("harvest_all", client=client)
+
+    assert client.sent == [("harvester.fetch_all", None, "harvester")]
 
 
 def test_send_unknown_key_raises_before_broker_call() -> None:

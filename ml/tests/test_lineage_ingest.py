@@ -23,10 +23,10 @@ from transit_ai.lineage.ingest import (
     BenchmarkSource,
     IngestPlan,
     ManifestSource,
+    discover_all,
     discover_artifact_sources,
     discover_benchmark_sources,
     discover_manifest_sources,
-    discover_all,
     filter_plan,
     make_ingest_key,
 )
@@ -220,4 +220,3 @@ def test_filter_plan_keeps_only_requested_kind() -> None:
 def test_filter_plan_unknown_kind_raises() -> None:
     with pytest.raises(ValueError, match="не поддерживается"):
         filter_plan(_discovered_plan(), "nope")
-

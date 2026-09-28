@@ -44,9 +44,9 @@ scheduler/api-server, нет сервиса в compose), MLflow = локальн
 - [x] Фаза 0.5: старый side-car DAG удалён, `transit_pipeline` — единственный DAG (5 стадий через `_celery_client`), AST-тест переписан, `make airflow-test` 7 passed
 - [x] Фаза 1: `--overrides-file` в `make_submission.py` (порядок: `pred_cap` → `zero_route` → overrides), `ml/configs/overrides/nov_dec_2025.yaml` (профили A/B), unit-тесты
 - [x] Фаза 2: `mlops/dags/_celery_client.py` (send/wait по имени, ноль импортов `app.*`); Celery-таск `ml_pipeline.run_ml_script` (allowlist lineage/mlflow_ingest/mlflow_leaderboard); `make pipeline-*` переведены на клиент
-- [ ] Фаза 3: MLflow-сервер в профиле `mlops` (Postgres-БД `mlflow`), `track_run` с тегами `airflow_dag_run_id`/`submission_id`
-- [ ] Фаза 4: DAG `transit_pipeline` (harvest→train→ingest→predict→leaderboard, retries/timeout/params) + Airflow-профиль в Docker (init/scheduler/api-server, `AIRFLOW_HOST_PORT`, метастор БД `airflow`)
-- [ ] Фаза 5: отчёт `docs/reports/repro_best_vs_pilot.md` + ledger + clinerule 33 + HANDOFF
+- [x] Фаза 3: MLflow-сервис в профиле `mlops` (Postgres-БД `mlflow`), `track_run` с тегами `airflow_dag_run_id`/`submission_id`
+- [x] Фаза 4: DAG `transit_pipeline` (harvest→train→ingest→predict→leaderboard, retries/timeout/params) + Airflow-профиль в Docker (init/dag-processor/scheduler/api-server, `AIRFLOW_HOST_PORT=8087`, метастор БД `airflow`)
+- [x] Фаза 5: отчёт `docs/reports/repro_best_vs_pilot.md` + ledger + clinerule 33 + HANDOFF
 
 ## Technical Notes
 
@@ -83,15 +83,18 @@ make mlflow-leaderboard
 
 ## Status
 
-`in-progress` — Фаза 0 (изоляция mlops-тестов, зелёный `make test`) и Фаза 1
-(`--overrides-file` + YAML-профили) закрыты; Фаза 2 проверена end-to-end:
-`send('run_ml_script', script='lineage_snapshot')` → воркер → системный python →
-sha256 `train.csv` совпал с эталоном (25.9 s).
+`done` (Tier A). Пилот закрыт: MLflow-сервис (profile `mlops`), Airflow 3.3.2 в Docker
+(profile `airflow`) с единственным DAG `transit_pipeline`, рецепт лучшего сабмита
+воспроизводится пайплайном и проверен числами (`docs/reports/repro_best_vs_pilot.md`).
 
-**Блокеры, найденные по ходу (ledger):**
-- F-127 — справочник организаторов (xlsx) отсутствует → xgboost-путь (train/predict)
-  невыполним; baseline-путь работает.
-- F-132 — pre-built wheels и `requirements.txt` уехали в `docs/apps/**` → образ
-  воркера нельзя пересобрать (обход: `make pipeline-worker-dev`).
-- F-133 — в образе нет `pyyaml` (+ нет uv-окружения) → ML-шаги в Docker не работали;
-  исправлено объявлением зависимости и настраиваемым раннером (`ML_PIPELINE_ML_RUNNER`).
+Ключевые результаты Tier A:
+- детерминизм: два прогона → одинаковый `sha256`, 0 расхождений из 14640;
+- Airflow-стадия `predict` даёт байт-в-байт тот же CSV, что прямой вызов клиента;
+- манифест содержит все 6 шагов рецепта (bias calibration, `zero_route_5`,
+  `pred_cap_55` h0-4, 3 праздника, cold snap);
+- числа против эталона 0.83455 отличаются (утрачен `xgboost_v11_base_only`, F-127) —
+  расхождение объяснено, а не «подогнано».
+
+Осталось (отдельные тикеты): **T-236** — восстановить `apps/*/wheels` + `requirements.txt`
+и пересобрать образы воркеров (F-132), затем убрать `make pipeline-worker-dev`.
+Опционально **Tier B** — ретрейн `xgboost_v11_base_only` для побитового совпадения.

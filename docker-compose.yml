@@ -212,7 +212,8 @@ services:
       # T-235: зависимости уже pip-installed в образе → запускаем ml/scripts
       # системным python (uv run внутри образа создаёт .venv и тянет GB-и из сети)
       ML_PIPELINE_ML_RUNNER: python
-      PYTHONPATH: /app
+      # /app/ml — для `transit_ai.*` (как в образе), /app — для `apps.*`/`app.*`
+      PYTHONPATH: /app/ml:/app
     volumes:
       - ./ml:/app/ml:rw
       - ./predictions:/app/predictions:rw
@@ -223,9 +224,10 @@ services:
     networks:
       - transit-net
     # R6 hackathon-rules: train ≤ 60 мин. CPU pinned чтобы не наводить на backend.
-    mem_limit: 1g
-    mem_reservation: 512m
-    cpus: "1.0"
+    # T-235: реальный датасет (49M строк) требует больше памяти, чем синтетика.
+    mem_limit: 4g
+    mem_reservation: 1g
+    cpus: "2.0"
 
   # === MLflow tracking server (T-235, профиль `mlops`) ===
   # Side-car инфраструктура: MLflow НЕ входит в uv.lock/apps/* (D-044).
@@ -260,9 +262,112 @@ services:
     healthcheck:
       disable: true
 
+  # === Airflow 3.3.2 (T-235, профиль `airflow`) ===
+  # Оркестратор: DAG-и только ставят Celery-задачи по имени (mlops/dags/_celery_client.py),
+  # поэтому в образе нет ML-зависимостей. Метастор — БД `airflow` в существующем postgres.
+  # Порт 8087: 8080/8081 заняты ai-gateway, 5000 — registry:2.
+  airflow-init:
+    build:
+      context: .
+      dockerfile: mlops/airflow/Dockerfile
+    profiles: ["airflow"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment: &airflow-env
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:-}
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      # T-235: Airflow 3 + SimpleAuthManager: явный список пользователей требует
+      # multi_team-режима (ValueError "...associated to at least one team..."),
+      # поэтому для локального пилота используем ALL_ADMINS (любой логин = админ).
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS: "True"
+      AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET:-local_dev_only_change_me_0123456789}
+      AIRFLOW__SCHEDULER__STANDALONE_DAG_PROCESSOR: "True"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://transit:${POSTGRES_PASSWORD:-transit_dev_only}@postgres:5432/airflow
+      # DAG-таски шлют задачи по имени в Celery-воркеры проекта
+      TRANSIT_AI_CELERY_BROKER: redis://redis:6379/1
+      TRANSIT_AI_CELERY_BACKEND: redis://redis:6379/2
+    volumes:
+      - ./mlops/dags:/opt/airflow/dags:ro
+    networks:
+      - transit-net
+    # Официальный entrypoint образа подставляет `airflow` к произвольной команде,
+    # поэтому для init-скрипта он переопределяется (T-235).
+    entrypoint: ["/bin/bash", "-c", "/usr/local/bin/airflow-init-db"]
+    command: []
+    mem_limit: 1g
+    mem_reservation: 256m
+    cpus: "0.5"
+
+  airflow-scheduler:
+    build:
+      context: .
+      dockerfile: mlops/airflow/Dockerfile
+    profiles: ["airflow"]
+    restart: unless-stopped
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    environment: *airflow-env
+    volumes:
+      - ./mlops/dags:/opt/airflow/dags:ro
+      - airflow_logs:/opt/airflow/logs
+    networks:
+      - transit-net
+    command: ["airflow", "scheduler"]
+    mem_limit: 1g
+    mem_reservation: 512m
+    cpus: "1.0"
+
+  # Airflow 3: DAG-и парсит отдельный сервис (scheduler больше не парсит их сам),
+  # поэтому без dag-processor таблица serialized_dag пуста и `dags list` пуст (T-235).
+  airflow-dag-processor:
+    build:
+      context: .
+      dockerfile: mlops/airflow/Dockerfile
+    profiles: ["airflow"]
+    restart: unless-stopped
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    environment: *airflow-env
+    volumes:
+      - ./mlops/dags:/opt/airflow/dags:ro
+      - airflow_logs:/opt/airflow/logs
+    networks:
+      - transit-net
+    command: ["airflow", "dag-processor"]
+    mem_limit: 768m
+    mem_reservation: 256m
+    cpus: "0.5"
+
+  airflow-api-server:
+    build:
+      context: .
+      dockerfile: mlops/airflow/Dockerfile
+    profiles: ["airflow"]
+    restart: unless-stopped
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    environment: *airflow-env
+    volumes:
+      - ./mlops/dags:/opt/airflow/dags:ro
+      - airflow_logs:/opt/airflow/logs
+    networks:
+      - transit-net
+    ports:
+      - "${AIRFLOW_HOST_PORT:-8087}:8080"
+    command: ["airflow", "api-server", "--host", "0.0.0.0", "--port", "8080"]
+    mem_limit: 1g
+    mem_reservation: 512m
+    cpus: "1.0"
+
 volumes:
   postgres_data:
   redis_data:
+  airflow_logs:
 
 networks:
   transit-net:

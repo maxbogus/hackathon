@@ -270,7 +270,9 @@ def filter_plan(plan: IngestPlan, only: str = "all") -> IngestPlan:
         ValueError: неизвестное значение ``only``.
     """
     if only not in _INGEST_KINDS:
-        raise ValueError(f"only={only!r} не поддерживается; допустимо: {list(_INGEST_KINDS)}")
+        raise ValueError(
+            f"only={only!r} не поддерживается; допустимо: {list(_INGEST_KINDS)}"
+        )
     if only == "all":
         return plan
     return IngestPlan(

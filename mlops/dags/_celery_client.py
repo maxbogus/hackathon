@@ -91,6 +91,15 @@ def resolve_task_name(key: str) -> str:
     return TASKS[key]
 
 
+def queue_for(task_name: str) -> str:
+    """Очередь для задачи: префикс имени модуля (harvester/ml_pipeline — F-141).
+
+    Воркеры слушают свои очереди (task_default_queue), поэтому задача не может
+    достаться чужому воркеру и получить NotRegistered.
+    """
+    return task_name.split(".", 1)[0]
+
+
 def send(
     key: str,
     client: CeleryLike | None = None,
@@ -108,7 +117,9 @@ def send(
     """
     task_name = resolve_task_name(key)
     celery_client = client if client is not None else make_client()
-    async_result = celery_client.send_task(task_name, kwargs=kwargs or None)
+    async_result = celery_client.send_task(
+        task_name, kwargs=kwargs or None, queue=queue_for(task_name)
+    )
     return TaskHandle(task_id=str(async_result.id), task_name=task_name, key=key)
 
 
@@ -152,6 +163,7 @@ __all__ = [
     "backend_url",
     "broker_url",
     "make_client",
+    "queue_for",
     "resolve_task_name",
     "send",
     "wait",

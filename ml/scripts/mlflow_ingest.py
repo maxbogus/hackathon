@@ -28,14 +28,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]  # ml/
 sys.path.insert(0, str(ROOT))
 
-from transit_ai.lineage.ingest import (  # noqa: E402
+from transit_ai.lineage.ingest import (
     ArtifactSource,
     BenchmarkSource,
     ManifestSource,
     discover_all,
     filter_plan,
 )
-from transit_ai.tracking import (  # noqa: E402
+from transit_ai.tracking import (
     experiment_name,
     is_enabled,
     track_run,

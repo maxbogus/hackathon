@@ -33,7 +33,7 @@ REPO_ROOT := $(shell pwd)
         export-images import-images \
         lint format typecheck test test-unit test-int test-pipeline test-root test-slow check-all \
         seed inventory inspect-real train-baseline train-xgboost train-gru train-hybrid train-all \
-        predict calibrate evaluate submission sweep mc-scenario \
+        predict calibrate evaluate submission submission-compare sweep mc-scenario \
         api-gen api-check fe-gen \
         assistant-test assistant-reasoning mcp-run \
         ledger-add ledger-list ledger-check ledger-export \
@@ -50,6 +50,7 @@ REPO_ROOT := $(shell pwd)
         dvc-status dvc-cache-size dvc-test \
         optuna-probe optuna-smoke optuna-run optuna-test \
         airflow-probe airflow-dags-list airflow-tasks-list airflow-test-task airflow-test airflow-trigger \
+        airflow-up airflow-down airflow-logs airflow-secrets \
         db-upgrade db-downgrade db-revision db-current db-history \
         blog-stats blog-check
 
@@ -255,6 +256,9 @@ inspect-real: ## Print hackathon real dataset summary (T-143)
 # T-145: submission pipeline (WAPE-score = 0.8681 baseline на holdout)
 submission: ## Generate submission.csv for hackathon platform (10 routes × 61 days × 24h) (T-145)
 	$(UV) --directory ml run python scripts/make_submission.py --output $(REPO_ROOT)/predictions/submission.csv
+
+submission-compare: ## Сверить два submission-CSV: make submission-compare LEFT=a.csv RIGHT=b.csv [JSON=out.json]
+	$(UV) run python scripts/compare_submissions.py --left $(LEFT) --right $(RIGHT) $(if $(JSON),--json $(JSON),)
 
 # === T-230: наборы прогнозов (активный набор + эталон) ===
 
@@ -712,6 +716,8 @@ optuna-test: ## Optuna tests (storage, determinism, smoke)
 # for single-task smoke (no scheduler).
 
 AIRFLOW_HOME ?= $(REPO_ROOT)/mlops/airflow_home
+# T-235: порт UI сервиса Airflow в compose (профиль airflow)
+AIRFLOW_HOST_PORT ?= 8087
 
 airflow-probe: ## Airflow version ephemerally + db migrate
 	@AIRFLOW_HOME=$(AIRFLOW_HOME) $(UV) run --with apache-airflow airflow version
@@ -727,7 +733,37 @@ airflow-test-task: ## Test single task: make airflow-test-task TASK=harvest
 	@AIRFLOW_HOME=$(AIRFLOW_HOME) $(UV) run --with apache-airflow airflow tasks test transit_pipeline $(TASK) 2026-01-01 2>&1 | tail -3
 
 airflow-trigger: ## Trigger DAG: make airflow-trigger [DAG=transit_pipeline]
-	@AIRFLOW_HOME=$(AIRFLOW_HOME) $(UV) run --with apache-airflow airflow dags trigger $(or $(DAG),transit_pipeline) 2>&1 | tail -3
+	@if $(DC) --profile airflow ps --status running --services 2>/dev/null | grep -q airflow-scheduler; then \
+		$(DC) --profile airflow exec -T airflow-scheduler airflow dags trigger $(or $(DAG),transit_pipeline); \
+	else \
+		AIRFLOW_HOME=$(AIRFLOW_HOME) $(UV) run --with apache-airflow airflow dags trigger $(or $(DAG),transit_pipeline) 2>&1 | tail -3; \
+	fi
+
+# === T-235: Airflow как сервис (профиль airflow) ===
+# Метастор — БД airflow в существующем postgres; образ без ML-зависимостей
+# (DAG-и ставят Celery-задачи по имени). UI на :$(AIRFLOW_HOST_PORT) (8080/8081 заняты ai-gateway).
+
+airflow-up: ## Start Airflow 3.3.2 (profile: airflow) -> UI :$(AIRFLOW_HOST_PORT)
+	@$(DC) --profile airflow up -d airflow-init
+	@$(DC) --profile airflow up -d airflow-dag-processor airflow-scheduler airflow-api-server
+	@sleep 15
+	@$(DC) --profile airflow ps --format '{{.Service}}\t{{.Status}}' | head -5
+	@printf "\n\033[32m✓ Airflow UI: http://localhost:$(AIRFLOW_HOST_PORT)  (user: $${AIRFLOW_ADMIN_USER:-admin})\n  Триггер: make airflow-trigger\033[0m\n"
+
+airflow-down: ## Stop Airflow service (profile: airflow)
+	@$(DC) --profile airflow rm -sf airflow-api-server airflow-scheduler airflow-dag-processor airflow-init >/dev/null 2>&1 || true
+	@echo "airflow stopped"
+
+airflow-logs: ## Tail Airflow service logs (dag-processor + scheduler + api-server)
+	@$(DC) --profile airflow logs -f airflow-dag-processor airflow-scheduler airflow-api-server
+
+airflow-secrets: ## Сгенерировать AIRFLOW_FERNET_KEY в .env (T-235)
+	@if grep -q '^AIRFLOW_FERNET_KEY=..' .env 2>/dev/null; then \
+		echo "AIRFLOW_FERNET_KEY уже задан в .env"; \
+	else \
+		$(UV) run python -c 'import base64, os; print("AIRFLOW_FERNET_KEY=" + base64.urlsafe_b64encode(os.urandom(32)).decode())' >> .env; \
+		echo "AIRFLOW_FERNET_KEY добавлен в .env"; \
+	fi
 
 airflow-test: ## Airflow DAG structure tests (AST-контур + DAG-импорт в apache-airflow)
 	$(UV) run --with pytest --with pytest-asyncio --with apache-airflow python -m pytest mlops/tests/test_airflow_dag_structure.py -q --no-cov
@@ -870,14 +906,14 @@ pipeline-script: ## Run allowlisted ml script via worker: make pipeline-script S
 # WIP: после восстановления wheels и пересборки образа — удалить.
 
 pipeline-worker-dev: ## Dev-воркер: bind-mount кода + pyyaml (T-235, WIP до пересборки)
-	@$(DC) rm -f ml-pipeline-dev >/dev/null 2>&1 || true
+	@docker rm -f ml-pipeline-dev >/dev/null 2>&1 || true
 	@$(DC) run -d --name ml-pipeline-dev -e ML_PIPELINE_ML_RUNNER=python --entrypoint sh ml-pipeline \
 		-c "pip install --no-cache-dir pyyaml >/dev/null 2>&1; cd /app/apps/ml_pipeline && exec celery -A app.celery_app:celery_app worker --loglevel=info --concurrency=1"
-	@sleep 12
-	@$(DC) logs --tail 6 ml-pipeline-dev 2>&1 | grep -E 'run_ml_script|ready'
+	@sleep 14
+	@docker logs --tail 8 ml-pipeline-dev 2>&1 | grep -E 'run_ml_script|ready' || true
 
 pipeline-worker-dev-stop: ## Остановить dev-воркер (T-235)
-	@$(DC) rm -f ml-pipeline-dev >/dev/null 2>&1 || true
+	@docker rm -f ml-pipeline-dev >/dev/null 2>&1 || true
 	@echo "dev worker stopped"
 
 pipeline-status: ## Show active Celery tasks (ml-pipeline worker status)  [T-198]

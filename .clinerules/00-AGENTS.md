@@ -40,6 +40,7 @@
 | 30 | `30-no-replay-submissions.md` | Не предлагать варианты, которые уже залиты на платформу (F-061, D-027) |
 | 31 | `31-passenger-mode-actuals-and-predictions.md` | PassengerMode показывает actuals + predictions рядом (T-218, fallback MAX period) |
 | 32 | `32-ui-copy-standards.md` | Стандарт текстов UI: без идентификаторов, без англицизмов, официальный тон (T-231) |
+| 33 | `33-mlops-lab.md` | MLOps лаборатория: изоляция, тесты в `mlops/tests`, DAG-инвариант, очереди Celery, профили compose |
 | — | `MEMORY-BUDGET.md` | Анти-краш: не читать >1MB JSON |
 
 ## Quick rules

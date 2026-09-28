@@ -109,16 +109,21 @@ def build_predict_args(
     overrides_file: str | None = None,
     overrides_profile: str | None = None,
 ) -> list[str]:
-    """Собирает argv для ml/scripts/make_submission.py."""
+    """Собирает argv для ml/scripts/make_submission.py.
+
+    Даты передаются в ISO (%Y-%m-%d) — именно этот формат парсит
+    make_submission.py (F-140: раньше даты уходили как YYYYMMDD и задача
+    predict_window падала с ValueError).
+    """
     args = [
         "--model-id",
         model_id,
         "--model-kind",
         model_kind,
         "--start-date",
-        start_date.replace("-", ""),
+        start_date,
         "--end-date",
-        end_date.replace("-", ""),
+        end_date,
         "--coef-weather",
         str(coef_weather),
         "--coef-event",

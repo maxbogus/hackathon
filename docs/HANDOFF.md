@@ -1,7 +1,7 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-28T13:30:00Z
-> Обновлено: Cline (агент) — T-235 (MLOps pilot) Фаза 0: изоляция mlops-тестов, зелёный `make test`, `docs/MLFLOW.md`, фикс ledger-ids (F-125..F-129, D-047)
+> Последнее обновление: 2026-09-28T15:30:00Z
+> Обновлено: Cline (агент) — T-235 закрыт по Tier A: MLflow-сервис (profile `mlops`), Airflow 3.3.2 в Docker (profile `airflow`, DAG `transit_pipeline`), верификация воспроизводимости (F-134..F-142, D-047..D-049)
 
 ## Сессия 2026-09-28T13:30:00Z — T-235 Фаза 0: гейт зелёный + изоляция mlops-тестов
 
@@ -50,13 +50,34 @@
 - 🟠 **F-133**: в образе не было `pyyaml` и uv-окружения → ML-шаги в Docker не работали;
   исправлено (`pyyaml` в `ml/pyproject.toml`, `ML_PIPELINE_ML_RUNNER=python`). D-048.
 
-**Следующая задача:** T-235 Фаза 3 → MLflow-сервис в профиле `mlops`
-(Postgres-БД `mlflow`, порт 5001 — 5000 занят `registry:2`) + теги `airflow_dag_run_id`.
+**Следующая задача:** T-235 Фаза 5 закрыта (Tier A подтверждён, см. ниже).
+Дальше по плану: T-236 — восстановить `apps/*/wheels`+`requirements.txt` и пересобрать
+образы воркеров (F-132), чтобы убрать `make pipeline-worker-dev`.
 
-**Открытые вопросы:** (1) восстанавливаем xlsx или Tier A на baseline (F-127);
-(2) восстанавливать wheels/requirements в `apps/*/` или править Dockerfile+.dockerignore (F-132);
-(3) судьба 191 ruff-замечания — батч-фикс, per-file-ignores или отдельный тикет (F-126);
-(4) обновлять ли Dockerfile до multi-stage под test_dockerfile_hardening (F-129).
+**Результат Фаз 3–5 (2026-09-28, продолжение сессии):**
+- **Фаза 3 — MLflow-сервис** (профиль `mlops`): `mlflow==2.16.2` + `sqlalchemy<2.1`,
+  Postgres-БД `mlflow`, порт 5001, артефакты `./mlartifacts`. Проверено: `ingest`
+  82 источника за 8.1 с, повтор идемпотентен (0.8 с), `leaderboard` = 53 сабмита,
+  avg drift −0.5561. Грабли — F-137.
+- **Фаза 4 — Airflow в Docker** (профиль `airflow`, порт 8087): `airflow-init` (БД +
+  `db migrate`), `dag-processor`, `scheduler`, `api-server`; образ без ML-зависимостей
+  (`celery[redis]` только как клиент). DAG `transit_pipeline` найден, UI HTTP 200,
+  связка Airflow→Celery проверена живой таской `harvest` (SUCCESS) и стадией `predict`
+  (дала тот же CSV, что клиент). Грабли — F-139.
+- **Фаза 5 — Tier A**: два прогона → одинаковый `sha256`; Airflow-прогон == клиентский
+  (0 расхождений из 14640); структура 14640/10 маршрутов/negatives=0; манифест содержит
+  все 6 шагов рецепта. Числа против эталона 0.83455 отличаются (утрачен
+  `xgboost_v11_base_only`, F-127) — объяснено в `docs/reports/repro_best_vs_pilot.md`.
+  Инструмент сверки — `scripts/compare_submissions.py` (`make submission-compare`).
+- Новые правила: `.clinerules/33-mlops-lab.md`; ledger F-134..F-142, D-047..D-049.
+- Найдено и исправлено по ходу: даты `YYYYMMDD` вместо ISO (F-140), общая default-очередь
+  Celery → `NotRegistered` (F-141), `--only` падал на frozen dataclass (F-138),
+  18 тестов стали тяжёлыми (F-136).
+
+**Открытые вопросы:** (1) Tier B — ретрейн `xgboost_v11_base_only` для побитового
+совпадения (опция, +2–3 ч); (2) глобальный этап (общие пакеты `mlops-kit`, общий Airflow,
+ручки оркестрации) — отдельные тикеты; (3) F-132 (пересборка образов) и пре-существующие
+F-126 (191 ruff) / F-129 (6 падений test-root).
 
 ## Сессия 2026-09-28T12:00:00Z — docs/blog: серия постов «ИИ-скепсис» (F-124)
 

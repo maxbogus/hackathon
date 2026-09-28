@@ -32,4 +32,7 @@ celery_app.conf.update(
     task_soft_time_limit=240,  # soft warning за 4 минуты
     worker_max_tasks_per_child=100,
     worker_prefetch_multiplier=1,
+    # T-235: выделенная очередь (иначе делит default с ml_pipeline -> NotRegistered, F-141)
+    task_default_queue="harvester",
+    task_routes={"harvester.*": {"queue": "harvester"}},
 )

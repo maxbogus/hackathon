@@ -28,8 +28,21 @@ from _celery_client import send, wait  # sibling-модуль в mlops/dags (б�
 from airflow.sdk import dag, task
 
 PARTIAL_MODEL_ID = "xgboost_v11_traffic"
-OVERRIDES_FILE = "ml/configs/overrides/nov_dec_2025.yaml"
+# Путь относительно ml/ — важно: у задач cwd = ml/ (см. _run_ml_subprocess в
+# apps/ml_pipeline/app/tasks.py), поэтому 'ml/configs/...' дал бы ml/ml/configs.
+OVERRIDES_FILE = "configs/overrides/nov_dec_2025.yaml"
 OVERRIDES_PROFILE = "a_conservative"
+# Полный рецепт лучшего сабмита (F-083 = F-060 + F-051 + overrides):
+#   - зануление ночных часов h0-4, где прогноз ≤ 55 (F-060);
+#   - зануление маршрута 5 (F-051: не работал до 16.12).
+# Передаётся в Celery-задачу как zero_overrides (см. ml_cli.build_zero_args).
+PRED_CAP = 55
+CAP_HOURS = [0, 1, 2, 3, 4]
+ZERO_ROUTE = 5
+ZERO_OVERRIDES: dict[str, dict[str, object]] = {
+    "zero_route_5": {},
+    "zero_night_pred_cap": {"pred_cap": PRED_CAP, "hours": CAP_HOURS},
+}
 
 
 def _run_celery(key: str, timeout: float, **kwargs: object) -> dict:
@@ -86,6 +99,7 @@ def transit_pipeline() -> None:
             "submission_id": submission_id or _default_submission_id(),
             "overrides_file": overrides_file,
             "overrides_profile": overrides_profile,
+            "zero_overrides": ZERO_OVERRIDES,
         }
         return _run_celery("predict_window", timeout=1800, **kwargs)
 
