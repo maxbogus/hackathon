@@ -18,10 +18,15 @@ __pycache__/
 .hypothesis/
 
 # === Node (фронт) ===
-node_modules/
-.yarn/cache
-.yarn/install-state.gz
-.pnp.*
+# T-236: паттерны обязаны быть рекурсивными (`**/`) — они матчатся от корня контекста.
+# Без этого `COPY apps/frontend ./` приносил из хоста stale `apps/frontend/.yarn/install-state.gz`
+# и затирал state от `yarn install --immutable`, сборка образа падала с
+# "Couldn't find the node_modules state file - running an install might help".
+**/node_modules/
+**/.yarn/cache
+**/.yarn/install-state.gz
+**/.yarn/unplugged
+**/.pnp.*
 
 # === Git и IDE ===
 .git/
@@ -63,4 +68,3 @@ docker-compose*.yml
 !apps/backend/requirements.txt
 !apps/harvester/requirements.txt
 !apps/ml_pipeline/requirements.txt
-!apps/ml-pipeline/wheels/

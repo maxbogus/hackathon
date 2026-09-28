@@ -218,9 +218,9 @@ services:
       - ./ml:/app/ml:rw
       - ./predictions:/app/predictions:rw
       - ./data:/app/data:ro
-      # T-235: dev-mount исходников воркера, чтобы правки кода (новые таски)
-      # не требовали пересборки 13.8 GB образа. Симметрично ./ml:/app/ml.
-      - ./apps/ml_pipeline/app:/app/apps/ml_pipeline/app:ro
+      # T-236: dev-mount исходников воркера (`./apps/ml_pipeline/app`) удалён —
+      # образ пересобирается штатно (`make up`), поэтому код в контейнере обязан
+      # совпадать с репозиторием (иначе образ нельзя проверить и сдать комиссии).
     networks:
       - transit-net
     # R6 hackathon-rules: train ≤ 60 мин. CPU pinned чтобы не наводить на backend.

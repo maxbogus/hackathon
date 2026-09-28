@@ -16,7 +16,11 @@ ENV VITE_YANDEX_MAPS_API_KEY=$VITE_YANDEX_MAPS_API_KEY
 
 WORKDIR /app
 
-COPY apps/frontend/package.json apps/frontend/yarn.lock* ./
+# T-236: `.yarnrc.yml` обязателен рядом с package.json/yarn.lock — иначе `yarn install`
+# выполняется с дефолтным `nodeLinker: pnp` (создаётся .pnp.cjs, node_modules нет),
+# а следующий `COPY apps/frontend ./` приносит `.yarnrc.yml` с `nodeLinker: node-modules`
+# и шаг `yarn docker-build` падает: "Couldn't find the node_modules state file".
+COPY apps/frontend/package.json apps/frontend/yarn.lock* apps/frontend/.yarnrc.yml ./
 RUN --mount=type=cache,target=/root/.yarn/berry/cache     yarn install --immutable
 
 COPY apps/frontend ./

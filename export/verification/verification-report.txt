@@ -1,4 +1,4 @@
-=== Transit-AI verification: 2026-09-27T15:34:45Z ===
+=== Transit-AI verification: 2026-09-28T13:38:52Z ===
 repo: /home/maxbogus/Repositories/hackathon
 --- 1. Пререквизиты ---
 PASS  docker: /usr/bin/docker
@@ -8,9 +8,8 @@ PASS  python3: 3.12.3
 PASS  mmdc (mermaid→png)
 --- 2. Wheels для offline-сборки образов ---
 PASS  wheels backend: 3.2G
-PASS  wheels harvester: 5.8M
+PASS  wheels harvester: 5.7M
 PASS  wheels ml_pipeline: 3.2G
-WARN  дубль каталога apps/ml-pipeline/ рядом с apps/ml_pipeline/
 --- 3. Внешние данные: raw → normalized JSON ---
 PASS  make external-gen (8 источников → data/external/normalized/)
 uv --directory apps/harvester run python -m app.build --verify
@@ -40,6 +39,6 @@ PASS  frontend :5173 → 200
 PASS  заголовок submission: route;date;hour;prediction
 PASS  строк в submission: 14641 (10 маршрутов × 61 день × 24 ч)
 --- 7. Нагрузочный тест (k6) ---
-WARN  make loadtest-smoke вернул ненулевой код, но прогон прошёл (см. summary)
-=== ИТОГ: FAIL=0 WARN=2 ===
+WARN  smoke пропущен (--quick/--no-docker)
+=== ИТОГ: FAIL=0 WARN=1 ===
 VERIFIED

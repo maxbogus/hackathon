@@ -39,7 +39,7 @@ REPO_ROOT := $(shell pwd)
         ledger-add ledger-list ledger-check ledger-export \
         note-from-finding promote handoff handoff-update \
         backlog-ready backlog-list ticket docs         pyscn pyscn-compare pyscn-baseline         arch-dbml arch-dbml-check         benchmark-baseline benchmark-all benchmark-compare         run-benchmark         loadtest-smoke loadtest-baseline loadtest-stress loadtest-spike loadtest-soak loadtest-all loadtest-check check-training-time \
-        pipeline-up pipeline-down pipeline-logs pipeline-fetch pipeline-train pipeline-predict pipeline-full pipeline-status pipeline-script pipeline-worker-dev pipeline-worker-dev-stop pipeline-test \
+        pipeline-up pipeline-down pipeline-logs pipeline-fetch pipeline-train pipeline-predict pipeline-full pipeline-status pipeline-script pipeline-test \
         external-fetch external-gen external-verify external-show external-all \
         predictions-list predictions-activate predictions-restore-etalon predictions-ingest-csv \
         mlflow-probe mlflow-demo mlflow-runs mlflow-test mlflow-ui mlflow-server mlflow-run \
@@ -148,7 +148,9 @@ build-ml-pipeline: ## Pre-build Python wheels для ml-pipeline (offline cache)
 	@du -sh apps/ml_pipeline/wheels/ | awk '{printf "✓ ML-pipeline wheels: %s\n", $$1}'
 
 build-all: build-backend build-harvester build-ml-pipeline ## Pre-build все wheels (offline cache) [T-198b]
-	@printf "\n\033[32m✓ All wheels готовы для offline build (~430 MB).\033[0m\n"
+	@printf "\n\033[32m✓ All wheels готовы для offline build"
+	@du -sch apps/*/wheels 2>/dev/null | tail -1 | awk '{printf " (%s)", $$1}'
+	@printf "\033[0m\n"
 	@printf "\033[33m→ Следующий шаг: make up (Docker build будет offline)\033[0m\n"
 
 # === Main up target (зависит от build-all) ===
@@ -406,8 +408,8 @@ ticket: ## Create new ticket (make ticket ID=T-NNN TITLE="..." PHASE=1 PRIORITY=
 		--effort $(or $(EFFORT),4) \
 		--tags "$(or $(TAGS),)"
 
-ledger-add: ## Add decision to ledger (interactive)
-	$(UV) run python scripts/ledger.py add
+ledger-add: ## Add entry to ledger (stdin-driven): make ledger-add KIND=finding [ID=F-143]
+	$(UV) run python scripts/ledger.py add --kind $(or $(KIND),decision) $(if $(ID),--id $(ID),)
 
 ledger-list: ## Show last 7 days of decisions
 	$(UV) run python scripts/ledger.py list --days 7
@@ -897,24 +899,6 @@ pipeline-full: ## Trigger full_pipeline (train → predict) via Celery broker  [
 
 pipeline-script: ## Run allowlisted ml script via worker: make pipeline-script SCRIPT=mlflow_ingest
 	$(UV) run python -c "from mlops.dags._celery_client import send, wait; h = send('run_ml_script', script='$(SCRIPT)'); print('Task:', h.task_id); print('Result:', wait(h, timeout=900))"
-
-# === T-235: dev-воркер (без пересборки 13.8 GB образа) ===
-# Причина: (1) образ собран до T-235-правок (нет таска run_ml_script), а пересборка
-# сломана — pre-built wheels и requirements.txt уехали в docs/apps/** (F-132);
-# (2) в образе нет pyyaml, который нужен ml_cli (F-133).
-# Этот таргет поднимает воркер с bind-mount исходников и доустановленным pyyaml.
-# WIP: после восстановления wheels и пересборки образа — удалить.
-
-pipeline-worker-dev: ## Dev-воркер: bind-mount кода + pyyaml (T-235, WIP до пересборки)
-	@docker rm -f ml-pipeline-dev >/dev/null 2>&1 || true
-	@$(DC) run -d --name ml-pipeline-dev -e ML_PIPELINE_ML_RUNNER=python --entrypoint sh ml-pipeline \
-		-c "pip install --no-cache-dir pyyaml >/dev/null 2>&1; cd /app/apps/ml_pipeline && exec celery -A app.celery_app:celery_app worker --loglevel=info --concurrency=1"
-	@sleep 14
-	@docker logs --tail 8 ml-pipeline-dev 2>&1 | grep -E 'run_ml_script|ready' || true
-
-pipeline-worker-dev-stop: ## Остановить dev-воркер (T-235)
-	@docker rm -f ml-pipeline-dev >/dev/null 2>&1 || true
-	@echo "dev worker stopped"
 
 pipeline-status: ## Show active Celery tasks (ml-pipeline worker status)  [T-198]
 	@$(DC) exec ml-pipeline celery -A app.celery_app:celery_app inspect active 2>/dev/null || echo "ml-pipeline worker not running"

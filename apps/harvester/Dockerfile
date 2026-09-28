@@ -14,8 +14,10 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# uv нужен для export requirements (но НЕ sync)
-RUN pip install --no-cache-dir uv==0.5.7
+# T-236: uv в runtime-образе НЕ нужен — зависимости ставятся из pre-built wheels
+# через pip (--no-index --find-links), а CMD/entrypoint используют системный python.
+# Раньше здесь был `pip install uv==0.5.7` — единственный сетевой шаг сборки,
+# из-за которого offline-build ломался без интернета.
 
 # T-198h: non-root user через /etc/passwd (без useradd/groupadd).
 # UID 1000, GID 1000 для совместимости с volumes на хосте.
