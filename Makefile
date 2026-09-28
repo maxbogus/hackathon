@@ -52,7 +52,8 @@ REPO_ROOT := $(shell pwd)
         airflow-probe airflow-dags-list airflow-tasks-list airflow-test-task airflow-test \
         dvc-probe dvc-init dvc-add-smoke dvc-add-real dvc-add-artifacts \
         dvc-status dvc-cache-size dvc-test \
-        db-upgrade db-downgrade db-revision db-current db-history
+        db-upgrade db-downgrade db-revision db-current db-history \
+        blog-stats blog-check
 
 # ---------------------------------------------------------------------------
 # HELP
@@ -406,6 +407,18 @@ ledger-list: ## Show last 7 days of decisions
 
 ledger-export: ## Export ledger to markdown (for presentation)
 	$(UV) run python scripts/ledger.py export --output docs/ledger/EXPORT.md
+
+blog-stats: ## Regenerate blog stats → docs/blog/stats.json (docs/blog/)
+	$(UV) run python scripts/blog_stats.py
+
+blog-check: ## Blog gate: refresh stats + anonymization grep (docs/blog/)
+	$(UV) run python scripts/blog_stats.py --quiet
+	@if grep -rniE --exclude='00-*.md' --exclude-dir=sources \
+		'МТТЕХ|Богуславск|Баев|Павел|Света|Московск(ий|ого) транспорт|data/real/' docs/blog/ ; then \
+		echo "FAIL: в постах найдены запрещённые строки (см. 00-FACTS.md §9-10)"; \
+		exit 1; \
+	fi
+	@echo "blog-check: OK (stats обновлены, посты обезличены)"
 
 ledger-check: ## Check if merge requires ledger entry (called from pre-commit)
 	$(UV) run python scripts/ledger.py check

@@ -1,0 +1,65 @@
+{
+  "repo": {
+    "python_files": 275,
+    "python_lines": 36230,
+    "frontend_files": 90,
+    "frontend_lines": 10552
+  },
+  "ledger": {
+    "findings": 123,
+    "decisions": 50
+  },
+  "tests": {
+    "python_test_functions": 861,
+    "frontend_test_files": 32,
+    "frontend_cases": 294
+  },
+  "openapi_paths": 31,
+  "compose_services": 10,
+  "compose_service_names": [
+    "postgres",
+    "redis",
+    "backend",
+    "frontend",
+    "k6",
+    "harvester",
+    "ml-pipeline",
+    "postgres_data",
+    "redis_data",
+    "transit-net"
+  ],
+  "db_tables": [
+    "actuals",
+    "feature_toggles",
+    "prediction_runs",
+    "predictions",
+    "zero_overrides"
+  ],
+  "i18n_key_lines": 228,
+  "screens": [
+    "analyst",
+    "dispatcher",
+    "historical",
+    "index",
+    "passenger",
+    "predictions"
+  ],
+  "tickets": 47,
+  "clinerules": 34,
+  "skills": 7,
+  "commits_head": 185,
+  "commits_all_refs": 727,
+  "commits_per_day": {
+    "2026-09-20": 7,
+    "2026-09-22": 27,
+    "2026-09-23": 29,
+    "2026-09-25": 43,
+    "2026-09-26": 15,
+    "2026-09-27": 64
+  },
+  "first_commit": "2026-09-20",
+  "submission_csv": 55,
+  "submission_manifests": 53,
+  "model_artifacts": 23,
+  "best_platform_wape_score": 0.83455
+}
