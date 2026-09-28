@@ -15,7 +15,12 @@ DVC был опробован в пилоте и **удалён** (T-237, D-051)
 
 - ❌ MLflow / Optuna / Airflow **не** добавляются в `uv.lock`, `pyproject.toml` ядра,
   `apps/*` — ставятся эфемерно (`uv run --with …`) либо живут в отдельном образе.
-- ✅ Инструменты лаборатории можно удалить вместе с каталогом: код продукта от них не зависит.
+- ✅ `rm -rf mlops/` **не ломает продукт и приёмку**: `make up`, `make check-all`,
+  `verify_install.sh`, `make export-verify` работают без лаборатории. Недоступными
+  становятся lab-цели (`airflow-*`, `mlflow-up`, `optuna-*`) — они зависят от
+  `mlops-lab-guard` и падают с понятным сообщением, а не с ImportError.
+- ✅ Makefile **не импортирует** `mlops.*` (T-238): `pipeline-train|predict|full|script`
+  отправляют задачи в продуктовый воркер (`docker compose exec` + `send_task`).
 - ✅ Артефакты лаборатории gitignored: `mlops/airflow_home/`, `mlops/airflow/logs/`,
   `mlops/optuna/studies/`, `mlruns.db`, `mlartifacts/`.
 

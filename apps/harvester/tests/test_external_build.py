@@ -310,4 +310,3 @@ def test_input_paths_are_repo_relative(fake_repo: Path) -> None:
             assert not Path(path).is_absolute(), f"{name}: абсолютный путь {path!r}"
             assert not path.startswith(".."), f"{name}: выход за корень репозитория {path!r}"
             assert (fake_repo / path).exists(), f"{name}: путь {path!r} не резолвится от корня"
-

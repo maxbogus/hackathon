@@ -44,7 +44,7 @@ REPO_ROOT := $(shell pwd)
         predictions-list predictions-activate predictions-restore-etalon predictions-ingest-csv \
         mlflow-probe mlflow-demo mlflow-runs mlflow-test mlflow-ui mlflow-server mlflow-run \
         mlflow-ingest mlflow-ingest-only mlflow-leaderboard mlflow-up mlflow-down mlflow-logs mlflow-url \
-        mlops-compare mlops-test mlops-test-full \
+        mlops-compare mlops-test mlops-test-full mlops-lab-guard \
         lineage-snapshot-real lineage-snapshot lineage-verify lineage-test \
         optuna-probe optuna-smoke optuna-run optuna-test \
         airflow-probe airflow-dags-list airflow-tasks-list airflow-test-task airflow-test airflow-trigger \
@@ -550,22 +550,22 @@ MLFLOW_HINT_ENV  = MLFLOW_DISABLE_AGENT_HINT=1
 mlflow-probe: ## Версия MLflow (эфемерная установка, uv.lock не трогаем)
 	@$(MLFLOW_HINT_ENV) $(UV) run --with "$(MLFLOW_PKG)" python -c "import importlib.metadata as m; print('mlflow', m.version('mlflow'))"
 
-mlflow-demo: ## Демо tracking: 3 конфига x 4 fold -> раны в mlruns.db
+mlflow-demo: ## [dev] Демо tracking: 3 конфига x 4 fold -> раны в mlruns.db (канон — make mlflow-up)
 	@$(MLFLOW_HINT_ENV) $(UV) run --with "$(MLFLOW_PKG)" python ml/scripts/mlflow_demo.py
 
-mlflow-runs: ## Список ранов из локального store (LIMIT=N)
+mlflow-runs: ## [dev] Список ранов из локального store (LIMIT=N)
 	@$(MLFLOW_HINT_ENV) $(UV) run --with "$(MLFLOW_PKG)" python ml/scripts/mlflow_runs.py
 
 mlflow-test: ## Тесты трекера в MLflow-режиме (pytest + mlflow эфемерно)
 	@$(MLFLOW_HINT_ENV) $(UV) run --with pytest --with pytest-asyncio --with "$(MLFLOW_PKG)" python -m pytest ml/tests/test_mlflow_tracker.py -q
 
-mlflow-ui: ## MLflow UI -> http://127.0.0.1:$(MLFLOW_PORT) (sqlite store)
+mlflow-ui: ## [dev] MLflow UI -> http://127.0.0.1:$(MLFLOW_PORT) (sqlite store; канон — make mlflow-up)
 	@$(MLFLOW_HINT_ENV) $(UV) run --with "$(MLFLOW_PKG)" mlflow ui --backend-store-uri "sqlite:///$(REPO_ROOT)/mlruns.db" --port $(MLFLOW_PORT)
 
-mlflow-server: ## Local tracking server (sqlite) -> MLFLOW_TRACKING_URI=http://127.0.0.1:$(MLFLOW_PORT)
+mlflow-server: ## [dev] Локальный tracking server (sqlite) -> MLFLOW_TRACKING_URI=http://127.0.0.1:$(MLFLOW_PORT)
 	@$(MLFLOW_HINT_ENV) $(UV) run --with "$(MLFLOW_PKG)" mlflow server --host 127.0.0.1 --port $(MLFLOW_PORT) --backend-store-uri "sqlite:///$(REPO_ROOT)/mlruns.db" --default-artifact-root "file:$(REPO_ROOT)/mlartifacts"
 
-mlflow-run: ## Любой ml/-скрипт под tracking: make mlflow-run SCRIPT=scripts/train_xgboost.py ARGS="--model-id x"
+mlflow-run: ## [dev] Любой ml/-скрипт под tracking: make mlflow-run SCRIPT=scripts/train_xgboost.py ARGS="--model-id x"
 	@$(MLFLOW_HINT_ENV) $(UV) --directory ml run --with "$(MLFLOW_PKG)" python $(SCRIPT) $(ARGS)
 
 mlops-compare: ## Show MLOPS_LAB.md (the comparison report)
@@ -599,7 +599,7 @@ mlflow-leaderboard: ## Drift-table: local holdout vs platform score, top-30 subm
 # Backend store — БД mlflow в существующем postgres, артефакты — ./mlartifacts.
 # Клиенты ходят на http://localhost:$(MLFLOW_HOST_PORT): export MLFLOW_TRACKING_URI=...
 
-mlflow-up: ## Start MLflow tracking server (profile: mlops) -> :$(MLFLOW_HOST_PORT)
+mlflow-up: mlops-lab-guard ## Start MLflow tracking server (profile: mlops) -> :$(MLFLOW_HOST_PORT)
 	@$(DC) --profile mlops up -d mlflow
 	@sleep 5
 	@$(DC) --profile mlops logs --tail 4 mlflow 2>&1 | tail -4
@@ -662,6 +662,21 @@ lineage-test: ## Тесты lineage пакета (hashing + snapshot, +pytest э
 
 
 # ---------------------------------------------------------------------------
+# MLOPS LAB: guard (T-238, D-053)
+# ---------------------------------------------------------------------------
+# Честный инвариант: `rm -rf mlops/` не ломает продукт и приёмку (`make up`,
+# `verify_install.sh`, `make test`, `make export-verify`), но убирает лабораторию
+# (Airflow DAG, MLflow-сервис, Optuna). Lab-цели требуют каталог и падают с
+# понятным сообщением, а не с ImportError/traceback.
+
+mlops-lab-guard:
+	@[ -d "$(REPO_ROOT)/mlops/dags" ] || { \
+		echo "ERROR: mlops/ отсутствует — это lab-цель (.clinerules/33-mlops-lab.md)."; \
+		echo "       Продукт при этом работает: make up / make export-verify / make check-all"; \
+		exit 1; \
+	}
+
+# ---------------------------------------------------------------------------
 # MLOPS LAB: Optuna (TPE hyperparameter search, sqlite storage)
 # ---------------------------------------------------------------------------
 # Optuna is NOT in uv.lock: installed ephemerally via uv run --with optuna.
@@ -672,15 +687,15 @@ lineage-test: ## Тесты lineage пакета (hashing + snapshot, +pytest э
 optuna-probe: ## Optuna version ephemerally
 	@$(UV) run --with optuna python -c "import optuna; print('optuna', optuna.__version__)"
 
-optuna-smoke: ## 2-trial smoke (CI, <5s, deterministic seed=42)
+optuna-smoke: mlops-lab-guard ## 2-trial smoke (CI, <5s, deterministic seed=42)
 	@cd $(REPO_ROOT) && $(UV) run --with optuna python -c \
 		"from mlops.optuna.study_xgboost import create_study; s = create_study(n_trials=2); print(f\"smoke OK: best={s.best_value:.4f}, n_trials={len(s.trials)}\")"
 
-optuna-run: ## 15-trial TPE run (~30 sec on real XGBoost, R6 budget)
+optuna-run: mlops-lab-guard ## 15-trial TPE run (~30 sec on real XGBoost, R6 budget)
 	@cd $(REPO_ROOT) && $(UV) run --with optuna --with xgboost --with polars python -c \
 		"from mlops.optuna.study_xgboost import create_study; s = create_study(n_trials=15, timeout=1800); print(f\"best={s.best_value:.4f}, params={s.best_params}\")"
 
-optuna-test: ## Optuna tests (storage, determinism, smoke)
+optuna-test: mlops-lab-guard ## Optuna tests (storage, determinism, smoke)
 	$(UV) run --with pytest --with pytest-asyncio --with optuna python -m pytest mlops/tests/test_optuna_objective.py -q --no-cov
 
 
@@ -700,13 +715,13 @@ airflow-probe: ## Airflow version ephemerally + db migrate
 	@AIRFLOW_HOME=$(AIRFLOW_HOME) $(UV) run --with apache-airflow airflow version
 	@AIRFLOW_HOME=$(AIRFLOW_HOME) $(UV) run --with apache-airflow airflow db migrate 2>&1 | tail -2
 
-airflow-dags-list: ## List DAGs in mlops/dags
+airflow-dags-list: mlops-lab-guard ## List DAGs in mlops/dags
 	@AIRFLOW_HOME=$(AIRFLOW_HOME) $(UV) run --with apache-airflow airflow dags list 2>&1 | grep -E "dag_id|transit" | head -10
 
-airflow-tasks-list: ## List tasks in transit_pipeline DAG
+airflow-tasks-list: mlops-lab-guard ## List tasks in transit_pipeline DAG
 	@AIRFLOW_HOME=$(AIRFLOW_HOME) $(UV) run --with apache-airflow airflow tasks list transit_pipeline 2>&1 | tail -10
 
-airflow-test-task: ## Test single task: make airflow-test-task TASK=harvest
+airflow-test-task: mlops-lab-guard ## Test single task: make airflow-test-task TASK=harvest
 	@AIRFLOW_HOME=$(AIRFLOW_HOME) $(UV) run --with apache-airflow airflow tasks test transit_pipeline $(TASK) 2026-01-01 2>&1 | tail -3
 
 airflow-trigger: ## Trigger DAG: make airflow-trigger [DAG=transit_pipeline]
@@ -720,7 +735,7 @@ airflow-trigger: ## Trigger DAG: make airflow-trigger [DAG=transit_pipeline]
 # Метастор — БД airflow в существующем postgres; образ без ML-зависимостей
 # (DAG-и ставят Celery-задачи по имени). UI на :$(AIRFLOW_HOST_PORT) (8080/8081 заняты ai-gateway).
 
-airflow-up: ## Start Airflow 3.3.2 (profile: airflow) -> UI :$(AIRFLOW_HOST_PORT)
+airflow-up: mlops-lab-guard ## Start Airflow 3.3.2 (profile: airflow) -> UI :$(AIRFLOW_HOST_PORT)
 	@$(DC) --profile airflow up -d airflow-init
 	@$(DC) --profile airflow up -d airflow-dag-processor airflow-scheduler airflow-api-server
 	@sleep 15
@@ -863,17 +878,27 @@ external-show: ## Таблица источников: строки / sha256 / �
 
 external-all: external-gen external-verify ## gen + verify (offline)  [T-231]
 
-pipeline-train: ## Trigger ml_pipeline.train_xgboost via broker (T-235: by-name client)
-	$(UV) run python -c "from mlops.dags._celery_client import send, wait; h = send('train_xgboost'); print('Task:', h.task_id, h.task_name); print('Result:', wait(h, timeout=600))"
+# T-238 (D-053): отправка задач по имени в уже поднятый воркер.
+# Раньше эти цели импортировали `mlops.dags._celery_client` — из-за этого `mlops/`
+# переставал быть удаляемым (обещание D-044), а сдача зависела от лаборатории.
+# Теперь канал — продуктовый стек (`docker compose exec` + `send_task`), без импортов mlops.
+# Канон оркестрации — DAG: `make airflow-trigger` (см. .clinerules/33-mlops-lab.md).
 
-pipeline-predict: ## Trigger ml_pipeline.predict_window with default params
-	$(UV) run python -c "from mlops.dags._celery_client import send, wait; h = send('predict_window', model_id='xgboost_v_default'); print('Task:', h.task_id); print('Result:', wait(h, timeout=600))"
+pipeline-train: ## Trigger ml_pipeline.train_xgboost через брокер (T-238: без mlops/)
+	@$(DC) exec -T -w /app/apps/ml_pipeline ml-pipeline python -c \
+		"from app.celery_app import celery_app; r = celery_app.send_task('ml_pipeline.train_xgboost'); print('Task:', r.task_id); print('Result:', r.get(timeout=600))"
+
+pipeline-predict: ## Trigger ml_pipeline.predict_window via broker: make pipeline-predict [MODEL_ID=...]
+	@$(DC) exec -T -w /app/apps/ml_pipeline ml-pipeline python -c \
+		"from app.celery_app import celery_app; r = celery_app.send_task('ml_pipeline.predict_window', kwargs={'model_id': '$(or $(MODEL_ID),xgboost_v_default)'}); print('Task:', r.task_id); print('Result:', r.get(timeout=900))"
 
 pipeline-full: ## Trigger full_pipeline (train → predict) via Celery broker  [T-198]
-	$(UV) run python -c "from mlops.dags._celery_client import send, wait; h = send('full_pipeline'); print('Task ID:', h.task_id); print('Waiting for result (timeout=1800s)...'); print('Result:', wait(h, timeout=1800))"
+	@$(DC) exec -T -w /app/apps/ml_pipeline ml-pipeline python -c \
+		"from app.celery_app import celery_app; r = celery_app.send_task('ml_pipeline.full_pipeline'); print('Task:', r.task_id); print('Result:', r.get(timeout=1800))"
 
 pipeline-script: ## Run allowlisted ml script via worker: make pipeline-script SCRIPT=mlflow_ingest
-	$(UV) run python -c "from mlops.dags._celery_client import send, wait; h = send('run_ml_script', script='$(SCRIPT)'); print('Task:', h.task_id); print('Result:', wait(h, timeout=900))"
+	@$(DC) exec -T -w /app/apps/ml_pipeline ml-pipeline python -c \
+		"from app.celery_app import celery_app; r = celery_app.send_task('ml_pipeline.run_ml_script', kwargs={'script': '$(SCRIPT)'}); print('Task:', r.task_id); print('Result:', r.get(timeout=900))"
 
 pipeline-status: ## Show active Celery tasks (ml-pipeline worker status)  [T-198]
 	@$(DC) exec ml-pipeline celery -A app.celery_app:celery_app inspect active 2>/dev/null || echo "ml-pipeline worker not running"

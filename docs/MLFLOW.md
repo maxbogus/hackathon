@@ -80,9 +80,16 @@ make mlflow-run SCRIPT=scripts/train_xgboost.py ARGS="--model-id x"   # любо
 
 ## MLflow как сервис (профиль `mlops`, T-235)
 
-Локальный sqlite (`mlruns.db`) остаётся для одиночных прогонов, но для оркестрации
-(DAG + Celery-воркеры + несколько клиентов) поднимается **сервер** — один писатель
-вместо конкурирующих процессов за SQLite.
+**Канон для передачи (T-238, D-052):** все раны, на которые ссылаются отчёты и сдача,
+живут в **сервере** — `make mlflow-up` (профиль `mlops`, Postgres-БД `mlflow`, порт
+`${MLFLOW_HOST_PORT:-5001}`), клиенты ходят через
+`export MLFLOW_TRACKING_URI=http://localhost:5001`.
+
+Локальный sqlite (`mlruns.db`) — **`[dev]`-режим** для одиночных прогонов на одной машине:
+он не поставляется, не переносится и не должен быть источником цифр в документах
+(цели `mlflow-ui`, `mlflow-server`, `mlflow-demo`, `mlflow-runs`, `mlflow-run`).
+Для оркестрации (DAG + Celery-воркеры + несколько клиентов) обязателен сервер — один
+писатель вместо конкурирующих процессов за SQLite.
 
 ```bash
 make mlflow-up      # profile: mlops -> http://localhost:5001 (+ создаст БД mlflow в postgres)
@@ -117,7 +124,9 @@ make mlflow-leaderboard     # drift-таблица против сервера
   (кроме сервиса в профиле `mlops`/`airflow` — см. `mlops/README.md`).
 - ❌ Никто не читает MLflow в runtime (`apps/*`): только ML-скрипты и `make mlflow-*`.
 - ❌ Артефакты-контракты не «переезжают» в MLflow: источник истины — файлы/БД.
-- ✅ `mlops/` можно удалить (`rm -rf mlops/`) — пайплайн не сломается.
+- ✅ `mlops/` можно удалить (`rm -rf mlops/`) — пайплайн не сломается; lab-цели
+  (`airflow-*`, `mlflow-up`, `optuna-*`) требуют каталог и падают с понятным
+  сообщением (`make mlops-lab-guard`, T-238).
 
 ## Тесты
 

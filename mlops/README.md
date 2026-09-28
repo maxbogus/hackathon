@@ -40,12 +40,14 @@ mlops/
 3. **Optuna study** — копируй `mlops/optuna/study_xgboost.py`, меняй objective
 4. **Airflow DAG** — добавь новый файл в `mlops/dags/`, допиши таски
 
-## Изоляция от P0
+## Изоляция от P0 (T-238, D-053)
 
-- ✅ `apps/*` — 0 модификаций
-- ✅ `uv.lock` — 0 модификаций
-- ✅ `pyproject.toml` — 0 модификаций (нет новых runtime-зависимостей)
-- ✅ `docker-compose.yml` — 0 модификаций
-- ✅ `make check-all` — зелёный
+- ✅ `uv.lock` / `pyproject.toml` ядра — 0 модификаций (инструменты эфемерные либо в своих образах)
+- ℹ️ `docker-compose.yml` — добавлены профили `mlops` и `airflow`; их сервисы не поднимаются по умолчанию
+- ✅ `make check-all` — зелёный и без лаборатории
 
-Все 4 инструмента можно удалить за `rm -rf mlops/` без последствий для P0.
+`rm -rf mlops/` **не ломает продукт и приёмку**: `make up`, `verify_install.sh`,
+`make check-all`, `make export-verify` продолжают работать. Недоступными становятся только
+lab-цели (`airflow-*`, `mlflow-up`, `optuna-*`) — они зависят от `mlops-lab-guard` и падают
+с понятным сообщением, а не с traceback. Makefile больше не импортирует `mlops.*`:
+`pipeline-train|predict|full|script` отправляют задачи в продуктовый воркер.

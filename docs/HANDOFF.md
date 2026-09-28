@@ -1,7 +1,64 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-28T15:30:00Z
-> Обновлено: Cline (агент) — T-235 закрыт по Tier A: MLflow-сервис (profile `mlops`), Airflow 3.3.2 в Docker (profile `airflow`, DAG `transit_pipeline`), верификация воспроизводимости (F-134..F-142, D-047..D-049)
+> Последнее обновление: 2026-09-28T16:05:00Z
+> Обновлено: Cline (агент) — подготовка к передаче комиссии: T-236 (offline-сборка образов),
+> T-237 (provenance без DVC + переносимый export-пакет), T-238 (единый store MLflow +
+> честный инвариант изоляции). Находки F-143..F-150, решения D-050..D-053.
+
+## Сессия 2026-09-28T16:05:00Z — передача комиссии: 4 этапа уборки и честных обещаний
+
+**Контекст:** код передаётся внешней комиссии. Критерий — «клонируй репозиторий + `.tar` образов →
+`verify_install.sh` = VERIFIED», без шагов, требующих нашей машины, кэшей или секретов.
+Проверено: acceptance-скрипт lab-слой не упоминает, но требует `apps/*/wheels`.
+
+**Этап 1 — T-236 (P0, `2b811c1`): offline-сборка образов**
+- `make build-all` из текущего lock: wheels backend 3.2 G / harvester 5.7 M / ml_pipeline 3.2 G;
+  `docker build --network=none` → **exit 0** (offline подтверждён).
+- Удалён `pip install uv==0.5.7` из трёх runtime-образов — uv там не использовался, а шаг был
+  единственным сетевым (F-144).
+- `apps/frontend/Dockerfile`: `.yarnrc.yml` копируется вместе с `package.json`/`yarn.lock` —
+  без него `yarn install` уходил в PnP и `yarn docker-build` падал (F-143).
+- `.dockerignore`: рекурсивные `**/node_modules`, `**/.yarn/*`.
+- `docker-compose.yml`: удалён dev bind-mount `./apps/ml_pipeline/app` (скрывал образ, F-145).
+- Удалены `docs/apps/` (**6.7 ГБ** мусора, F-132/F-146), `apps/ml-pipeline/`, костыль
+  `make pipeline-worker-dev*`.
+- Проверено: `make up` — все сервисы up; Airflow-стадия `harvest` SUCCESS;
+  `run_ml_script(lineage_snapshot)` через брокер SUCCESS за 26.8 с; `verify_install.sh --quick`
+  = **VERIFIED (FAIL=0)**, wheels PASS 3.2G/5.7M/3.2G.
+
+**Этап 2 — T-237 (`e7afb92`): provenance без DVC + переносимые артефакты**
+- DVC удалён целиком (27 `*.dvc`, `.dvc/`, `mlops/dvc-cache`, probe, тест, цели `dvc-*`):
+  у хранилища не было remote → у получателя `dvc pull` падал (D-051).
+- Добавлена цель `make export-verify` (+ `scripts/verify_export.py`, `export-checksums`):
+  README обещал команду, которой не существовало (F-147); `verification-report.txt` исключён
+  из checksums (пересоздаётся при verify).
+- `data/external/normalized/*`: пути входов стали относительными (RED→GREEN
+  `test_input_paths_are_repo_relative`) — раньше в git попадал `/home/maxbogus/...`, а из
+  контейнера `/app/...` (F-148).
+- `.githooks/pre-commit`: forbidden-проверка получила `--diff-filter=ACMR` — раньше она
+  блокировала коммиты, которые **удаляют** файлы (F-149).
+
+**Этап 3–4 — T-238: единый store MLflow + честная изоляция**
+- MLflow: канон — сервер (`make mlflow-up`, профиль `mlops`, Postgres, :5001); локальный sqlite —
+  `[dev]`, цели `mlflow-ui|server|demo|runs|run` помечены `[dev]` (D-052).
+- `Makefile` больше **не импортирует** `mlops.*` (было 6 мест, F-150): `pipeline-*` отправляют
+  задачи в продуктовый воркер (`docker compose exec` + `send_task` + `r.get()`), lab-цели
+  (`optuna-*`, `airflow-*`, `mlflow-up`) зависят от `mlops-lab-guard` и падают с понятным
+  сообщением (D-053). `_celery_client` остался в bundle — перенос в `apps/*` нарушил бы
+  DAG-инвариант (clinerule 33 R3).
+- Проверено: `grep -c 'from mlops' Makefile` = 0; `make mlflow-up` (guard) → :5001;
+  `make pipeline-script SCRIPT=lineage_snapshot` → SUCCESS (25.1 с, sha256 `e4157ed7…`).
+
+**Артефакты на диске:** `scripts/verify_export.py`, `docs/backlog/archive/T-236..T-238*.md`,
+`docs/ledger/{findings,decisions}.jsonl` (F-143..F-150, D-050..D-053), `.dockerignore`,
+`apps/{backend,frontend,harvester,ml_pipeline}/Dockerfile`, `docker-compose.yml`,
+`export/{README.md,checksums.sha256}`, `apps/harvester/app/build/builders.py`.
+
+**Открытые вопросы:** Tier B (ретрейн `xgboost_v11_base_only`) — делать ли; глобальный этап
+(общие пакеты `mlops-kit`, общий Airflow, ручки оркестрации); пре-существующий долг F-126
+(ruff вне mlops), F-129 (6 падений `test-root`), F-122 (prettier-шаг в хуках маскирует падение —
+сегодня снова видели `Couldn't find the node_modules state file`, но хук отчитался «prettier passed»).
+
 
 ## Сессия 2026-09-28T13:30:00Z — T-235 Фаза 0: гейт зелёный + изоляция mlops-тестов
 
