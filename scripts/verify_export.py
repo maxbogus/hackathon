@@ -63,8 +63,8 @@ def sha256_file(path: Path) -> str:
 def parse_checksums(path: Path) -> list[tuple[str, str]]:
     """Разобрать `sha256sum`-файл в список `(относительный путь, хэш)`."""
     entries: list[tuple[str, str]] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
         if not line:
             continue
         parts = line.split(None, 1)
@@ -144,7 +144,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"FAIL  {problem}")
 
     if missing or problems:
-        print(f"\nИТОГ: FAIL={len(missing) + len(problems)} (проверено хэшей: {checked})")
+        total = len(missing) + len(problems)
+        print(f"\nFAIL summary: {total} (hashes checked: {checked})")
         return 1
 
     print(f"OK: обязательные файлы на месте ({len(REQUIRED_FILES)}), sha256 сверено ({checked})")

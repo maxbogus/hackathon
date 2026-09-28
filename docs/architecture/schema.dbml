@@ -46,6 +46,8 @@ Table predictions {
   coef_season float [not null]
   submission_id varchar
   git_commit varchar
+  is_active boolean [not null]
+  is_etalon boolean [not null]
   created_at datetime [not null]
 }
 
@@ -64,6 +66,12 @@ Table prediction_runs {
   csv_path varchar
   started_at datetime [not null]
   finished_at datetime
+  pipeline_kind varchar
+  row_count int
+  recommendation varchar
+  error text
+  is_etalon boolean [not null]
+  activated_at datetime
 }
 
 Table zero_overrides {

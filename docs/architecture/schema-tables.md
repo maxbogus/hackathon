@@ -7,6 +7,6 @@
 |-------|---------|---------------|---------|
 | `actuals` | Historical boardings (one row per route × datetime). | — | 5 |
 | `feature_toggles` | Один toggle: фича (например use_poi) включена или нет. | — | 6 |
-| `predictions` | One prediction point: route × datetime → value. | — | 22 |
-| `prediction_runs` | Один запуск ml_pipeline Celery task. | — | 14 |
+| `predictions` | One prediction point: route × datetime → value. | — | 24 |
+| `prediction_runs` | Один запуск ml_pipeline Celery task. | — | 20 |
 | `zero_overrides` | Один override: zero_strategy + параметры. | — | 6 |

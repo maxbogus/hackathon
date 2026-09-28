@@ -483,7 +483,11 @@ docs: api-gen fe-gen ## Regenerate all generated docs (OpenAPI + TS types)
 
 pyscn: .pyscn/report.json ## Run pyscn structural analysis → .pyscn/report.{json,html}
 	@printf "\033[36m→ Running pyscn analyze...\033[0m\n"
-	pyscn analyze apps/ ml/ scripts/ --json --html --no-open --output .pyscn/report.json
+	pyscn analyze apps/ ml/ scripts/ --json --html --no-open
+	@mkdir -p .pyscn/reports
+	@latest=$$(ls -t .pyscn/reports/*.json 2>/dev/null | head -1); \
+	if [ -n "$$latest" ]; then cp "$$latest" .pyscn/report.json; printf "\033[36m→ JSON: %s → .pyscn/report.json\033[0m\n" "$$latest"; \
+	else echo "ERROR: pyscn не создал JSON-отчёт в .pyscn/reports/"; exit 1; fi
 
 pyscn-compare: pyscn ## Compare current report vs baseline (CI gate)
 	@printf "\033[36m→ Comparing vs baseline...\033[0m\n"

@@ -49,6 +49,17 @@
 - Проверено: `grep -c 'from mlops' Makefile` = 0; `make mlflow-up` (guard) → :5001;
   `make pipeline-script SCRIPT=lineage_snapshot` → SUCCESS (25.1 с, sha256 `e4157ed7…`).
 
+**Гейты (после всех правок):** `verify_install.sh --quick` = **VERIFIED (FAIL=0)**, wheels PASS
+3.2G/5.7M/3.2G; `make api-check` OK (31 путей); `make ledger-check` OK; `make mlops-test`
+18 passed / 2 skipped; `make export-verify` OK (14 файлов, 62 хэша); `make pyscn-compare` = **PASS**
+(health 68→88, дублирование 56.5%→13.5%); `frontend-text-check` OK; python-gate `make test` =
+284/438/13/9 passed. Остаются красными **пре-существующие** места (не из этой сессии):
+`make lint` — 179 ruff-замечаний вне mlops (F-126; файлы этой сессии добавляют 0 — проверено
+`ruff --stdin-filename` против `195b48d`), `yarn typecheck`/`vitest` — на хосте нет `node_modules`
+(F-122/F-126), mypy — известная module-mapping заметка по `apps/assistant/app/__init__.py`.
+Попутно починены: `make pyscn` (CLI 1.32 больше не принимает `--output` с двумя форматами) и
+drift `make arch-dbml-check` (схема не перегенерировалась после T-194/T-230).
+
 **Артефакты на диске:** `scripts/verify_export.py`, `docs/backlog/archive/T-236..T-238*.md`,
 `docs/ledger/{findings,decisions}.jsonl` (F-143..F-150, D-050..D-053), `.dockerignore`,
 `apps/{backend,frontend,harvester,ml_pipeline}/Dockerfile`, `docker-compose.yml`,
