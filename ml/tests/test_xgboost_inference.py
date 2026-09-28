@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 import numpy as np
 import pandas as pd
 import pytest
+from _data_guards import requires_spravochnik
 
 from transit_ai.data.base import DateRange
 from transit_ai.data.real import RealSource
@@ -28,6 +29,7 @@ def full_data() -> pd.DataFrame:
     )
 
 
+@requires_spravochnik
 def test_inference_without_lag_lookup_returns_non_zero(full_data: pd.DataFrame) -> None:
     """Без lookup + без boardings → lag = 0 (legacy, регрессия).
     БЕЗ lookup поведение = текущее плохое (это ожидаемо)."""
@@ -69,6 +71,7 @@ def test_build_lag_lookup(full_data: pd.DataFrame) -> None:
         assert lookup[key25] < lookup[key], "route 25 < route 17"
 
 
+@requires_spravochnik
 def test_inference_with_lag_lookup_returns_realistic_sum(
     full_data: pd.DataFrame,
 ) -> None:
@@ -111,6 +114,7 @@ def test_inference_with_lag_lookup_returns_realistic_sum(
     )
 
 
+@requires_spravochnik
 def test_predict_with_ci_with_lag_lookup(full_data: pd.DataFrame) -> None:
     """predict_with_ci тоже должен использовать lag_lookup."""
     model = XGBoostRoutePredictor(

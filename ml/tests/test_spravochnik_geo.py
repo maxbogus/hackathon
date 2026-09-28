@@ -6,6 +6,8 @@ RED-тесты пишутся ДО реализации (clinerule 16).
 
 from __future__ import annotations
 
+from _data_guards import requires_spravochnik
+
 from transit_ai.data.spravochnik_geo import (
     build_route_geo_features,
     load_user_routes,
@@ -20,6 +22,7 @@ def test_load_user_routes_returns_5_missing_routes() -> None:
     assert user_routes[50]["n_stops"] == 82
 
 
+@requires_spravochnik
 def test_build_route_geo_features_returns_all_10_routes() -> None:
     """T-156: все 10 маршрутов получают geo-фичи."""
     geo = build_route_geo_features()
@@ -27,6 +30,7 @@ def test_build_route_geo_features_returns_all_10_routes() -> None:
     assert set(geo["route"].tolist()) == {1, 5, 7, 11, 12, 17, 25, 26, 28, 50}
 
 
+@requires_spravochnik
 def test_build_route_geo_features_has_required_columns() -> None:
     """T-156: обязательные колонки в результате."""
     geo = build_route_geo_features()
@@ -45,6 +49,7 @@ def test_build_route_geo_features_has_required_columns() -> None:
     assert required.issubset(geo.columns), f"missing: {required - set(geo.columns)}"
 
 
+@requires_spravochnik
 def test_routes_in_spravochnik_have_real_coords() -> None:
     """T-156: 5 маршрутов из справочника (1,5,7,11,12) имеют реальные координаты."""
     geo = build_route_geo_features()
@@ -55,6 +60,7 @@ def test_routes_in_spravochnik_have_real_coords() -> None:
         assert 37.3 < row["lon_mid"] < 37.9
 
 
+@requires_spravochnik
 def test_routes_not_in_spravochnik_have_user_coords() -> None:
     """T-156: 5 маршрутов вне справочника получают координаты от user."""
     geo = build_route_geo_features()
@@ -65,6 +71,7 @@ def test_routes_not_in_spravochnik_have_user_coords() -> None:
         assert 37.3 < row["lon_mid"] < 37.9
 
 
+@requires_spravochnik
 def test_dist_center_is_reasonable_for_all_routes() -> None:
     """T-156: dist_center_km в диапазоне 0..30 км."""
     geo = build_route_geo_features()
@@ -74,6 +81,7 @@ def test_dist_center_is_reasonable_for_all_routes() -> None:
         )
 
 
+@requires_spravochnik
 def test_primary_place_id_is_known_depot() -> None:
     """T-156: primary_place_id ∈ known depots."""
     geo = build_route_geo_features()

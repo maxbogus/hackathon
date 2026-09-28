@@ -62,7 +62,9 @@ class SearchSpace:
 DEFAULT_SEARCH_SPACE = SearchSpace()
 
 
-def suggest_params(trial: optuna.Trial, space: SearchSpace = DEFAULT_SEARCH_SPACE) -> dict[str, Any]:
+def suggest_params(
+    trial: optuna.Trial, space: SearchSpace = DEFAULT_SEARCH_SPACE
+) -> dict[str, Any]:
     """Ask trial to suggest XGBoost hyperparameters."""
     return {
         "n_estimators": trial.suggest_int("n_estimators", *space.n_estimators),
@@ -115,16 +117,19 @@ def build_objective(
                transit_ai.models.xgboost_route integration.
     """
     if real:
+
         def real_objective(trial: optuna.Trial) -> float:
             raise NotImplementedError(
                 "real=True requires transit_ai.models.xgboost_route; "
                 "use real=False (surrogate) for smoke"
             )
+
         return real_objective
 
     def surrogate_objective(trial: optuna.Trial) -> float:
         params = suggest_params(trial)
         return _surrogate_score(params, seed)
+
     return surrogate_objective
 
 
@@ -149,7 +154,11 @@ def build_real_objective(
     from transit_ai.models.xgboost_route import XGBoostRoutePredictor  # noqa: PLC0415
     from transit_ai.reports.metrics import wape_score  # noqa: PLC0415
 
-    df = pl.read_parquet(df_subset_path) if str(df_subset_path).endswith(".parquet") else pl.read_csv(df_subset_path)
+    df = (
+        pl.read_parquet(df_subset_path)
+        if str(df_subset_path).endswith(".parquet")
+        else pl.read_csv(df_subset_path)
+    )
     n = len(df)
     split = int(n * 0.8)
     train_df = df.head(split)
@@ -178,6 +187,7 @@ def build_real_objective(
         elapsed = _time.monotonic() - t0
         trial.set_user_attr("train_time_sec", elapsed)
         return score
+
     return real_objective
 
 

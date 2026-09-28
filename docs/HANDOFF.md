@@ -1,7 +1,47 @@
 # HANDOFF — Transit-AI
 
-> Последнее обновление: 2026-09-28T12:00:00Z
-> Обновлено: Cline (агент) — docs/blog: серия из 5 постов про ИИ-скепсис (факт-база, гейт обезличивания, `make blog-stats`). F-124: README заказчика жил только в dangling git-объекте.
+> Последнее обновление: 2026-09-28T13:30:00Z
+> Обновлено: Cline (агент) — T-235 (MLOps pilot) Фаза 0: изоляция mlops-тестов, зелёный `make test`, `docs/MLFLOW.md`, фикс ledger-ids (F-125..F-129, D-047)
+
+## Сессия 2026-09-28T13:30:00Z — T-235 Фаза 0: гейт зелёный + изоляция mlops-тестов
+
+**Контекст:** пилот Tier A — Airflow(Docker)+MLflow над существующими Celery-воркерами,
+цель — воспроизводимость лучшего рецепта (best submission 0.83455, F-083/F-127).
+Фаза 0 = «почини тесты», потому что гейт был красный до начала работ.
+
+**Что сделано:**
+- `mlops/tests/` (+`conftest.py`) — перенесены 3 лабораторных теста
+  (`test_optuna_objective`, `test_dvc_probe`, `test_airflow_dag_structure`) из `ml/tests/`.
+  В airflow-тесте появился **герметичный AST-контур** (dag_id/schedule/3 таска/цепочка/
+  запрет импортов кода проекта) + `importorskip` для реального Airflow. Пути — от
+  `parents[2]`, а не `/home/maxbogus/...`.
+- Makefile: цели `mlops-test` (герметично) / `mlops-test-full` (эфемерные optuna/dvc/airflow),
+  `optuna-test`/`dvc-test`/`airflow-test` переведены на новые пути, `.PHONY` дедуплицирован,
+  `mlops/` добавлен в scope `make lint/format`.
+- 🔴 Фикс битых `make pipeline-train|predict|full`: импорт `apps.ml_pipeline.app.celery_app`
+  падал (`import app` резолвился в `apps/assistant/app`) → теперь `uv --directory apps/ml_pipeline`.
+- `ml/tests/_data_guards.py` + `requires_spravochnik`: 20 тестов, требующих справочник
+  организаторов (`data/real/spravochniki/*.xlsx`, данные вне git), теперь **skip**, а не fail.
+- `docs/MLFLOW.md` — закрыта мёртвая ссылка (на неё ссылались Makefile и docstring теста).
+- `scripts/ledger.py` — `resolve_id()` против коллизий id (F-128) + `tests/test_ledger_ids.py` (7 кейсов).
+- Тикет T-235 (status: in-progress), ledger F-125..F-129, D-047.
+
+**Метрики:** `ml/tests` 419 passed / 22 skipped (было «448 collected, 1 error»);
+`make mlops-test` 8 passed / 2 skipped за 0.16 с; `make airflow-test` 7 passed (Airflow 3.3.2);
+backend 284 / assistant 13 / mcp 9 — зелёные; `make test-root` 142 passed / **6 failed**
+(пре-существующие, F-129).
+
+**Не в объёме Фазы 0 (пре-существующее, зафиксировано):**
+`make lint` красный на 191 ruff-замечании вне mlops (F-126), `yarn lint`/vitest без
+`node_modules` невозможны (F-122), 6 падений test-root (F-129).
+
+**Следующая задача:** T-235 Фаза 1 → `--overrides-file` в `ml/scripts/make_submission.py`
+(врезка после `pred_cap`, строка ~331) + `ml/configs/overrides/nov_dec_2025.yaml` (профили
+`a_conservative` / `b_aggressive`) + `ml/tests/test_overrides_config.py`.
+
+**Открытые вопросы:** (1) тег образа MLflow для профиля `mlops`; (2) судьба 191 ruff-замечания —
+батч-фикс, per-file-ignores или отдельный тикет; (3) обновлять ли Dockerfile до multi-stage
+под test_dockerfile_hardening (F-129).
 
 ## Сессия 2026-09-28T12:00:00Z — docs/blog: серия постов «ИИ-скепсис» (F-124)
 

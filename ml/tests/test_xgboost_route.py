@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 import numpy as np
 import pandas as pd
 import pytest
+from _data_guards import requires_spravochnik
 
 from transit_ai.data.base import DateRange
 from transit_ai.data.real import RealSource
@@ -26,6 +27,7 @@ def full_data() -> pd.DataFrame:
     )
 
 
+@requires_spravochnik
 def test_xgboost_route_fit_on_real_data(full_data: pd.DataFrame) -> None:
     """T-152: model fits on real hackathon data without errors."""
     model = XGBoostRoutePredictor(
@@ -41,6 +43,7 @@ def test_xgboost_route_fit_on_real_data(full_data: pd.DataFrame) -> None:
     assert model.feature_names_ == list(FEATURE_NAMES)
 
 
+@requires_spravochnik
 def test_xgboost_route_predict_returns_correct_shape(full_data: pd.DataFrame) -> None:
     """predict_batch returns same length array."""
     model = XGBoostRoutePredictor(
@@ -56,6 +59,7 @@ def test_xgboost_route_predict_returns_correct_shape(full_data: pd.DataFrame) ->
     assert (preds >= 0).all()
 
 
+@requires_spravochnik
 def test_xgboost_route_predict_with_ci(full_data: pd.DataFrame) -> None:
     """predict_with_ci returns (median, lower, upper) — order respected."""
     model = XGBoostRoutePredictor(
@@ -74,6 +78,7 @@ def test_xgboost_route_predict_with_ci(full_data: pd.DataFrame) -> None:
     )
 
 
+@requires_spravochnik
 def test_xgboost_route_holdout_wape_better_than_baseline(
     full_data: pd.DataFrame,
 ) -> None:
@@ -107,6 +112,7 @@ def test_xgboost_route_holdout_wape_better_than_baseline(
     )
 
 
+@requires_spravochnik
 def test_xgboost_route_save_load_roundtrip(full_data: pd.DataFrame, tmp_path) -> None:
     """T-152 acceptance: model can be saved and loaded."""
     model = XGBoostRoutePredictor(
@@ -174,6 +180,7 @@ def _build_future_grid(
     return pd.DataFrame(rows)
 
 
+@requires_spravochnik
 def test_xgboost_route_predict_recursive_method_exists(full_data: pd.DataFrame) -> None:
     """T-153: predict_recursive доступен как метод модели."""
     model = XGBoostRoutePredictor(
@@ -186,6 +193,7 @@ def test_xgboost_route_predict_recursive_method_exists(full_data: pd.DataFrame) 
     assert callable(model.predict_recursive)
 
 
+@requires_spravochnik
 def test_xgboost_route_predict_recursive_returns_correct_shape(
     full_data: pd.DataFrame,
 ) -> None:
@@ -210,6 +218,7 @@ def test_xgboost_route_predict_recursive_returns_correct_shape(
     assert (preds >= 0).all(), "predictions должны быть >= 0"
 
 
+@requires_spravochnik
 def test_xgboost_route_predict_recursive_reproducible(
     full_data: pd.DataFrame,
 ) -> None:

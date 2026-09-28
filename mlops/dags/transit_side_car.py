@@ -22,9 +22,8 @@ subprocess для uv, чтобы не загрязнять основной venv
 from __future__ import annotations
 
 import os
-import subprocess
-import sys
 from pathlib import Path
+import subprocess
 
 from airflow.sdk import dag, task
 
@@ -34,16 +33,21 @@ UV = "uv"
 
 def _run_uv_subprocess(args: list[str]) -> str:
     """Run uv with --with packages from repo root, return stdout."""
-    cmd = [UV, "--directory", str(REPO_ROOT)] + args
+    cmd = [UV, "--directory", str(REPO_ROOT), *args]
     env = os.environ.copy()
     # Inherit env for mlflow (TRANSIT_AI_MLFLOW etc.)
     result = subprocess.run(
-        cmd, capture_output=True, text=True, timeout=600, cwd=str(REPO_ROOT), env=env
+        cmd,
+        capture_output=True,
+        text=True,
+        timeout=600,
+        cwd=str(REPO_ROOT),
+        env=env,
+        check=False,
     )
     if result.returncode != 0:
         raise RuntimeError(
-            f"uv command failed (exit={result.returncode}): {cmd}\n"
-            f"stderr: {result.stderr[-500:]}"
+            f"uv command failed (exit={result.returncode}): {cmd}\nstderr: {result.stderr[-500:]}"
         )
     return result.stdout
 
@@ -63,31 +67,48 @@ def transit_side_car() -> None:
     def lineage_snapshot() -> dict[str, str]:
         """Снять snapshot для data/real/train.csv (8 GB)."""
         snapshot_path = REPO_ROOT / "docs" / "lineage" / "datasets" / "real_ridership.json"
-        _run_uv_subprocess([
-            "run", "python", "ml/scripts/lineage_snapshot.py",
-            "--input", "data/real/train.csv",
-            "--output", "docs/lineage/datasets/real_ridership.json",
-        ])
+        _run_uv_subprocess(
+            [
+                "run",
+                "python",
+                "ml/scripts/lineage_snapshot.py",
+                "--input",
+                "data/real/train.csv",
+                "--output",
+                "docs/lineage/datasets/real_ridership.json",
+            ]
+        )
         return {"snapshot": str(snapshot_path)}
 
     @task
     def mlflow_ingest() -> dict[str, int]:
         """Идемпотентный ingest 81 источника в MLflow."""
-        _run_uv_subprocess([
-            "run", "--with", "mlflow>=2.16",
-            "python", "ml/scripts/mlflow_ingest.py",
-        ])
+        _run_uv_subprocess(
+            [
+                "run",
+                "--with",
+                "mlflow>=2.16",
+                "python",
+                "ml/scripts/mlflow_ingest.py",
+            ]
+        )
         return {"created": 0, "skipped": 81, "errors": 0}
 
     @task
     def mlflow_leaderboard() -> str:
         """Локальная drift-таблица local holdout vs platform score."""
-        out = _run_uv_subprocess([
-            "run", "--with", "mlflow>=2.16",
-            "python", "ml/scripts/mlflow_leaderboard.py", "--top", "30",
-        ])
+        out = _run_uv_subprocess(
+            [
+                "run",
+                "--with",
+                "mlflow>=2.16",
+                "python",
+                "ml/scripts/mlflow_leaderboard.py",
+                "--top",
+                "30",
+            ]
+        )
         return out[-2000:] if len(out) > 2000 else out
-
 
     # DAG dependencies: snapshot → ingest → leaderboard (Airflow 3 uses >> operator)
     snap = lineage_snapshot()

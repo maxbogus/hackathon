@@ -11,6 +11,7 @@ from datetime import UTC, datetime, timedelta
 import numpy as np
 import pandas as pd
 import pytest
+from _data_guards import requires_spravochnik
 
 from transit_ai.models.catboost_route import CatBoostRoutePredictor
 from transit_ai.models.xgboost_route import (
@@ -55,6 +56,7 @@ def _make_minimal_ridership(n_days: int = 5, n_routes: int = 3) -> pd.DataFrame:
 # ────────────────────────────────────────────────────────────────────
 
 
+@requires_spravochnik
 def test_catboost_fit_predict() -> None:
     """fit на минимальных данных → predict возвращает массив правильного shape."""
     model = CatBoostRoutePredictor(model_id="cat_test_v1", iterations=20)
@@ -85,6 +87,7 @@ def test_catboost_uses_same_features_as_xgboost() -> None:
     assert hasattr(XGBoostRoutePredictor, "fit")
 
 
+@requires_spravochnik
 def test_catboost_predict_with_lag_lookup() -> None:
     """predict_batch с lag_lookup (T-152-fallback) работает на submission-like данных."""
     model = CatBoostRoutePredictor(model_id="cat_test_lag", iterations=20)
@@ -116,6 +119,7 @@ def test_catboost_predict_with_lag_lookup() -> None:
     assert preds.mean() < 1000.0
 
 
+@requires_spravochnik
 def test_catboost_save_load(tmp_path_factory: pytest.TempPathFactory) -> None:
     """model.pkl сохраняется и загружается через joblib (как XGBoost)."""
     import joblib

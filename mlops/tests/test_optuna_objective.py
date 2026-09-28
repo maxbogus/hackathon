@@ -7,18 +7,26 @@
   4. suggest_int/float/loguniform работают
   5. best_params не пустой, best_value ∈ R
 
-Запуск: make optuna-smoke (Makefile).
+Запуск: make optuna-test (или make mlops-test-full).
+
+Optuna — эфемерная зависимость (не в uv.lock). Если её нет, модуль скипается
+целиком (importorskip), а не валит сборку всего прогона: раньше этот модуль
+лежал в ml/tests и ломал `make test` (collection error, F-125).
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-import optuna
+import time
 
+import pytest
 
-from optuna import create_study, load_study
+# Эфемерная зависимость: uv run --with optuna python -m pytest mlops/tests/...
+optuna = pytest.importorskip("optuna", reason="optuna эфемерна: uv run --with optuna")
 
-from mlops.optuna.study_xgboost import (
+from optuna import create_study, load_study  # noqa: E402
+
+from mlops.optuna.study_xgboost import (  # noqa: E402
     DEFAULT_SEARCH_SPACE,
     build_objective,
     suggest_params,
@@ -27,8 +35,16 @@ from mlops.optuna.study_xgboost import (
 
 def test_search_space_has_required_keys() -> None:
     """Search space содержит все гиперпараметры XGBoost route-only."""
-    expected = {"n_estimators", "max_depth", "learning_rate", "subsample",
-                "colsample_bytree", "min_child_weight", "reg_alpha", "reg_lambda"}
+    expected = {
+        "n_estimators",
+        "max_depth",
+        "learning_rate",
+        "subsample",
+        "colsample_bytree",
+        "min_child_weight",
+        "reg_alpha",
+        "reg_lambda",
+    }
     assert expected <= set(DEFAULT_SEARCH_SPACE.keys())
 
 
@@ -51,30 +67,43 @@ def test_suggest_params_returns_all_keys() -> None:
 
 def test_objective_is_deterministic_with_seed(tmp_path: Path) -> None:
     """Objective воспроизводима при seed=42 (детерминизм R3 hackathon-rules)."""
-    import optuna
     storage = f"sqlite:///{tmp_path / 'optuna.db'}"
     obj = build_objective(seed=42)
-    
+
     # 2 trials на одном seed → одинаковые metrics
-    study1 = create_study(storage=storage, study_name="s1", load_if_exists=False,
-                         direction="maximize", sampler=optuna.samplers.TPESampler(seed=42))
+    study1 = create_study(
+        storage=storage,
+        study_name="s1",
+        load_if_exists=False,
+        direction="maximize",
+        sampler=optuna.samplers.TPESampler(seed=42),
+    )
     study1.optimize(obj, n_trials=2, show_progress_bar=False)
-    
-    study2 = create_study(storage=storage, study_name="s2", load_if_exists=False,
-                         direction="maximize", sampler=optuna.samplers.TPESampler(seed=42))
+
+    study2 = create_study(
+        storage=storage,
+        study_name="s2",
+        load_if_exists=False,
+        direction="maximize",
+        sampler=optuna.samplers.TPESampler(seed=42),
+    )
     study2.optimize(obj, n_trials=2, show_progress_bar=False)
-    
-    assert study1.best_value == study2.best_value,         f"non-deterministic: {study1.best_value} != {study2.best_value}"
+
+    assert study1.best_value == study2.best_value, (
+        f"non-deterministic: {study1.best_value} != {study2.best_value}"
+    )
 
 
 def test_two_trial_smoke_under_30_seconds(tmp_path: Path) -> None:
     """2-trial smoke < 30 сек (бюджет для CI)."""
-    import time
     storage = f"sqlite:///{tmp_path / 'optuna.db'}"
     obj = build_objective(seed=42)
-    study = create_study(storage=storage, study_name="smoke",
-                        direction="maximize",
-                        sampler=optuna.samplers.TPESampler(seed=42))
+    study = create_study(
+        storage=storage,
+        study_name="smoke",
+        direction="maximize",
+        sampler=optuna.samplers.TPESampler(seed=42),
+    )
     t0 = time.monotonic()
     study.optimize(obj, n_trials=2, show_progress_bar=False)
     elapsed = time.monotonic() - t0
@@ -87,11 +116,14 @@ def test_study_persists_to_sqlite(tmp_path: Path) -> None:
     """После создания study можно загрузить из storage и увидеть trials."""
     storage = f"sqlite:///{tmp_path / 'optuna.db'}"
     obj = build_objective(seed=42)
-    study = create_study(storage=storage, study_name="persist",
-                        direction="maximize",
-                        sampler=optuna.samplers.TPESampler(seed=42))
+    study = create_study(
+        storage=storage,
+        study_name="persist",
+        direction="maximize",
+        sampler=optuna.samplers.TPESampler(seed=42),
+    )
     study.optimize(obj, n_trials=3, show_progress_bar=False)
-    
+
     # Перезагрузка из sqlite
     loaded = load_study(study_name="persist", storage=storage)
     assert len(loaded.trials) == 3
@@ -101,11 +133,13 @@ def test_study_persists_to_sqlite(tmp_path: Path) -> None:
 def test_objective_maximize_direction_improves_with_good_params(tmp_path: Path) -> None:
     """Objective: хорошие params → лучше, чем случайные (sanity)."""
     obj = build_objective(seed=42)
-    import optuna
     storage = f"sqlite:///{tmp_path / 'optuna.db'}"
-    study = create_study(storage=storage, study_name="sanity",
-                        direction="maximize",
-                        sampler=optuna.samplers.TPESampler(seed=42))
+    study = create_study(
+        storage=storage,
+        study_name="sanity",
+        direction="maximize",
+        sampler=optuna.samplers.TPESampler(seed=42),
+    )
     # 10 trials — TPE должен найти что-то лучше baseline
     study.optimize(obj, n_trials=10, show_progress_bar=False)
     assert study.best_value > 0.0

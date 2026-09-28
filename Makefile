@@ -44,14 +44,12 @@ REPO_ROOT := $(shell pwd)
         predictions-list predictions-activate predictions-restore-etalon predictions-ingest-csv \
         mlflow-probe mlflow-demo mlflow-runs mlflow-test mlflow-ui mlflow-server mlflow-run \
         mlflow-ingest mlflow-ingest-only mlflow-leaderboard \
-        mlops-probe mlops-compare \
+        mlops-probe mlops-compare mlops-test mlops-test-full \
         lineage-snapshot-real lineage-snapshot lineage-verify lineage-test \
         dvc-probe dvc-init dvc-add-smoke dvc-add-real dvc-add-artifacts \
         dvc-status dvc-cache-size dvc-test \
         optuna-probe optuna-smoke optuna-run optuna-test \
         airflow-probe airflow-dags-list airflow-tasks-list airflow-test-task airflow-test \
-        dvc-probe dvc-init dvc-add-smoke dvc-add-real dvc-add-artifacts \
-        dvc-status dvc-cache-size dvc-test \
         db-upgrade db-downgrade db-revision db-current db-history \
         blog-stats blog-check
 
@@ -327,12 +325,12 @@ frontend-text-check: lint-frontend-text ## Alias
 # ---------------------------------------------------------------------------
 
 lint: ## ruff + eslint + prettier --check
-	$(UV) run ruff check apps/ ml/ scripts/
+	$(UV) run ruff check apps/ ml/ mlops/ scripts/
 	cd apps/frontend && $(YARN) lint
 
 format: ## ruff format + eslint --fix
-	$(UV) run ruff format apps/ ml/ scripts/
-	$(UV) run ruff check --fix apps/ ml/ scripts/
+	$(UV) run ruff format apps/ ml/ mlops/ scripts/
+	$(UV) run ruff check --fix apps/ ml/ mlops/ scripts/
 	cd apps/frontend && $(YARN) format
 
 typecheck: ## mypy strict + tsc --noEmit
@@ -556,6 +554,20 @@ mlops-probe: ## Probe all 4 MLOps tools ephemerally (versions + filesystem suppo
 mlops-compare: ## Show MLOPS_LAB.md (the comparison report)
 	@cat $(REPO_ROOT)/mlops/MLOPS_LAB.md
 
+# ---------------------------------------------------------------------------
+# MLOPS LAB: тесты лаборатории (изолированы от `make test`)
+# ---------------------------------------------------------------------------
+# mlops/tests/ НЕ входит в testpaths (pyproject.toml): тесты лаборатории требуют
+# эфемерных пакетов (optuna/dvc/apache-airflow) и сети, поэтому `make test`
+# остаётся герметичным и быстрым (F-125). Контур A — mlops-test (герметичный),
+# полный контур (эфемерные зависимости + сеть) — mlops-test-full.
+
+mlops-test: ## MLOps lab tests: герметичный контур (AST-структура DAG, skip эфемерных)
+	$(UV) run --with pytest --with pytest-asyncio python -m pytest mlops/tests/ -q --no-cov
+
+mlops-test-full: ## MLOps lab tests: + эфемерные optuna/dvc/apache-airflow (нужна сеть)
+	$(UV) run --with pytest --with pytest-asyncio --with optuna --with dvc --with apache-airflow python -m pytest mlops/tests/ -q --no-cov
+
 
 mlflow-ingest: ## Idempotent ingest 81 sources (23 artifacts + 53 manifests + 5 benchmarks)
 	@$(MLFLOW_HINT_ENV) $(UV) --directory ml run --with "$(MLFLOW_PKG)" python scripts/mlflow_ingest.py
@@ -635,7 +647,7 @@ dvc-cache-size: ## DVC cache size (close to 0 if hardlink works)
 	@du -sh $(REPO_ROOT)/mlops/dvc-cache 2>/dev/null || echo "no cache yet"
 
 dvc-test: ## DVC probe tests (script exists + version >= 3.0)
-	$(UV) run --with pytest --with pytest-asyncio python -m pytest ml/tests/test_dvc_probe.py -q
+	$(UV) run --with pytest --with pytest-asyncio python -m pytest mlops/tests/test_dvc_probe.py -q --no-cov
 
 
 # ---------------------------------------------------------------------------
@@ -658,7 +670,7 @@ optuna-run: ## 15-trial TPE run (~30 sec on real XGBoost, R6 budget)
 		"from mlops.optuna.study_xgboost import create_study; s = create_study(n_trials=15, timeout=1800); print(f\"best={s.best_value:.4f}, params={s.best_params}\")"
 
 optuna-test: ## Optuna tests (storage, determinism, smoke)
-	$(UV) run --with pytest --with pytest-asyncio --with optuna python -m pytest ml/tests/test_optuna_objective.py -q
+	$(UV) run --with pytest --with pytest-asyncio --with optuna python -m pytest mlops/tests/test_optuna_objective.py -q --no-cov
 
 
 # ---------------------------------------------------------------------------
@@ -684,8 +696,8 @@ airflow-tasks-list: ## List tasks in transit_side_car DAG
 airflow-test-task: ## Test single task: make airflow-test-task TASK=lineage_snapshot
 	@AIRFLOW_HOME=$(AIRFLOW_HOME) $(UV) run --with apache-airflow airflow tasks test transit_side_car $(TASK) 2026-01-01 2>&1 | tail -3
 
-airflow-test: ## Airflow DAG structure tests (DAG loads, 3 tasks, deps)
-	$(UV) run --with pytest --with pytest-asyncio --with apache-airflow python -m pytest ml/tests/test_airflow_dag_structure.py -q
+airflow-test: ## Airflow DAG structure tests (AST-контур + DAG-импорт в apache-airflow)
+	$(UV) run --with pytest --with pytest-asyncio --with apache-airflow python -m pytest mlops/tests/test_airflow_dag_structure.py -q --no-cov
 
 # CI gate (расширенный): все проверки включая структурный анализ
 # ---------------------------------------------------------------------------
@@ -806,13 +818,13 @@ external-show: ## Таблица источников: строки / sha256 / �
 external-all: external-gen external-verify ## gen + verify (offline)  [T-231]
 
 pipeline-train: ## Trigger ml_pipeline.train_xgboost via broker
-	$(UV) run python -c "from apps.ml_pipeline.app.celery_app import celery_app; r = celery_app.send_task('ml_pipeline.train_xgboost'); print('Task:', r.id); print('Result:', r.get(timeout=600))"
+	$(UV) --directory apps/ml_pipeline run python -c "from app.celery_app import celery_app; r = celery_app.send_task('ml_pipeline.train_xgboost'); print('Task:', r.id); print('Result:', r.get(timeout=600))"
 
 pipeline-predict: ## Trigger ml_pipeline.predict_window with default params
-	$(UV) run python -c "from apps.ml_pipeline.app.celery_app import celery_app; r = celery_app.send_task('ml_pipeline.predict_window', kwargs={'model_id':'xgboost_v_default'}); print('Task:', r.id); print('Result:', r.get(timeout=600))"
+	$(UV) --directory apps/ml_pipeline run python -c "from app.celery_app import celery_app; r = celery_app.send_task('ml_pipeline.predict_window', kwargs={'model_id':'xgboost_v_default'}); print('Task:', r.id); print('Result:', r.get(timeout=600))"
 
 pipeline-full: ## Trigger full_pipeline (train → predict) via Celery broker  [T-198]
-	$(UV) run python -c "from apps.ml_pipeline.app.celery_app import celery_app; r = celery_app.send_task('ml_pipeline.full_pipeline'); print('Task ID:', r.id); print('Waiting for result (timeout=1800s)...'); print('Result:', r.get(timeout=1800))"
+	$(UV) --directory apps/ml_pipeline run python -c "from app.celery_app import celery_app; r = celery_app.send_task('ml_pipeline.full_pipeline'); print('Task ID:', r.id); print('Waiting for result (timeout=1800s)...'); print('Result:', r.get(timeout=1800))"
 
 pipeline-status: ## Show active Celery tasks (ml-pipeline worker status)  [T-198]
 	@$(DC) exec ml-pipeline celery -A app.celery_app:celery_app inspect active 2>/dev/null || echo "ml-pipeline worker not running"

@@ -80,6 +80,8 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["ANN", "PLR2004", "S101", "RUF002", "RUF003", "B011"]  # tests OK: assert, магические числа, кириллица в docstrings
+"**/tests/**/*.py" = ["ANN", "PLR2004", "S101", "RUF002", "RUF003", "B011"]  # вложенные tests/ (ml/tests, mlops/tests, apps/*/tests)
+"mlops/**/*.py" = ["RUF002", "RUF003"]  # эфемерная лаборатория: кириллица в docstrings (как в остальном проекте)
 "scripts/test_distribution.py" = ["ANN", "PLR2004", "S101", "RUF002", "RUF003", "B011"]  # distribution tests OK
 "**/scripts/**/*.py" = ["T201", "PLR2004"]   # print() в скриптах OK
 "__init__.py" = ["F401", "F403"]             # re-exports OK

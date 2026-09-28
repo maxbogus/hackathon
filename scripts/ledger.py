@@ -31,11 +31,47 @@ def next_id(kind: str, file: Path) -> str:
     return f"{prefix}-{(max(ids, default=0) + 1):03d}"
 
 
+def existing_ids(file: Path) -> set[str]:
+    """Все id из jsonl-файла (устойчиво к битым строкам)."""
+    if not file.exists():
+        return set()
+    ids: set[str] = set()
+    for raw in file.read_text(encoding="utf-8").splitlines():
+        stripped = raw.strip()
+        if not stripped:
+            continue
+        try:
+            ids.add(str(json.loads(stripped)["id"]))
+        except (json.JSONDecodeError, KeyError):
+            continue
+    return ids
+
+
+def resolve_id(kind: str, file: Path, requested: str | None = None) -> str:
+    """Уникальный D-NNN/F-NNN.
+
+    F-128: `next_id` считает max+1, поэтому два параллельных запуска `ledger add`
+    получали одинаковый id (F-046, F-096, F-097 в истории). Здесь id проверяется
+    на фактическую занятость и при коллизии сдвигается вперёд.
+    """
+    used = existing_ids(file)
+    if requested and requested not in used:
+        return requested
+    candidate = next_id(kind, file)
+    while candidate in used:
+        prefix, num = candidate.split("-")
+        candidate = f"{prefix}-{int(num) + 1:03d}"
+    return candidate
+
+
 def cmd_add(args: argparse.Namespace) -> int:
     """Интерактивно добавляет запись."""
     kind = "decision" if args.kind == "decision" else "finding"
     target = DECISIONS if kind == "decision" else FINDINGS
-    record_id = args.id or next_id(kind, target)
+    requested = args.id
+    record_id = resolve_id(kind, target, requested)
+    if requested and requested != record_id:
+        print(f"⚠ {requested} уже занят — берём {record_id}")
     ts = datetime.now(UTC).isoformat()
 
     print(f"Добавляем {record_id} в {target.name}")
