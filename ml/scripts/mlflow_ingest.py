@@ -33,6 +33,7 @@ from transit_ai.lineage.ingest import (  # noqa: E402
     BenchmarkSource,
     ManifestSource,
     discover_all,
+    filter_plan,
 )
 from transit_ai.tracking import (  # noqa: E402
     experiment_name,
@@ -173,16 +174,7 @@ def main() -> int:
     client = mlflow.tracking.MlflowClient(tracking_uri=tracking_uri())
 
     plan = discover_all()
-    if args.only != "all":
-        plan.artifact_sources = (
-            plan.artifact_sources if args.only == "artifacts" else []
-        )
-        plan.manifest_sources = (
-            plan.manifest_sources if args.only == "manifests" else []
-        )
-        plan.benchmark_sources = (
-            plan.benchmark_sources if args.only == "benchmarks" else []
-        )
+    plan = filter_plan(plan, args.only)
 
     if not args.quiet:
         print(f"experiment: {exp_name} (id={exp_id})")

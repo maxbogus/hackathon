@@ -253,15 +253,43 @@ def discover_all(repo_root: Path | str = REPO_ROOT_DEFAULT) -> IngestPlan:
     )
 
 
+_INGEST_KINDS = ("all", "artifacts", "manifests", "benchmarks")
+
+
+def filter_plan(plan: IngestPlan, only: str = "all") -> IngestPlan:
+    """Оставить в плане только выбранный вид источников (T-235).
+
+    Args:
+        plan: результат ``discover_all()``.
+        only: ``all`` | ``artifacts`` | ``manifests`` | ``benchmarks``.
+
+    Returns:
+        Новый ``IngestPlan`` (dataclass frozen — мутация запрещена).
+
+    Raises:
+        ValueError: неизвестное значение ``only``.
+    """
+    if only not in _INGEST_KINDS:
+        raise ValueError(f"only={only!r} не поддерживается; допустимо: {list(_INGEST_KINDS)}")
+    if only == "all":
+        return plan
+    return IngestPlan(
+        artifact_sources=plan.artifact_sources if only == "artifacts" else [],
+        manifest_sources=plan.manifest_sources if only == "manifests" else [],
+        benchmark_sources=plan.benchmark_sources if only == "benchmarks" else [],
+    )
+
+
 __all__ = [
+    "REPO_ROOT_DEFAULT",
     "ArtifactSource",
     "BenchmarkSource",
     "IngestPlan",
     "ManifestSource",
-    "REPO_ROOT_DEFAULT",
     "discover_all",
     "discover_artifact_sources",
     "discover_benchmark_sources",
     "discover_manifest_sources",
+    "filter_plan",
     "make_ingest_key",
 ]

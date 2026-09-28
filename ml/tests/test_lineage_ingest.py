@@ -27,6 +27,7 @@ from transit_ai.lineage.ingest import (
     discover_benchmark_sources,
     discover_manifest_sources,
     discover_all,
+    filter_plan,
     make_ingest_key,
 )
 
@@ -180,3 +181,43 @@ def test_empty_repo_returns_empty_plan(tmp_path: Path) -> None:
     assert plan.manifest_count == 0
     assert plan.benchmark_count == 0
     assert plan.total == 0
+
+
+# ─────────────── filter_plan: `make mlflow-ingest-only KIND=...` (T-235) ───────────────
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _discovered_plan() -> IngestPlan:
+    """Реальный план по репозиторию (23 артефакта + манифесты + бенчмарки)."""
+    return discover_all(REPO_ROOT)
+
+
+def test_filter_plan_all_returns_same_plan() -> None:
+    """only=all → план без изменений (объект тот же)."""
+    plan = _discovered_plan()
+    assert filter_plan(plan, "all") is plan
+
+
+def test_filter_plan_keeps_only_requested_kind() -> None:
+    """only=benchmarks обнуляет прочие виды источников, исходный план не мутирует.
+
+    Регресс F-138: раньше этот код присваивал поля frozen dataclass →
+    dataclasses.FrozenInstanceError, то есть `--only` в mlflow_ingest падал.
+    """
+    plan = _discovered_plan()
+    assert plan.artifact_count > 0 and plan.manifest_count > 0, "нужен непустой план"
+
+    filtered = filter_plan(plan, "benchmarks")
+
+    assert filtered.benchmark_count == plan.benchmark_count
+    assert filtered.artifact_count == 0
+    assert filtered.manifest_count == 0
+    assert plan.artifact_count > 0  # исходный план не изменился
+    assert plan.manifest_count > 0
+
+
+def test_filter_plan_unknown_kind_raises() -> None:
+    with pytest.raises(ValueError, match="не поддерживается"):
+        filter_plan(_discovered_plan(), "nope")
+

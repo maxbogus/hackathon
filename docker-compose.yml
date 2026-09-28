@@ -227,6 +227,39 @@ services:
     mem_reservation: 512m
     cpus: "1.0"
 
+  # === MLflow tracking server (T-235, профиль `mlops`) ===
+  # Side-car инфраструктура: MLflow НЕ входит в uv.lock/apps/* (D-044).
+  # Backend store — БД `mlflow` в существующем postgres (entrypoint создаёт её при старте),
+  # артефакты — ./mlartifacts (host volume). Порт 5001: 5000 занят registry:2.
+  mlflow:
+    build:
+      context: .
+      dockerfile: mlops/mlflow/Dockerfile
+    profiles: ["mlops"]
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      MLFLOW_BACKEND_STORE_URI: postgresql+psycopg2://transit:${POSTGRES_PASSWORD:-transit_dev_only}@postgres:5432/mlflow
+      MLFLOW_ARTIFACTS_DESTINATION: /mlartifacts
+      # MLflow 3 проверяет Host-заголовок вместе с портом: клиенты с хоста ходят на
+      # localhost:${MLFLOW_HOST_PORT}, воркеры — на mlflow:5000.
+      MLFLOW_ALLOWED_HOSTS: "localhost,localhost:${MLFLOW_HOST_PORT:-5001},127.0.0.1,127.0.0.1:${MLFLOW_HOST_PORT:-5001},mlflow,mlflow:5000,host.docker.internal"
+    volumes:
+      - ./mlartifacts:/mlartifacts:rw
+    networks:
+      - transit-net
+    ports:
+      - "${MLFLOW_HOST_PORT:-5001}:5000"
+    mem_limit: 2g
+    mem_reservation: 512m
+    cpus: "1.0"
+    # T-235/F-137: healthcheck отключён — python-urllib healthcheck ронял сервер
+    # (Exit=0 → restart). Проверка доступности: `curl http://localhost:${MLFLOW_HOST_PORT}/health`.
+    healthcheck:
+      disable: true
+
 volumes:
   postgres_data:
   redis_data:

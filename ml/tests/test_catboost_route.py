@@ -20,6 +20,9 @@ from transit_ai.models.xgboost_route import (
     build_lag_lookup,
 )
 
+# F-136: fit на полном датасете (49M строк) — вне быстрого гейта
+pytestmark = pytest.mark.slow
+
 # ────────────────────────────────────────────────────────────────────
 # Fixtures: минимальный ridership DataFrame для тестов
 # ────────────────────────────────────────────────────────────────────

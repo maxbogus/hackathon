@@ -78,7 +78,40 @@ make mlflow-run SCRIPT=scripts/train_xgboost.py ARGS="--model-id x"   # любо
 Заменяет ручной grep по `docs/ledger/findings.jsonl`.
 Метрики: `WAPE-score ∈ [0,1]`, больше = лучше (clinerule 27).
 
+## MLflow как сервис (профиль `mlops`, T-235)
+
+Локальный sqlite (`mlruns.db`) остаётся для одиночных прогонов, но для оркестрации
+(DAG + Celery-воркеры + несколько клиентов) поднимается **сервер** — один писатель
+вместо конкурирующих процессов за SQLite.
+
+```bash
+make mlflow-up      # profile: mlops -> http://localhost:5001 (+ создаст БД mlflow в postgres)
+make mlflow-url     # печатает export MLFLOW_TRACKING_URI=http://localhost:5001
+make mlflow-logs    # хвост логов сервера
+make mlflow-down    # остановить
+
+# клиенты:
+export MLFLOW_TRACKING_URI=http://localhost:5001
+make mlflow-ingest          # 81 источник (идемпотентно)
+make mlflow-leaderboard     # drift-таблица против сервера
+```
+
+| Параметр | Значение |
+|---|---|
+| Образ | `mlops/mlflow/Dockerfile` — `mlflow==2.16.2` + `sqlalchemy<2.1` + `gunicorn` + `psycopg2-binary` |
+| Backend store | БД `mlflow` в существующем `postgres` (entrypoint создаёт её при старте) |
+| Артефакты | volume `./mlartifacts` (host) ↔ `/mlartifacts` (контейнер), `--serve-artifacts` |
+| Порт | `${MLFLOW_HOST_PORT:-5001}` (5000 занят локальным `registry:2`) |
+| Версия клиента | `MLFLOW_PKG ?= mlflow==2.16.2` (совпадает с сервером), переопределяется: `MLFLOW_PKG="mlflow>=2.16" make ...` |
+
+**Грабли (F-137), если будете менять версию/конфиг:**
+- sqlalchemy резолвится как 2.1 → MLflow падает `ImportError: cannot import name 'FallbackAsyncAdaptedQueuePool'` → пиньте `sqlalchemy<2.1`.
+- MLflow 3.x-сервер в контейнере ронял uvicorn-воркеры на API-запросах (`Empty reply from server`), а его security-middleware требовал `--allowed-hosts` вместе с портом — поэтому пинится 2.16.2.
+- `HEALTHCHECK` через `python -c urllib…` внутри контейнера роняет сервер → healthcheck отключён, проверяйте снаружи: `curl localhost:5001/health`.
+- Смена мажорной версии MLflow на существующей БД → `alembic Can't locate revision`; пересоздайте БД: `DROP DATABASE mlflow;` (работы перезаливаются `make mlflow-ingest`).
+
 ## Изоляция (не ломать)
+
 
 - ❌ MLflow **не** добавляется в `uv.lock` / `pyproject.toml` / `docker-compose.yml`
   (кроме сервиса в профиле `mlops`/`airflow` — см. `mlops/README.md`).

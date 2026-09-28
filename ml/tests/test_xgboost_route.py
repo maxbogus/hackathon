@@ -1,4 +1,10 @@
-"""Tests for XGBoostRoutePredictor on real hackathon data (T-152)."""
+"""Tests for XGBoostRoutePredictor on real hackathon data (T-152).
+
+Все тесты модуля обучают модель на реальном датасете организаторов (49M строк,
+8 ГБ train.csv) — это медленно (десятки минут), поэтому модуль помечен `slow`:
+`make test` их не гоняет, явный запуск — `make test-slow`
+(T-235, F-136: после подключения xlsx эти тесты перестали скипаться).
+"""
 
 from __future__ import annotations
 
@@ -13,6 +19,9 @@ from transit_ai.data.base import DateRange
 from transit_ai.data.real import RealSource
 from transit_ai.models.xgboost_route import FEATURE_NAMES, XGBoostRoutePredictor
 from transit_ai.reports.metrics import compute_metrics
+
+# F-136: тесты обучают модель на полном датасете (49M строк) — вне быстрого гейта
+pytestmark = pytest.mark.slow
 
 
 @pytest.fixture(scope="module")

@@ -31,7 +31,7 @@ REPO_ROOT := $(shell pwd)
 .PHONY: help install hooks-install up up-minimal up-status up-loadtest down \
         build-backend build-harvester build-ml-pipeline build-all \
         export-images import-images \
-        lint format typecheck test test-unit test-int test-pipeline test-root check-all \
+        lint format typecheck test test-unit test-int test-pipeline test-root test-slow check-all \
         seed inventory inspect-real train-baseline train-xgboost train-gru train-hybrid train-all \
         predict calibrate evaluate submission sweep mc-scenario \
         api-gen api-check fe-gen \
@@ -43,7 +43,7 @@ REPO_ROOT := $(shell pwd)
         external-fetch external-gen external-verify external-show external-all \
         predictions-list predictions-activate predictions-restore-etalon predictions-ingest-csv \
         mlflow-probe mlflow-demo mlflow-runs mlflow-test mlflow-ui mlflow-server mlflow-run \
-        mlflow-ingest mlflow-ingest-only mlflow-leaderboard \
+        mlflow-ingest mlflow-ingest-only mlflow-leaderboard mlflow-up mlflow-down mlflow-logs mlflow-url \
         mlops-probe mlops-compare mlops-test mlops-test-full \
         lineage-snapshot-real lineage-snapshot lineage-verify lineage-test \
         dvc-probe dvc-init dvc-add-smoke dvc-add-real dvc-add-artifacts \
@@ -339,14 +339,19 @@ typecheck: ## mypy strict + tsc --noEmit
 test: ## pytest (per-app + ml) + vitest (run)
 	@printf "\033[36m→ backend pytest\033[0m\n"
 	cd $(REPO_ROOT)/apps/backend && $(PYTHON) -m pytest tests/ -q --no-cov
-	@printf "\033[36m→ ml pytest\033[0m\n"
-	cd $(REPO_ROOT) && $(UV) run pytest ml/tests -q --no-cov
+	@printf "\033[36m→ ml pytest (быстрый гейт: без -m slow, F-136)\033[0m\n"
+	cd $(REPO_ROOT) && $(UV) run pytest ml/tests -q --no-cov -m "not slow"
 	@printf "\033[36m→ assistant pytest\033[0m\n"
 	cd $(REPO_ROOT)/apps/assistant && $(PYTHON) -m pytest tests/ -q --no-cov
 	@printf "\033[36m→ mcp pytest\033[0m\n"
 	cd $(REPO_ROOT)/apps/mcp && $(PYTHON) -m pytest tests/ -q --no-cov
 	@printf "\033[36m→ vitest (frontend)\033[0m\n"
 	cd $(REPO_ROOT)/apps/frontend && $(YARN) test:run
+
+# F-136: тяжёлые тесты ml/ (fit на полном датасете организаторов, десятки минут).
+# Вынесены из `make test`, чтобы гейт оставался быстрым. Запуск — вручную.
+test-slow: ## Тяжёлые ml-тесты: fit на полном датасете (десятки минут) [F-136]
+	cd $(REPO_ROOT) && $(UV) run pytest ml/tests -q --no-cov -m slow
 
 
 # Root tests/ (clinerules, loadtest SLA, dockerfile hardening) — отдельно,
@@ -523,8 +528,13 @@ run-benchmark: ## Generic benchmark entry (delegates to ml.transit_ai.benchmark.
 # Артефакты: file:<repo>/mlartifacts. Контракты (JSON Schema, ml/artifacts/*/meta.json,
 # predictions/*.json) остаются источником истины. См. docs/MLFLOW.md.
 
-MLFLOW_PKG      ?= mlflow>=2.16
+# T-235: клиент MLflow запинован той же версией, что сервер в mlops/mlflow/Dockerfile.
+# 3.16.x как клиент к 3.16-серверу не работает в этом окружении (F-137), а версии
+# клиент/сервер должны совпадать. Переопределяется: MLFLOW_PKG="mlflow>=2.16" make ...
+MLFLOW_PKG      ?= mlflow==2.16.2
 MLFLOW_PORT     ?= 5000
+# T-235: порт сервиса MLflow в compose (профиль mlops). 5000 занят registry:2.
+MLFLOW_HOST_PORT ?= 5001
 MLFLOW_HINT_ENV  = MLFLOW_DISABLE_AGENT_HINT=1
 
 mlflow-probe: ## Версия MLflow (эфемерная установка, uv.lock не трогаем)
@@ -577,6 +587,26 @@ mlflow-ingest-only: ## Ingest only one kind: make mlflow-ingest-only KIND=artifa
 
 mlflow-leaderboard: ## Drift-table: local holdout vs platform score, top-30 submissions
 	@$(MLFLOW_HINT_ENV) $(UV) --directory ml run --with "$(MLFLOW_PKG)" python scripts/mlflow_leaderboard.py --top 30
+
+# === T-235: MLflow как сервис (профиль mlops) ===
+# Backend store — БД mlflow в существующем postgres, артефакты — ./mlartifacts.
+# Клиенты ходят на http://localhost:$(MLFLOW_HOST_PORT): export MLFLOW_TRACKING_URI=...
+
+mlflow-up: ## Start MLflow tracking server (profile: mlops) -> :$(MLFLOW_HOST_PORT)
+	@$(DC) --profile mlops up -d mlflow
+	@sleep 5
+	@$(DC) --profile mlops logs --tail 4 mlflow 2>&1 | tail -4
+	@printf "\n\033[32m✓ MLflow: http://localhost:$(MLFLOW_HOST_PORT)\n  export MLFLOW_TRACKING_URI=http://localhost:$(MLFLOW_HOST_PORT)\033[0m\n"
+
+mlflow-down: ## Stop MLflow tracking server
+	@$(DC) --profile mlops rm -sf mlflow >/dev/null 2>&1 || true
+	@echo "mlflow stopped"
+
+mlflow-logs: ## Tail MLflow server logs
+	@$(DC) --profile mlops logs -f mlflow
+
+mlflow-url: ## Print MLflow tracking URI for clients
+	@echo "MLFLOW_TRACKING_URI=http://localhost:$(MLFLOW_HOST_PORT)"
 # ---------------------------------------------------------------------------
 # MLOPS LAB: Lineage-lite (sha256 + manifest для 8 GB датасетов)
 # ---------------------------------------------------------------------------
