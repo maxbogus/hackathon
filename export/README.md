@@ -71,6 +71,7 @@ make external-gen        # обновить normalized JSON + manifest.json
 python3 scripts/generate_dbml.py   # schema.dbml + schema-tables.md (или make arch-dbml)
 mmdc -i docs/submission/diagrams/dfd_ru.mmd -o export/04-architecture/dfd_ru.png -b white -s 2
 make export-verify       # обязательные файлы + sha256 (см. checksums.sha256)
+make export-checksums    # перегенерировать checksums.sha256 после правок пакета
 ```
 
 ## Известные пробелы (добить при наличии времени)
@@ -100,8 +101,8 @@ make export-verify       # обязательные файлы + sha256 (см. c
 |---|---|---|
 | Код (`apps/`, `ml/`, `scripts/`), документация, ledger | GitHub | `git clone` |
 | Бинарные артефакты (XGBoost boosters, PNG/PDF) | GitHub через **Git LFS** (11 файлов, 10.6 МБ) | `git clone` + `git lfs pull` |
-| Датасет организаторов `data/real/train.csv` (8.16 ГБ), `test.csv` (2.23 ГБ) | **не в git** — только `.dvc`-указатели | поставляется хакатоном; локально `dvc checkout` из `mlops/dvc-cache` |
-| `ml/artifacts/*`, `predictions/*`, `.venv`, `docs/apps/**/wheels`, `mlartifacts/`, `mlruns/` | **не в git** (gitignore) | поставляются архивом/собираются заново (`make train-*`) |
+| Датасет организаторов `data/real/train.csv` (8.16 ГБ), `test.csv` (2.23 ГБ) | **не в git** | поставляется хакатоном; целостность — `docs/lineage/datasets/*.json` (sha256) |
+| `ml/artifacts/*`, `predictions/*`, `.venv`, `mlartifacts/`, `mlruns/` | **не в git** (gitignore) | поставляются архивом/собираются заново (`make train-*`) |
 
 Требования к клону:
 

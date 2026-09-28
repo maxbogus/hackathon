@@ -172,16 +172,13 @@ export/01-ml/artifacts/**/*.pkl
 export/dist/
 export/**/*.tar.gz
 
-# === MLOps lab (MLflow / Optuna / Airflow / DVC) ===
+# === MLOps lab (MLflow / Optuna / Airflow) ===
 # Локальные store'ы лаборатории: не в git (эфемерные, восстанавливаются прогоном).
 mlruns/
 mlruns.db
 mlartifacts/
 mlops/airflow_home/
 mlops/optuna/studies/
-mlops/dvc-cache/
-.dvc/cache/
-.dvc/tmp/
 
 # T-235: артефакты фоновых прогонов
 nohup.out

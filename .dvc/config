@@ -1,5 +1,0 @@
-[core]
-    no_scm = True
-[cache]
-    dir = ../mlops/dvc-cache
-    type = hardlink

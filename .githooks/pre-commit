@@ -17,7 +17,7 @@ printf "\n${YELLOW}→ pre-commit: starting checks...${NC}\n"
 
 # 1. Запрет на коммит .env и артефактов
 printf "${YELLOW}→ checking for forbidden files...${NC}\n"
-forbidden=$(git diff --cached --name-only | grep -E '\.env$|\.env\.local$|ml/artifacts/[^/]+/(model|pickle|bin|pt|onnx|json|npz)$|predictions/[^/]+\.(parquet|csv)$|data/real/' || true)
+forbidden=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.env$|\.env\.local$|ml/artifacts/[^/]+/(model|pickle|bin|pt|onnx|json|npz)$|predictions/[^/]+\.(parquet|csv)$|data/real/' || true)
 if [ -n "$forbidden" ]; then
   printf "${RED}✗ Found forbidden files in commit:${NC}\n"
   echo "$forbidden"

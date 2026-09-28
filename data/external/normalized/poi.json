@@ -879,10 +879,10 @@
     }
   ],
   "rows_count": 146,
-  "generated_at": "2026-09-25T18:12:24+00:00",
+  "generated_at": "2026-09-27T20:02:34+00:00",
   "inputs": [
     {
-      "path": "/home/maxbogus/Repositories/hackathon/data/external/poi_moscow.json",
+      "path": "data/external/poi_moscow.json",
       "sha256": "addb6390e96d92857c67b2e04235cd974ff01a30188dc24428aae9382f944265",
       "rows": 146
     }

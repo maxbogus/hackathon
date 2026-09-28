@@ -2923,10 +2923,10 @@
     }
   ],
   "rows_count": 365,
-  "generated_at": "2026-09-25T17:09:17+00:00",
+  "generated_at": "2026-09-27T20:02:34+00:00",
   "inputs": [
     {
-      "path": "/home/maxbogus/Repositories/hackathon/data/external/weather_2025.csv",
+      "path": "data/external/weather_2025.csv",
       "sha256": "08457b8bda4686f9032d20bedaeed8e212dadc77ab9b046e397ef7b9233214d3",
       "rows": 365
     }

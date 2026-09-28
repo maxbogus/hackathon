@@ -123,7 +123,7 @@ make mlflow-leaderboard     # drift-таблица против сервера
 
 Режим no-op (без mlflow) и режим tracking проверяются в
 `ml/tests/test_mlflow_tracker.py` (`make mlflow-test`). Тесты лаборатории
-(optuna/dvc/airflow) живут отдельно — `mlops/tests/` (`make mlops-test`).
+(optuna/airflow) живут отдельно — `mlops/tests/` (`make mlops-test`).
 
 ## См. также
 

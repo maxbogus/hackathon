@@ -2,18 +2,22 @@
 
 ## Зачем
 
-`mlops/` — side-car лаборатория (MLflow, DVC, Optuna, Airflow) рядом с P0-пайплайном.
+`mlops/` — side-car лаборатория (MLflow, Optuna, Airflow) рядом с P0-пайплайном.
+DVC был опробован в пилоте и **удалён** (T-237, D-051): у хранилища не было remote,
+поэтому `dvc pull` у получателя пакета падал, а committed `*.dvc` создавали ложное
+обещание provenance. Provenance теперь — sha256-манифесты (`docs/lineage/`,
+`data/external/normalized/manifest.json`) и `export/checksums.sha256`.
 Она должна оставаться **изолированной и удаляемой** (`rm -rf mlops/` не ломает продукт),
 при этом её тесты не должны отравлять основной гейт, а сервисы — конфликтовать с портами
 соседних проектов. Правила зафиксированы после пилота T-235.
 
 ## R1. Изоляция от P0
 
-- ❌ MLflow / DVC / Optuna / Airflow **не** добавляются в `uv.lock`, `pyproject.toml` ядра,
+- ❌ MLflow / Optuna / Airflow **не** добавляются в `uv.lock`, `pyproject.toml` ядра,
   `apps/*` — ставятся эфемерно (`uv run --with …`) либо живут в отдельном образе.
 - ✅ Инструменты лаборатории можно удалить вместе с каталогом: код продукта от них не зависит.
 - ✅ Артефакты лаборатории gitignored: `mlops/airflow_home/`, `mlops/airflow/logs/`,
-  `mlops/optuna/studies/`, `mlops/dvc-cache/`, `mlruns.db`, `mlartifacts/`.
+  `mlops/optuna/studies/`, `mlruns.db`, `mlartifacts/`.
 
 ## R2. Тесты лаборатории живут только в `mlops/tests/`
 
@@ -22,7 +26,7 @@
 - ✅ Обязателен `pytest.importorskip(...)` для эфемерной зависимости.
 - ✅ Пути считать от репозитория (`Path(__file__).resolve().parents[2]`), не хардкодить.
 - Команды: `make mlops-test` (герметичный контур), `make mlops-test-full` (эфемерные
-  optuna/dvc/apache-airflow), точечно — `make optuna-test|dvc-test|airflow-test`.
+  optuna/apache-airflow), точечно — `make optuna-test|airflow-test`.
 
 ## R3. DAG-инвариант (переносимость в общий Airflow)
 

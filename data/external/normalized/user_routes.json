@@ -56,7 +56,7 @@
   "generated_at": "2026-09-25T16:43:47+00:00",
   "inputs": [
     {
-      "path": "/home/maxbogus/Repositories/hackathon/ml/transit_ai/data/_user_routes_2025.json",
+      "path": "ml/transit_ai/data/_user_routes_2025.json",
       "sha256": "a367951a4ae3eaa57afd5ef8fa935fd90cd0c0a406421170634128902bddea8f",
       "rows": 5
     }

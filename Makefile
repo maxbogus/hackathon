@@ -30,7 +30,7 @@ REPO_ROOT := $(shell pwd)
 
 .PHONY: help install hooks-install up up-minimal up-status up-loadtest down \
         build-backend build-harvester build-ml-pipeline build-all \
-        export-images import-images \
+        export-images import-images export-verify export-checksums \
         lint format typecheck test test-unit test-int test-pipeline test-root test-slow check-all \
         seed inventory inspect-real train-baseline train-xgboost train-gru train-hybrid train-all \
         predict calibrate evaluate submission submission-compare sweep mc-scenario \
@@ -44,10 +44,8 @@ REPO_ROOT := $(shell pwd)
         predictions-list predictions-activate predictions-restore-etalon predictions-ingest-csv \
         mlflow-probe mlflow-demo mlflow-runs mlflow-test mlflow-ui mlflow-server mlflow-run \
         mlflow-ingest mlflow-ingest-only mlflow-leaderboard mlflow-up mlflow-down mlflow-logs mlflow-url \
-        mlops-probe mlops-compare mlops-test mlops-test-full \
+        mlops-compare mlops-test mlops-test-full \
         lineage-snapshot-real lineage-snapshot lineage-verify lineage-test \
-        dvc-probe dvc-init dvc-add-smoke dvc-add-real dvc-add-artifacts \
-        dvc-status dvc-cache-size dvc-test \
         optuna-probe optuna-smoke optuna-run optuna-test \
         airflow-probe airflow-dags-list airflow-tasks-list airflow-test-task airflow-test airflow-trigger \
         airflow-up airflow-down airflow-logs airflow-secrets \
@@ -209,6 +207,12 @@ import-images: ## [T-198b] Import .tar для жюри: make import-images TAR=d
 	docker load -i $(TAR)
 	@printf "\n\033[32m✓ Images загружены.\033[0m\n"
 	@printf "\033[33m→ Следующий шаг: make up\033[0m\n"
+
+export-verify: ## [T-237] Проверить сдаточный пакет export/: обязательные файлы + sha256
+	$(UV) run python scripts/verify_export.py
+
+export-checksums: ## [T-237] Перегенерировать export/checksums.sha256 после правок пакета
+	$(UV) run python scripts/verify_export.py --write
 
 down: ## Stop docker stack
 	$(DC) down
@@ -564,9 +568,6 @@ mlflow-server: ## Local tracking server (sqlite) -> MLFLOW_TRACKING_URI=http://1
 mlflow-run: ## Любой ml/-скрипт под tracking: make mlflow-run SCRIPT=scripts/train_xgboost.py ARGS="--model-id x"
 	@$(MLFLOW_HINT_ENV) $(UV) --directory ml run --with "$(MLFLOW_PKG)" python $(SCRIPT) $(ARGS)
 
-mlops-probe: ## Probe all 4 MLOps tools ephemerally (versions + filesystem support)
-	@bash $(REPO_ROOT)/mlops/probes/dvc_probe.sh
-
 mlops-compare: ## Show MLOPS_LAB.md (the comparison report)
 	@cat $(REPO_ROOT)/mlops/MLOPS_LAB.md
 
@@ -574,15 +575,15 @@ mlops-compare: ## Show MLOPS_LAB.md (the comparison report)
 # MLOPS LAB: тесты лаборатории (изолированы от `make test`)
 # ---------------------------------------------------------------------------
 # mlops/tests/ НЕ входит в testpaths (pyproject.toml): тесты лаборатории требуют
-# эфемерных пакетов (optuna/dvc/apache-airflow) и сети, поэтому `make test`
+# эфемерных пакетов (optuna/apache-airflow) и сети, поэтому `make test`
 # остаётся герметичным и быстрым (F-125). Контур A — mlops-test (герметичный),
 # полный контур (эфемерные зависимости + сеть) — mlops-test-full.
 
 mlops-test: ## MLOps lab tests: герметичный контур (AST-структура DAG, skip эфемерных)
 	$(UV) run --with pytest --with pytest-asyncio python -m pytest mlops/tests/ -q --no-cov
 
-mlops-test-full: ## MLOps lab tests: + эфемерные optuna/dvc/apache-airflow (нужна сеть)
-	$(UV) run --with pytest --with pytest-asyncio --with optuna --with dvc --with apache-airflow python -m pytest mlops/tests/ -q --no-cov
+mlops-test-full: ## MLOps lab tests: + эфемерные optuna/apache-airflow (нужна сеть)
+	$(UV) run --with pytest --with pytest-asyncio --with optuna --with apache-airflow python -m pytest mlops/tests/ -q --no-cov
 
 
 mlflow-ingest: ## Idempotent ingest 81 sources (23 artifacts + 53 manifests + 5 benchmarks)
@@ -651,39 +652,13 @@ lineage-test: ## Тесты lineage пакета (hashing + snapshot, +pytest э
 
 
 # ---------------------------------------------------------------------------
-# MLOPS LAB: DVC (dataset tracking, hardlink cache)
+# MLOPS LAB: DVC — УДАЛЁН (T-237, D-051)
 # ---------------------------------------------------------------------------
-# DVC is NOT in uv.lock: installed ephemerally via uv run --with dvc.
-# cache.type=hardlink + cache.dir=mlops/dvc-cache on ext4 = 0 GB overhead.
-# Verified: train.csv inode in repo == inode in cache, link count = 2.
-# .dvc/ and *.dvc are committed; .dvc/cache/ is in .gitignore.
-
-dvc-probe: ## DVC version + filesystem support (hardlink/reflink)
-	@bash $(REPO_ROOT)/mlops/probes/dvc_probe.sh
-
-dvc-init: ## dvc init --no-scm + cache.type=hardlink + cache.dir=mlops/dvc-cache
-	@if [ -d $(REPO_ROOT)/.dvc ]; then echo "already initialized"; exit 0; fi
-	$(UV) run --with dvc dvc init --no-scm
-	$(UV) run --with dvc dvc cache dir mlops/dvc-cache
-	$(UV) run --with dvc dvc config cache.type hardlink
-
-dvc-add-smoke: ## dvc add data/external/normalized/manifest.json (smoke 5 KB, ~2s)
-	$(UV) run --with dvc dvc add data/external/normalized/manifest.json
-
-dvc-add-real: ## dvc add data/real/*.csv (~18s for 8 GB train.csv + ~6s for 2 GB test.csv)
-	$(UV) run --with dvc dvc add data/real/train.csv data/real/test.csv
-
-dvc-add-artifacts: ## dvc add ml/artifacts/*/model.pkl (~25s, 23 files)
-	@for pkl in ml/artifacts/*/model.pkl; do $(UV) run --with dvc dvc add "$$pkl"; done
-
-dvc-status: ## dvc status (data up-to-date?)
-	$(UV) run --with dvc dvc status
-
-dvc-cache-size: ## DVC cache size (close to 0 if hardlink works)
-	@du -sh $(REPO_ROOT)/mlops/dvc-cache 2>/dev/null || echo "no cache yet"
-
-dvc-test: ## DVC probe tests (script exists + version >= 3.0)
-	$(UV) run --with pytest --with pytest-asyncio python -m pytest mlops/tests/test_dvc_probe.py -q --no-cov
+# DVC не входит в контракт передачи: `.dvc/config` не имел remote, поэтому
+# `dvc pull` у получателя падал, а 3 committed *.dvc создавали ложное обещание
+# provenance. Provenance данных теперь: docs/lineage/datasets/*.json (sha256 в git)
+# + data/external/normalized/manifest.json + export/checksums.sha256.
+# Датасет организаторов поставляется отдельно (см. export/README.md).
 
 
 # ---------------------------------------------------------------------------

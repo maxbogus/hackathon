@@ -2,8 +2,8 @@
 
 Зачем: mlops-тесты — изолированная лаборатория (clinerule 33). Они НЕ должны
 попадать в `make test` (ml/tests), потому что требуют эфемерных зависимостей
-(optuna / dvc / apache-airflow) и сети. Запуск — только через
-`make mlops-test` / `make optuna-test` / `make dvc-test` / `make airflow-test`.
+(optuna / apache-airflow) и сети. Запуск — только через
+`make mlops-test` / `make optuna-test` / `make airflow-test`.
 
 Этот conftest добавляет корень репо в sys.path, чтобы работали импорты
 `from mlops.optuna.study_xgboost import ...` при запуске pytest из любого каталога.

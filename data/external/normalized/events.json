@@ -100,10 +100,10 @@
     }
   ],
   "rows_count": 8,
-  "generated_at": "2026-09-25T19:34:26+00:00",
+  "generated_at": "2026-09-27T20:02:34+00:00",
   "inputs": [
     {
-      "path": "/home/maxbogus/Repositories/hackathon/data/external/events_moscow.json",
+      "path": "data/external/events_moscow.json",
       "sha256": "6ebd132811ad5a6e6d9a77a50c84d9222cccdd6a3167da0950fd3a675d6078dd",
       "rows": 8
     }

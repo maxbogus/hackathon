@@ -733,10 +733,10 @@
     ]
   },
   "rows_count": 142,
-  "generated_at": "2026-09-25T18:13:08+00:00",
+  "generated_at": "2026-09-27T20:02:34+00:00",
   "inputs": [
     {
-      "path": "/home/maxbogus/Repositories/hackathon/data/external/stops_routes.json",
+      "path": "data/external/stops_routes.json",
       "sha256": "e54fd4ebd82541a35166cce5a9b4a1ba98c9adef2605e66f3d2dd05a73d7dc95",
       "rows": 142
     }

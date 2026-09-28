@@ -10587,10 +10587,10 @@
     }
   ],
   "rows_count": 1512,
-  "generated_at": "2026-09-25T17:13:11+00:00",
+  "generated_at": "2026-09-27T20:02:34+00:00",
   "inputs": [
     {
-      "path": "/home/maxbogus/Repositories/hackathon/data/external/validators_lookup.csv",
+      "path": "data/external/validators_lookup.csv",
       "sha256": "a2ae0ecf2b43c093b54b1bc239cf0d53fc5babc11dd847fa44a33ad85985398e",
       "rows": 1512
     }

@@ -291,3 +291,23 @@ def test_cli_show_lists_all_sources(fake_repo: Path, capsys: pytest.CaptureFixtu
     shown = capsys.readouterr().out
     for name in EXPECTED_SOURCES:
         assert name in shown
+
+
+# ─────────────────── переносимость артефактов (T-237) ───────────────────
+
+
+def test_input_paths_are_repo_relative(fake_repo: Path) -> None:
+    """Пути входов в артефактах относительные, а не абсолютные (T-237).
+
+    Артефакты `data/external/normalized/*.json` коммитятся и передаются комиссии:
+    абсолютный путь нашей машины (`/home/...`) или контейнера (`/app/...`) делает
+    метаданные непереносимыми — у получателя те же файлы лежат по другому пути.
+    """
+    summary = pipeline.build_all(repo_root=fake_repo, out_dir=_out_dir(fake_repo))
+    for name, meta in summary["sources"].items():
+        for entry in meta["inputs"]:
+            path = entry["path"]
+            assert not Path(path).is_absolute(), f"{name}: абсолютный путь {path!r}"
+            assert not path.startswith(".."), f"{name}: выход за корень репозитория {path!r}"
+            assert (fake_repo / path).exists(), f"{name}: путь {path!r} не резолвится от корня"
+

@@ -110,6 +110,38 @@ def raw_path(repo_root: Path, key: str) -> Path:
     return repo_root / RAW_SOURCES[key]
 
 
+def repo_root_from_output(out_dir: Path) -> Path | None:
+    """Корень репозитория, найденный от каталога вывода.
+
+    Нужен, чтобы записывать пути входов **относительными**: артефакты
+    `data/external/normalized/*.json` коммитятся и передаются комиссии, а
+    абсолютный путь машины-источника (`/home/...`) или контейнера (`/app/...`)
+    делает метаданные непереносимыми (T-237).
+
+    Порядок поиска:
+    1. Конвенция каталога вывода `<root>/data/external/normalized`.
+    2. Маркер `pyproject.toml` вверх по дереву (нестандартный `--out`).
+    """
+    if out_dir.name == "normalized" and out_dir.parent.name == "external":
+        candidate = out_dir.parents[2]  # <root>/data/external/normalized → <root>
+        if (candidate / "data" / "external").is_dir():
+            return candidate
+    for candidate in (out_dir, *out_dir.parents):
+        if (candidate / "pyproject.toml").exists():
+            return candidate
+    return None
+
+
+def display_path(path: Path, root: Path | None) -> str:
+    """Путь для метаданных: относительный к корню репозитория, иначе абсолютный."""
+    if root is None:
+        return str(path)
+    try:
+        return str(path.relative_to(root))
+    except ValueError:
+        return str(path)
+
+
 def _as_float(value: object, default: float = 0.0) -> float:
     """float из строки/числа; пустое/битое — default."""
     if isinstance(value, bool) or value is None:
@@ -186,13 +218,16 @@ def write_artifact(
     Метаданные (`source`, `rows_count`, `generated_at`, `inputs`) добавляются здесь.
     """
     present = [p for p, _ in inputs if p.exists()]
+    root = repo_root_from_output(out_dir)
     payload: dict[str, Any] = {
         "source": source,
         **body,
         "rows_count": rows_count,
         "generated_at": generated_at(present, source_epoch),
         "inputs": [
-            {"path": str(p), "sha256": sha256_file(p), "rows": n} for p, n in inputs if p.exists()
+            {"path": display_path(p, root), "sha256": sha256_file(p), "rows": n}
+            for p, n in inputs
+            if p.exists()
         ],
     }
     out_path = out_dir / OUT_FILES[source]

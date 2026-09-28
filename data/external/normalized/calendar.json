@@ -35,15 +35,15 @@
     ]
   ],
   "rows_count": 18,
-  "generated_at": "2026-09-27T13:06:29+00:00",
+  "generated_at": "2026-09-27T20:02:34+00:00",
   "inputs": [
     {
-      "path": "/home/maxbogus/Repositories/hackathon/data/external/holidays_ru_2025.json",
+      "path": "data/external/holidays_ru_2025.json",
       "sha256": "33f55ed24bed7ab81ba2fb53821683e93f60862050dfd81a9bc64f05b9ba374b",
       "rows": 14
     },
     {
-      "path": "/home/maxbogus/Repositories/hackathon/data/external/school_breaks_2025.json",
+      "path": "data/external/school_breaks_2025.json",
       "sha256": "718327632e655771a4804db64fc222dab8f0d56e09ba2ca6d09d5ac85d3e9d66",
       "rows": 4
     }

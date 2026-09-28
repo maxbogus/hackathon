@@ -331,10 +331,10 @@
     }
   ],
   "rows_count": 41,
-  "generated_at": "2026-09-25T21:00:55+00:00",
+  "generated_at": "2026-09-27T20:02:34+00:00",
   "inputs": [
     {
-      "path": "/home/maxbogus/Repositories/hackathon/data/external/traffic_osm_moscow.json",
+      "path": "data/external/traffic_osm_moscow.json",
       "sha256": "6e04a632b054a6a4d7994770af0fad5bdb2e037c501428bcac472c1ac38dff02",
       "rows": 41
     }
