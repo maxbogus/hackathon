@@ -60,7 +60,7 @@
 
 | # | Факт | Значение | Пруф |
 |---|---|---|---|
-| 3.1 | Коммиты в текущей истории | **185** | `git --no-pager rev-list --count HEAD` |
+| 3.1 | Коммиты в текущей истории | **185** до коммита самой серии (значение «на момент генерации» — в `commits_head` в `docs/blog/stats.json`) | `git --no-pager rev-list --count HEAD` |
 | 3.2 | Коммиты по всем его refs | 727 | `git --no-pager rev-list --count --all` |
 | 3.3 | Первый коммит | 2026-09-20 | `git --no-pager log --reverse --date=short --pretty='%ad %s' \| head -1` |
 | 3.4 | Коммиты по дням | 20.09 — 7, **22.09 — 27**, 23.09 — 29, 25.09 — 43, 26.09 — 15, **27.09 — 64** | `git --no-pager log --pretty='%ad' --date=short \| sort \| uniq -c` |
