@@ -14,10 +14,9 @@ from __future__ import annotations
 
 from typing import Any
 
-import pytest
-
 from app.celery_app import celery_app
 from app.tasks import ML_SCRIPT_ALLOWLIST, _run_uv_with_packages, run_ml_script_task
+import pytest
 
 
 @pytest.fixture()
@@ -66,18 +65,12 @@ def test_lineage_snapshot_runs_with_fixed_args(
     result = run_ml_script_task(script="lineage_snapshot")
 
     assert result["status"] == "ok"
-    assert captured == [
-        {
-            "script": "scripts/lineage_snapshot.py",
-            "args": [
-                "--input",
-                "data/real/train.csv",
-                "--output",
-                "docs/lineage/datasets/real_ridership.json",
-            ],
-            "packages": [],
-        }
-    ]
+    assert captured[0]["script"] == "scripts/lineage_snapshot.py"
+    args = captured[0]["args"]
+    # Пути абсолютные (T-235): иначе при cwd=ml/ или cwd=apps/ml_pipeline они резолвятся по-разному
+    assert args[0] == "--input" and args[1].endswith("data/real/train.csv")
+    assert args[2] == "--output" and args[3].endswith("docs/lineage/datasets/real_ridership.json")
+    assert captured[0]["packages"] == []
     assert result["stdout_tail"] == "ok-output"
 
 
@@ -108,7 +101,7 @@ def test_extra_args_are_appended(captured: list[dict[str, Any]]) -> None:
 def test_nonzero_returncode_becomes_error(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "app.tasks._run_uv_with_packages",
-        lambda script, args, packages: (1, "partial", "boom: traceback"),
+        lambda _script, _args, _packages: (1, "partial", "boom: traceback"),
     )
 
     result = run_ml_script_task(script="mlflow_ingest")
@@ -145,4 +138,29 @@ def test_run_uv_with_packages_builds_uv_command(
     assert seen["cmd"][2].endswith("/ml")
     assert seen["cmd"][4:6] == ["--with", "mlflow>=2.16"]
     assert seen["cmd"][6:] == ["python", "scripts/mlflow_ingest.py", "--top", "5"]
+    # Регресс-гард: `--with` ДО `python`, иначе uv передал бы флаг скрипту
+    assert seen["cmd"].index("--with") < seen["cmd"].index("python")
     assert seen["kwargs"]["check"] is False
+
+
+def test_python_runner_skips_uv_and_with(monkeypatch: pytest.MonkeyPatch) -> None:
+    """T-235: в Docker (ML_PIPELINE_ML_RUNNER=python) запускаем системным python."""
+    seen: dict[str, Any] = {}
+
+    class _Proc:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def _fake_run(cmd: list[str], **kwargs: Any) -> _Proc:
+        seen["cmd"] = cmd
+        return _Proc()
+
+    monkeypatch.setattr("app.tasks.settings.ml_runner", "python")
+    monkeypatch.setattr("app.tasks.subprocess.run", _fake_run)
+
+    _run_uv_with_packages("scripts/mlflow_ingest.py", ["--top", "3"], ["mlflow>=2.16"])
+
+    assert seen["cmd"] == ["python", "scripts/mlflow_ingest.py", "--top", "3"]
+    assert "--with" not in seen["cmd"]
+    assert "uv" not in seen["cmd"]

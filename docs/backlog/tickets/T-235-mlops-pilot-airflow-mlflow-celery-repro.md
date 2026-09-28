@@ -41,7 +41,7 @@ scheduler/api-server, нет сервиса в compose), MLflow = локальн
 
 - [x] Фаза 0: `make test` зелёный (mlops-тесты вынесены в `mlops/tests/`, `importorskip`), `make mlops-test` зелёный
 - [ ] Фаза 1: `--overrides-file` в `make_submission.py` (порядок: `pred_cap` → `zero_route` → overrides), `ml/configs/overrides/nov_dec_2025.yaml` (профили A/B), unit-тесты
-- [ ] Фаза 2: `mlops/dags/_celery_client.py` (send/wait по имени, ноль импортов `app.*`); Celery-таск `ml_pipeline.run_ml_script` (allowlist lineage/mlflow_ingest/mlflow_leaderboard); `make pipeline-*` переведены на клиент
+- [x] Фаза 2: `mlops/dags/_celery_client.py` (send/wait по имени, ноль импортов `app.*`); Celery-таск `ml_pipeline.run_ml_script` (allowlist lineage/mlflow_ingest/mlflow_leaderboard); `make pipeline-*` переведены на клиент
 - [ ] Фаза 3: MLflow-сервер в профиле `mlops` (Postgres-БД `mlflow`), `track_run` с тегами `airflow_dag_run_id`/`submission_id`
 - [ ] Фаза 4: DAG `transit_pipeline` (harvest→train→ingest→predict→leaderboard, retries/timeout/params) + Airflow-профиль в Docker (init/scheduler/api-server, `AIRFLOW_HOST_PORT`, метастор БД `airflow`)
 - [ ] Фаза 5: отчёт `docs/reports/repro_best_vs_pilot.md` + ledger + clinerule 33 + HANDOFF
@@ -81,4 +81,15 @@ make mlflow-leaderboard
 
 ## Status
 
-`in-progress` — Фаза 0 закрыта (изоляция mlops-тестов, зелёный `make test`).
+`in-progress` — Фаза 0 (изоляция mlops-тестов, зелёный `make test`) и Фаза 1
+(`--overrides-file` + YAML-профили) закрыты; Фаза 2 проверена end-to-end:
+`send('run_ml_script', script='lineage_snapshot')` → воркер → системный python →
+sha256 `train.csv` совпал с эталоном (25.9 s).
+
+**Блокеры, найденные по ходу (ledger):**
+- F-127 — справочник организаторов (xlsx) отсутствует → xgboost-путь (train/predict)
+  невыполним; baseline-путь работает.
+- F-132 — pre-built wheels и `requirements.txt` уехали в `docs/apps/**` → образ
+  воркера нельзя пересобрать (обход: `make pipeline-worker-dev`).
+- F-133 — в образе нет `pyyaml` (+ нет uv-окружения) → ML-шаги в Docker не работали;
+  исправлено объявлением зависимости и настраиваемым раннером (`ML_PIPELINE_ML_RUNNER`).

@@ -39,7 +39,7 @@ REPO_ROOT := $(shell pwd)
         ledger-add ledger-list ledger-check ledger-export \
         note-from-finding promote handoff handoff-update \
         backlog-ready backlog-list ticket docs         pyscn pyscn-compare pyscn-baseline         arch-dbml arch-dbml-check         benchmark-baseline benchmark-all benchmark-compare         run-benchmark         loadtest-smoke loadtest-baseline loadtest-stress loadtest-spike loadtest-soak loadtest-all loadtest-check check-training-time \
-        pipeline-up pipeline-down pipeline-logs pipeline-fetch pipeline-train pipeline-predict pipeline-full pipeline-status pipeline-script pipeline-test \
+        pipeline-up pipeline-down pipeline-logs pipeline-fetch pipeline-train pipeline-predict pipeline-full pipeline-status pipeline-script pipeline-worker-dev pipeline-worker-dev-stop pipeline-test \
         external-fetch external-gen external-verify external-show external-all \
         predictions-list predictions-activate predictions-restore-etalon predictions-ingest-csv \
         mlflow-probe mlflow-demo mlflow-runs mlflow-test mlflow-ui mlflow-server mlflow-run \
@@ -828,6 +828,24 @@ pipeline-full: ## Trigger full_pipeline (train → predict) via Celery broker  [
 
 pipeline-script: ## Run allowlisted ml script via worker: make pipeline-script SCRIPT=mlflow_ingest
 	$(UV) run python -c "from mlops.dags._celery_client import send, wait; h = send('run_ml_script', script='$(SCRIPT)'); print('Task:', h.task_id); print('Result:', wait(h, timeout=900))"
+
+# === T-235: dev-воркер (без пересборки 13.8 GB образа) ===
+# Причина: (1) образ собран до T-235-правок (нет таска run_ml_script), а пересборка
+# сломана — pre-built wheels и requirements.txt уехали в docs/apps/** (F-132);
+# (2) в образе нет pyyaml, который нужен ml_cli (F-133).
+# Этот таргет поднимает воркер с bind-mount исходников и доустановленным pyyaml.
+# WIP: после восстановления wheels и пересборки образа — удалить.
+
+pipeline-worker-dev: ## Dev-воркер: bind-mount кода + pyyaml (T-235, WIP до пересборки)
+	@$(DC) rm -f ml-pipeline-dev >/dev/null 2>&1 || true
+	@$(DC) run -d --name ml-pipeline-dev -e ML_PIPELINE_ML_RUNNER=python --entrypoint sh ml-pipeline \
+		-c "pip install --no-cache-dir pyyaml >/dev/null 2>&1; cd /app/apps/ml_pipeline && exec celery -A app.celery_app:celery_app worker --loglevel=info --concurrency=1"
+	@sleep 12
+	@$(DC) logs --tail 6 ml-pipeline-dev 2>&1 | grep -E 'run_ml_script|ready'
+
+pipeline-worker-dev-stop: ## Остановить dev-воркер (T-235)
+	@$(DC) rm -f ml-pipeline-dev >/dev/null 2>&1 || true
+	@echo "dev worker stopped"
 
 pipeline-status: ## Show active Celery tasks (ml-pipeline worker status)  [T-198]
 	@$(DC) exec ml-pipeline celery -A app.celery_app:celery_app inspect active 2>/dev/null || echo "ml-pipeline worker not running"

@@ -31,21 +31,48 @@ def _now_iso() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
 
 
-def _run_uv_script(script: str, *args: str) -> tuple[int, str, str]:
-    """Run uv-managed ML script. Returns (returncode, stdout, stderr)."""
-    cmd = [
-        "uv",
-        "--directory",
-        str(settings.repo_root / "ml"),
-        "run",
-        "python",
-        script,
-        *args,
-    ]
+def _ml_command(script: str, args: Sequence[str], packages: Sequence[str]) -> list[str]:
+    """Собрать argv запуска ml-скрипта (T-235).
+
+    ``uv``     — ``uv --directory ml run [--with pkg] python <script> <args>``
+                 (локальная разработка: env из uv.lock).
+    ``python`` — ``python <script> <args>`` (Docker-образ: зависимости уже
+                 pip-installed; ``uv run`` в образе создаёт .venv и тянет GB-и).
+
+    Важно: ``--with`` идёт ДО ``python`` — иначе uv передал бы его скрипту.
+    """
+    if settings.ml_runner == "python":
+        return ["python", script, *args]
+    cmd = ["uv", "--directory", str(settings.repo_root / "ml"), "run"]
+    for package in packages:
+        cmd += ["--with", package]
+    return [*cmd, "python", script, *args]
+
+
+def _run_ml_subprocess(cmd: list[str]) -> tuple[int, str, str]:
+    """Запустить собранную команду из каталога ml/ (T-235).
+
+    ``cwd=ml/`` важен для паритета раннеров: ``uv --directory ml run`` выполняется
+    из ml/, значит и системный python должен стартовать там же (относительные
+    пути в скриптах резолвятся одинаково).
+    """
     env = os.environ.copy()
     env.setdefault("PYTHONPATH", str(settings.repo_root))
-    proc = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=1700, check=False)
+    proc = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        env=env,
+        cwd=str(settings.repo_root / "ml"),
+        timeout=1700,
+        check=False,
+    )
     return proc.returncode, proc.stdout, proc.stderr
+
+
+def _run_uv_script(script: str, *args: str) -> tuple[int, str, str]:
+    """Run ML script (uv или системный python — см. settings.ml_runner)."""
+    return _run_ml_subprocess(_ml_command(script, args, ()))
 
 
 # ─────────────────────────── Train ─────────────────────────────────────
@@ -230,15 +257,13 @@ def _run_uv_with_packages(
     args: Sequence[str],
     packages: Sequence[str],
 ) -> tuple[int, str, str]:
-    """Запустить ml-скрипт через uv, при необходимости с эфемерными пакетами."""
-    cmd = ["uv", "--directory", str(settings.repo_root / "ml"), "run"]
-    for package in packages:
-        cmd += ["--with", package]
-    cmd += ["python", script, *args]
-    env = os.environ.copy()
-    env.setdefault("PYTHONPATH", str(settings.repo_root))
-    proc = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=1700, check=False)
-    return proc.returncode, proc.stdout, proc.stderr
+    """Запустить ml-скрипт, при необходимости с эфемерными пакетами (T-235).
+
+    При ``ml_runner="python"`` (Docker) ``--with`` не нужен: пакеты уже в образе;
+    если запрошены эфемерные пакеты, а runner — системный python, они игнорируются
+    (для mlflow это значит «MLflow выключен» — мягкая деградация трекера).
+    """
+    return _run_ml_subprocess(_ml_command(script, args, packages))
 
 
 @dataclass(frozen=True)
@@ -255,9 +280,9 @@ ML_SCRIPT_ALLOWLIST: dict[str, MlScriptSpec] = {
         script="scripts/lineage_snapshot.py",
         args=(
             "--input",
-            "data/real/train.csv",
+            str(settings.data_dir / "real" / "train.csv"),
             "--output",
-            "docs/lineage/datasets/real_ridership.json",
+            str(settings.repo_root / "docs" / "lineage" / "datasets" / "real_ridership.json"),
         ),
     ),
     "mlflow_ingest": MlScriptSpec(

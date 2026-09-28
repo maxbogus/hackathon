@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -27,6 +28,12 @@ class Settings(BaseSettings):
 
     # DB (sync URL для SQLAlchemy sync engine в Celery tasks)
     database_url: str = "postgresql+psycopg2://transit:transit@localhost:5432/transit_ai"
+
+    # Чем запускать ml/scripts внутри воркера (T-235):
+    #   "uv"     — `uv --directory ml run python` (локально: env из uv.lock)
+    #   "python" — системный python (Docker-образ: зависимости pip-installed,
+    #              сеть и GB-и не нужны; `uv run` в образе создаёт .venv и тянет deps)
+    ml_runner: Literal["uv", "python"] = "uv"
 
     # Paths
     repo_root: Path = REPO_ROOT
