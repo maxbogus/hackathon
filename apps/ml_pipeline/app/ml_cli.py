@@ -106,6 +106,8 @@ def build_predict_args(
     model_kind: str = "xgboost_route",
     flags_file: Path | None = None,
     zero_args: list[str] | None = None,
+    overrides_file: str | None = None,
+    overrides_profile: str | None = None,
 ) -> list[str]:
     """Собирает argv для ml/scripts/make_submission.py."""
     args = [
@@ -128,5 +130,9 @@ def build_predict_args(
         args += ["--submission-id", submission_id]
     if flags_file is not None:
         args += ["--flags-file", str(flags_file)]
+    if overrides_file:
+        args += ["--overrides-file", overrides_file]
+    if overrides_profile:
+        args += ["--overrides-profile", overrides_profile]
     args += list(zero_args or [])
     return args

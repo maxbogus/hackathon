@@ -122,6 +122,8 @@ def predict_window_task(
     feature_flags: dict | None = None,
     zero_overrides: dict | None = None,
     model_kind: str = "xgboost_route",
+    overrides_file: str | None = None,
+    overrides_profile: str | None = None,
 ) -> dict:
     """Generate predictions for [start_date, end_date] using given model.
 
@@ -167,6 +169,8 @@ def predict_window_task(
         model_kind=model_kind,
         flags_file=flags_file,
         zero_args=zero_args,
+        overrides_file=overrides_file,
+        overrides_profile=overrides_profile,
     )
     rc, out, err = _run_uv_script("scripts/make_submission.py", *args)
     if rc != 0:

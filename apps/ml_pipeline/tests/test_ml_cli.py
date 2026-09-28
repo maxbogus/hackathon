@@ -139,6 +139,36 @@ class TestBuildPredictArgs:
         assert args[-2:] == ["--zero-route", "5"]
         assert "--submission-id" not in args
 
+    def test_overrides_args_added(self) -> None:
+        """T-235: профиль schedule-overrides прокидывается в argv."""
+        args = build_predict_args(
+            model_id="xgboost_v11_traffic",
+            start_date="2025-11-01",
+            end_date="2025-12-31",
+            submission_id="airflow-pilot",
+            coef_weather=1.0,
+            coef_event=1.0,
+            coef_season=1.0,
+            overrides_file="ml/configs/overrides/nov_dec_2025.yaml",
+            overrides_profile="a_conservative",
+        )
+        assert args[args.index("--overrides-file") + 1] == "ml/configs/overrides/nov_dec_2025.yaml"
+        assert args[args.index("--overrides-profile") + 1] == "a_conservative"
+
+    def test_overrides_args_omitted_when_not_set(self) -> None:
+        """Без overrides_file/profile флагов нет (обратная совместимость)."""
+        args = build_predict_args(
+            model_id="m",
+            start_date="2025-11-01",
+            end_date="2025-11-02",
+            submission_id=None,
+            coef_weather=1.0,
+            coef_event=1.0,
+            coef_season=1.0,
+        )
+        assert "--overrides-file" not in args
+        assert "--overrides-profile" not in args
+
 
 class TestWriteFlagsFile:
     def test_writes_yaml_and_creates_dir(self, tmp_path: Path) -> None:

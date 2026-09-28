@@ -40,7 +40,9 @@ scheduler/api-server, нет сервиса в compose), MLflow = локальн
 ## Acceptance Criteria
 
 - [x] Фаза 0: `make test` зелёный (mlops-тесты вынесены в `mlops/tests/`, `importorskip`), `make mlops-test` зелёный
-- [ ] Фаза 1: `--overrides-file` в `make_submission.py` (порядок: `pred_cap` → `zero_route` → overrides), `ml/configs/overrides/nov_dec_2025.yaml` (профили A/B), unit-тесты
+- [x] Фаза 0.5: датасет организаторов разложен в `data/real/` (`spravochniki/`, `README.md`, `test_submission.csv`), дубликаты удалены без потери DVC-hardlink, `.gitignore` закрыт; geo-тесты проходят (7 passed, 0 skipped)
+- [x] Фаза 0.5: старый side-car DAG удалён, `transit_pipeline` — единственный DAG (5 стадий через `_celery_client`), AST-тест переписан, `make airflow-test` 7 passed
+- [x] Фаза 1: `--overrides-file` в `make_submission.py` (порядок: `pred_cap` → `zero_route` → overrides), `ml/configs/overrides/nov_dec_2025.yaml` (профили A/B), unit-тесты
 - [x] Фаза 2: `mlops/dags/_celery_client.py` (send/wait по имени, ноль импортов `app.*`); Celery-таск `ml_pipeline.run_ml_script` (allowlist lineage/mlflow_ingest/mlflow_leaderboard); `make pipeline-*` переведены на клиент
 - [ ] Фаза 3: MLflow-сервер в профиле `mlops` (Postgres-БД `mlflow`), `track_run` с тегами `airflow_dag_run_id`/`submission_id`
 - [ ] Фаза 4: DAG `transit_pipeline` (harvest→train→ingest→predict→leaderboard, retries/timeout/params) + Airflow-профиль в Docker (init/scheduler/api-server, `AIRFLOW_HOST_PORT`, метастор БД `airflow`)

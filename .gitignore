@@ -80,6 +80,11 @@ data/real/*.zip
 data/real/*.json
 data/real/labels/
 data/real/spravochniki/
+# T-235: распакованный архив организаторов (10 ГБ) — страховка, чтобы не попал в git,
+# если снова распакуют в data/dataset/ (файлы должны лежать в data/real/)
+data/dataset/
+data/real/README.md
+data/real/test_submission.csv
 data/validation_reports/*.json
 ml/artifacts/*/
 ml/artifacts/active.json

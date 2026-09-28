@@ -49,7 +49,7 @@ REPO_ROOT := $(shell pwd)
         dvc-probe dvc-init dvc-add-smoke dvc-add-real dvc-add-artifacts \
         dvc-status dvc-cache-size dvc-test \
         optuna-probe optuna-smoke optuna-run optuna-test \
-        airflow-probe airflow-dags-list airflow-tasks-list airflow-test-task airflow-test \
+        airflow-probe airflow-dags-list airflow-tasks-list airflow-test-task airflow-test airflow-trigger \
         db-upgrade db-downgrade db-revision db-current db-history \
         blog-stats blog-check
 
@@ -690,11 +690,14 @@ airflow-probe: ## Airflow version ephemerally + db migrate
 airflow-dags-list: ## List DAGs in mlops/dags
 	@AIRFLOW_HOME=$(AIRFLOW_HOME) $(UV) run --with apache-airflow airflow dags list 2>&1 | grep -E "dag_id|transit" | head -10
 
-airflow-tasks-list: ## List tasks in transit_side_car DAG
-	@AIRFLOW_HOME=$(AIRFLOW_HOME) $(UV) run --with apache-airflow airflow tasks list transit_side_car 2>&1 | tail -10
+airflow-tasks-list: ## List tasks in transit_pipeline DAG
+	@AIRFLOW_HOME=$(AIRFLOW_HOME) $(UV) run --with apache-airflow airflow tasks list transit_pipeline 2>&1 | tail -10
 
-airflow-test-task: ## Test single task: make airflow-test-task TASK=lineage_snapshot
-	@AIRFLOW_HOME=$(AIRFLOW_HOME) $(UV) run --with apache-airflow airflow tasks test transit_side_car $(TASK) 2026-01-01 2>&1 | tail -3
+airflow-test-task: ## Test single task: make airflow-test-task TASK=harvest
+	@AIRFLOW_HOME=$(AIRFLOW_HOME) $(UV) run --with apache-airflow airflow tasks test transit_pipeline $(TASK) 2026-01-01 2>&1 | tail -3
+
+airflow-trigger: ## Trigger DAG: make airflow-trigger [DAG=transit_pipeline]
+	@AIRFLOW_HOME=$(AIRFLOW_HOME) $(UV) run --with apache-airflow airflow dags trigger $(or $(DAG),transit_pipeline) 2>&1 | tail -3
 
 airflow-test: ## Airflow DAG structure tests (AST-контур + DAG-импорт в apache-airflow)
 	$(UV) run --with pytest --with pytest-asyncio --with apache-airflow python -m pytest mlops/tests/test_airflow_dag_structure.py -q --no-cov

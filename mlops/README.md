@@ -11,12 +11,14 @@ mlops/
 ├── MLOPS_LAB.md           # сравнение 4 инструментов числами (отчёт)
 ├── README.md              # этот файл (how-to-use)
 ├── dags/
-│   └── transit_side_car.py # Airflow DAG: lineage → ingest → leaderboard
+│   ├── transit_pipeline.py # Airflow DAG: harvest → train → ingest → predict → leaderboard
+│   └── _celery_client.py   # тонкий клиент: задачи по имени (без импорта кода воркеров)
 ├── optuna/
 │   ├── study_xgboost.py   # Optuna TPE study для XGBoost route-only
 │   └── studies/           # sqlite storage (gitignored)
 ├── airflow_home/          # AIRFLOW_HOME (gitignored): airflow.db + cfg
 ├── dvc-cache/             # DVC hardlink cache (gitignored)
+├── tests/                 # тесты лаборатории (изолированы от ml/tests, см. clinerule 33)
 └── probes/
     └── dvc_probe.sh       # probe-скрипт для DVC версии + FS support
 ```
@@ -28,7 +30,7 @@ mlops/
 | MLflow | `make mlflow-leaderboard` | drift local↔platform по 53 сабмитам |
 | DVC | `dvc pull` (на новой машине) | 9.7 GB датасеты без скачивания (через `.dvc` указатели) |
 | Optuna | `make optuna-run` | 15 trials TPE за ~30 сек |
-| Airflow | `airflow tasks test transit_side_car lineage_snapshot 2026-01-01` | одна таска без scheduler |
+| Airflow | `airflow tasks test transit_pipeline harvest 2026-01-01` | одна таска без scheduler |
 
 Подробности — в `MLOPS_LAB.md`.
 

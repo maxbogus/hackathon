@@ -12,7 +12,7 @@
 5 разрозненных форматов хранения метаданных (CSV/JSON/MD/ledger/DB) одним
 `search_runs` / `git status` / `optuna.study.trials`. Side-car pipeline
 `lineage → ingest → leaderboard` оркестрируется через Airflow DAG
-(`transit_side_car`) с manual trigger. DVC даёт 0 GB overhead на 9.7 GB
+(`transit_pipeline`) с manual trigger. DVC даёт 0 GB overhead на 9.7 GB
 датасетах через hardlink (ext4). Optuna TPE находит surrogate-best 0.83
 за 1.9 сек (15 trials). Идемпотентность ingest обеспечивается через
 `transit_ai.ingest_key` тег в MLflow (повторный прогон — no-op, 0.2 сек).
@@ -35,7 +35,7 @@
 | grep по `docs/ledger/findings.jsonl` для ответа "что залито на платформу" | `make mlflow-leaderboard` → таблица 53 сабмитов с drift | 3 |
 | `train.csv` 8 GB без provenance для offline-сдачи жюри | DVC-указатель `train.csv.dvc` (95 байт), `dvc pull` восстанавливает | 4 |
 | ручной sweep `xgboost_sweep` (~5-7 точек) | Optuna TPE 15 trials, sqlite storage, resumable | 5 |
-| bash-скрипт для "fetch → ingest → leaderboard" | Airflow DAG `transit_side_car` с тасками и зависимостями | 6 |
+| bash-скрипт для "fetch → ingest → leaderboard" | Airflow DAG `transit_pipeline` с 5 тасками и зависимостями (T-235) | 6 |
 
 ## Реальные цифры (с машин, не из плана)
 
@@ -71,11 +71,18 @@ storage: mlops/optuna/studies/xgboost_route.db (sqlite, resumable)
 ```
 $ uv run --with apache-airflow python -c "import airflow; print(airflow.__version__)"
   → 3.3.2 за 3 сек
-$ make airflow-test         → 5/5 тестов (DAG imports, 3 tasks, sequential deps)
-$ airflow tasks test transit_side_car lineage_snapshot 2026-01-01  → exit 0
+$ make airflow-test         → 7/7 тестов (DAG imports, 5 tasks, sequential deps)
+$ airflow tasks test transit_pipeline harvest 2026-01-01  → exit 0
 $ airflow dags list | grep transit
-  → transit_side_car | mlops_dags bundle | schedule=None
+  → transit_pipeline | mlops_dags bundle | schedule=None
 ```
+
+> **T-235 (2026-09-28):** side-car DAG `transit_side_car` (lineage → ingest →
+> leaderboard через `uv subprocess`) **удалён**. Причина: внутри контейнера
+> Airflow uv-окружения нет — `uv run` создаёт `.venv` и тянет ML-стек из сети
+> (F-133). Единственный DAG — `transit_pipeline` (5 стадий), все шаги ставятся
+> Celery-задачами **по имени** через `mlops/dags/_celery_client.py`, то есть
+> оркестратор не импортирует код проекта и переносится в общий Airflow без правок.
 
 ## Что ДАЛО реальный результат
 
@@ -88,7 +95,7 @@ $ airflow dags list | grep transit
 3. **Lineage snapshot** (`make lineage-snapshot-real`) — 312-байтный JSON
    коммитится в git как provenance для 8 GB файла. Заменяет `hash_dataframe`
    который pickle-ит в RAM и OOM-ит.
-4. **Airflow DAG** (`transit_side_car`) — даже без scheduler, ручной
+4. **Airflow DAG** (`transit_pipeline`) — даже без scheduler, ручной
    `airflow tasks test` доказывает что pipeline reproducible.
 
 ## Что НЕ ДАЛО результата / overhead
@@ -138,7 +145,7 @@ $ airflow dags list | grep transit
 | DVC config | `.dvc/config` (no_scm, hardlink cache) |
 | DVC cache | `mlops/dvc-cache/files/md5/...` (gitignored, hardlink в ext4) |
 | Optuna study | `mlops/optuna/studies/xgboost_route.db` (sqlite, gitignored) |
-| Airflow DAG | `mlops/dags/transit_side_car.py` |
+| Airflow DAG | `mlops/dags/transit_pipeline.py` (+ `_celery_client.py`) |
 | Airflow home | `mlops/airflow_home/` (airflow.cfg + airflow.db, gitignored) |
 | Ledger | `docs/ledger/{decisions,findings}.jsonl` (+ F-112..F-118) |
 
@@ -169,7 +176,8 @@ make optuna-test           # 6 тестов storage/deтерминизм
 
 make airflow-probe         # Airflow version + db migrate
 make airflow-dags-list     # список DAGs
-make airflow-tasks-list    # tasks в transit_side_car
-make airflow-test-task TASK=lineage_snapshot  # одна таска без scheduler
-make airflow-test          # 5 тестов структуры DAG
+make airflow-tasks-list    # tasks в transit_pipeline
+make airflow-test-task TASK=harvest  # одна таска без scheduler
+make airflow-test          # тесты структуры DAG (AST-контур + импорт в Airflow)
+make airflow-trigger       # ручной запуск DAG через scheduler
 ```
