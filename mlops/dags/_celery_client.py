@@ -42,7 +42,8 @@ TERMINAL_STATES = frozenset({"SUCCESS", "FAILURE", "REVOKED"})
 class CeleryLike(Protocol):
     """Минимальный интерфейс Celery, который нужен клиенту (для тестов)."""
 
-    def send_task(self, name: str, kwargs: dict[str, Any] | None = ...) -> Any: ...
+    def send_task(self, name: str, kwargs: dict[str, Any] | None = ...) -> Any:  # noqa: ANN401
+        ...
 
 
 @dataclass(frozen=True)
@@ -72,9 +73,9 @@ def backend_url() -> str:
     )
 
 
-def make_client() -> Any:
+def make_client() -> Any:  # noqa: ANN401 (celery.Celery — динамический API)
     """Создать Celery-клиент (без импорта кода воркеров)."""
-    from celery import Celery
+    from celery import Celery  # noqa: PLC0415 (lazy: AST-проверкам DAG celery не нужен)
 
     return Celery("transit-orchestrator", broker=broker_url(), backend=backend_url())
 
@@ -93,7 +94,7 @@ def resolve_task_name(key: str) -> str:
 def send(
     key: str,
     client: CeleryLike | None = None,
-    **kwargs: Any,
+    **kwargs: Any,  # noqa: ANN401 (kwargs задачи прокидываются как есть)
 ) -> TaskHandle:
     """Отправить задачу из allowlist в брокер (не блокирует).
 
