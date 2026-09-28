@@ -207,7 +207,6 @@ def load_overrides(
     return spec.profiles[name]
 
 
-
 def apply_overrides(
     predictions: np.ndarray,
     grid: pd.DataFrame,
@@ -309,4 +308,3 @@ def _event_label(event: EventMultiplier) -> str:
         else ""
     )
     return f"event_{event.name}_{when}_routes_{routes_label}{hours_suffix}_mult_{_fmt(event.multiplier)}"
-

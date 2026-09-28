@@ -271,7 +271,9 @@ def main() -> int:
         test_pred_calibrated = apply_route_bias(
             test_pred, test_df["route_id"].astype(int).values, route_biases
         )
-        metrics_after = compute_metrics(test_df["boardings"].values, test_pred_calibrated)
+        metrics_after = compute_metrics(
+            test_df["boardings"].values, test_pred_calibrated
+        )
     print(
         f"Holdout WAPE-score (сен–окт, calibrated): {metrics_after['wape_score']:.4f} "
         f"(Δ {metrics_after['wape_score'] - metrics_before['wape_score']:+.4f})"
@@ -339,7 +341,9 @@ def main() -> int:
         n_cap = cap_mask.sum()
         if n_cap > 0:
             preds[cap_mask] = 0.0
-            print(f"F-060: zeroed {n_cap:,} rows where pred<={args.pred_cap} in hours={cap_hours}")
+            print(
+                f"F-060: zeroed {n_cap:,} rows where pred<={args.pred_cap} in hours={cap_hours}"
+            )
 
     # T-235: schedule overrides (праздники / cold snap / каникулы / события) из YAML-профиля.
     # Порядок как в манифесте эталона A (F-083): после pred_cap и zero_route.
@@ -371,7 +375,9 @@ def main() -> int:
         n_hol = holiday_mask.sum()
         if n_hol > 0:
             preds[holiday_mask] = 0.0
-            print(f"T-180: zeroed {n_hol:,} holiday rows ({sorted(HOLIDAYS_2025_11_12)})")
+            print(
+                f"T-180: zeroed {n_hol:,} holiday rows ({sorted(HOLIDAYS_2025_11_12)})"
+            )
 
     # Apply coefficients
     coef_product = args.coef_weather * args.coef_event * args.coef_season

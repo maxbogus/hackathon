@@ -60,7 +60,9 @@ def test_default_profile_resolves_to_conservative() -> None:
     """Без --overrides-profile берётся default_profile из файла."""
     import yaml
 
-    spec = OverridesFile.model_validate(yaml.safe_load(OVERRIDES_YAML.read_text("utf-8")))
+    spec = OverridesFile.model_validate(
+        yaml.safe_load(OVERRIDES_YAML.read_text("utf-8"))
+    )
     assert resolve_profile_name(spec) == "a_conservative"
     assert resolve_profile_name(spec, "b_aggressive") == "b_aggressive"
 
@@ -88,7 +90,12 @@ def test_invalid_spec_rejected_by_schema() -> None:
     """extra=forbid + проверки диапазонов/форм даты."""
     with pytest.raises(ValidationError):
         PeriodMultiplier.model_validate(
-            {"name": "x", "start_date": "2025-12-31", "end_date": "2025-12-01", "multiplier": 0.9}
+            {
+                "name": "x",
+                "start_date": "2025-12-31",
+                "end_date": "2025-12-01",
+                "multiplier": 0.9,
+            }
         )
     with pytest.raises(ValidationError):
         EventMultiplier.model_validate(
@@ -103,7 +110,11 @@ def test_invalid_spec_rejected_by_schema() -> None:
         )
     with pytest.raises(ValidationError):
         OverridesProfile.model_validate(
-            {"holiday_overrides": [{"date": "2025-11-03", "multiplier": 0.5, "junk": 1}]}
+            {
+                "holiday_overrides": [
+                    {"date": "2025-11-03", "multiplier": 0.5, "junk": 1}
+                ]
+            }
         )
 
 
@@ -142,7 +153,9 @@ def test_cold_snap_scales_whole_period() -> None:
     out, _ = apply_overrides(preds, grid, profile)
 
     assert out[0] == pytest.approx(92.0)
-    assert out[1] == pytest.approx(0.7 * 0.92 * 100.0)  # 31.12: holiday ×0.7 и cold snap ×0.92
+    assert out[1] == pytest.approx(
+        0.7 * 0.92 * 100.0
+    )  # 31.12: holiday ×0.7 и cold snap ×0.92
     assert out[2] == pytest.approx(100.0)  # вне submission-периода
 
 
@@ -167,7 +180,10 @@ def test_event_multiplier_applies_only_to_given_routes_and_hours() -> None:
     assert out[2] == pytest.approx(100.0)
     assert out[3] == pytest.approx(100.0)
     assert out[4] == pytest.approx(100.0)
-    assert any(label.startswith("event_spartak_cska_2025-11-22_routes_7_11_12_50") for label in labels)
+    assert any(
+        label.startswith("event_spartak_cska_2025-11-22_routes_7_11_12_50")
+        for label in labels
+    )
 
 
 def test_vacation_multiplier_applies_to_school_hours_only() -> None:
@@ -180,7 +196,9 @@ def test_vacation_multiplier_applies_to_school_hours_only() -> None:
 
     assert out[0] == pytest.approx(85.0)  # час 8 — школьный
     assert out[1] == pytest.approx(100.0)  # час 12 — нет
-    assert any("vacation_autumn" in label and "school_hours" in label for label in labels)
+    assert any(
+        "vacation_autumn" in label and "school_hours" in label for label in labels
+    )
 
 
 def test_labels_order_matches_documented_pipeline() -> None:
@@ -191,10 +209,13 @@ def test_labels_order_matches_documented_pipeline() -> None:
     _, labels = apply_overrides(np.array([100.0, 100.0]), grid, profile)
 
     kinds = [
-        "holiday" if label.startswith("holiday_override") else
-        "period" if label.startswith("cold_snap") else
-        "vacation" if label.startswith("vacation") else
-        "event"
+        "holiday"
+        if label.startswith("holiday_override")
+        else "period"
+        if label.startswith("cold_snap")
+        else "vacation"
+        if label.startswith("vacation")
+        else "event"
         for label in labels
     ]
     assert kinds == sorted(kinds, key=["holiday", "period", "vacation", "event"].index)
@@ -223,4 +244,3 @@ def test_empty_profile_is_noop() -> None:
 
     assert labels == []
     np.testing.assert_array_equal(out, preds)
-
