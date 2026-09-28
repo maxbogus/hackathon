@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
 import json
 import os
@@ -213,6 +215,100 @@ def full_pipeline(
         "status": "ok" if pred_res["status"] == "ok" else "partial",
         "train": train_res,
         "predict": pred_res,
+        "ts": _now_iso(),
+    }
+
+
+# ──────────────── Разрешённые ml/scripts-скрипты (T-235) ───────────────
+# Нужны оркестратору (Airflow/Makefile), чтобы запускать шаги lineage/MLflow
+# тем же механизмом, что train/predict, — без дублирования кода этих шагов
+# в DAG-е. Allowlist: произвольный скрипт/аргументы не принимаем.
+
+
+def _run_uv_with_packages(
+    script: str,
+    args: Sequence[str],
+    packages: Sequence[str],
+) -> tuple[int, str, str]:
+    """Запустить ml-скрипт через uv, при необходимости с эфемерными пакетами."""
+    cmd = ["uv", "--directory", str(settings.repo_root / "ml"), "run"]
+    for package in packages:
+        cmd += ["--with", package]
+    cmd += ["python", script, *args]
+    env = os.environ.copy()
+    env.setdefault("PYTHONPATH", str(settings.repo_root))
+    proc = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=1700, check=False)
+    return proc.returncode, proc.stdout, proc.stderr
+
+
+@dataclass(frozen=True)
+class MlScriptSpec:
+    """Разрешённый скрипт: путь внутри ml/, аргументы, эфемерные пакеты."""
+
+    script: str
+    args: tuple[str, ...] = ()
+    packages: tuple[str, ...] = ()
+
+
+ML_SCRIPT_ALLOWLIST: dict[str, MlScriptSpec] = {
+    "lineage_snapshot": MlScriptSpec(
+        script="scripts/lineage_snapshot.py",
+        args=(
+            "--input",
+            "data/real/train.csv",
+            "--output",
+            "docs/lineage/datasets/real_ridership.json",
+        ),
+    ),
+    "mlflow_ingest": MlScriptSpec(
+        script="scripts/mlflow_ingest.py",
+        packages=("mlflow>=2.16",),
+    ),
+    "mlflow_leaderboard": MlScriptSpec(
+        script="scripts/mlflow_leaderboard.py",
+        args=("--top", "30"),
+        packages=("mlflow>=2.16",),
+    ),
+}
+
+
+@shared_task(name="ml_pipeline.run_ml_script", bind=True, max_retries=0)
+def run_ml_script_task(self, script: str, extra_args: list[str] | None = None) -> dict:
+    """Запустить разрешённый ml/scripts-скрипт (allowlist T-235).
+
+    Args:
+        script: ключ из ML_SCRIPT_ALLOWLIST (lineage_snapshot / mlflow_ingest /
+            mlflow_leaderboard).
+        extra_args: дополнительные argv, добавляются в конец.
+
+    Returns:
+        ``{"status": "ok"|"error", "script": ..., "stdout_tail": ...}``.
+    """
+    spec = ML_SCRIPT_ALLOWLIST.get(script)
+    if spec is None:
+        return {
+            "status": "error",
+            "script": script,
+            "error": f"скрипт {script!r} не в allowlist",
+            "allowed": sorted(ML_SCRIPT_ALLOWLIST),
+            "ts": _now_iso(),
+        }
+    args = [*spec.args, *(extra_args or [])]
+    rc, out, err = _run_uv_with_packages(spec.script, args, spec.packages)
+    if rc != 0:
+        return {
+            "status": "error",
+            "script": script,
+            "returncode": rc,
+            "stderr": err[-2000:],
+            "stdout_tail": out[-1000:],
+            "ts": _now_iso(),
+        }
+    return {
+        "status": "ok",
+        "script": script,
+        "args": args,
+        "stdout_tail": out[-1000:],
         "ts": _now_iso(),
     }
 

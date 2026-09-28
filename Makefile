@@ -39,7 +39,7 @@ REPO_ROOT := $(shell pwd)
         ledger-add ledger-list ledger-check ledger-export \
         note-from-finding promote handoff handoff-update \
         backlog-ready backlog-list ticket docs         pyscn pyscn-compare pyscn-baseline         arch-dbml arch-dbml-check         benchmark-baseline benchmark-all benchmark-compare         run-benchmark         loadtest-smoke loadtest-baseline loadtest-stress loadtest-spike loadtest-soak loadtest-all loadtest-check check-training-time \
-        pipeline-up pipeline-down pipeline-logs pipeline-fetch pipeline-train pipeline-predict pipeline-full pipeline-status pipeline-test \
+        pipeline-up pipeline-down pipeline-logs pipeline-fetch pipeline-train pipeline-predict pipeline-full pipeline-status pipeline-script pipeline-test \
         external-fetch external-gen external-verify external-show external-all \
         predictions-list predictions-activate predictions-restore-etalon predictions-ingest-csv \
         mlflow-probe mlflow-demo mlflow-runs mlflow-test mlflow-ui mlflow-server mlflow-run \
@@ -817,14 +817,17 @@ external-show: ## Таблица источников: строки / sha256 / �
 
 external-all: external-gen external-verify ## gen + verify (offline)  [T-231]
 
-pipeline-train: ## Trigger ml_pipeline.train_xgboost via broker
-	$(UV) --directory apps/ml_pipeline run python -c "from app.celery_app import celery_app; r = celery_app.send_task('ml_pipeline.train_xgboost'); print('Task:', r.id); print('Result:', r.get(timeout=600))"
+pipeline-train: ## Trigger ml_pipeline.train_xgboost via broker (T-235: by-name client)
+	$(UV) run python -c "from mlops.dags._celery_client import send, wait; h = send('train_xgboost'); print('Task:', h.task_id, h.task_name); print('Result:', wait(h, timeout=600))"
 
 pipeline-predict: ## Trigger ml_pipeline.predict_window with default params
-	$(UV) --directory apps/ml_pipeline run python -c "from app.celery_app import celery_app; r = celery_app.send_task('ml_pipeline.predict_window', kwargs={'model_id':'xgboost_v_default'}); print('Task:', r.id); print('Result:', r.get(timeout=600))"
+	$(UV) run python -c "from mlops.dags._celery_client import send, wait; h = send('predict_window', model_id='xgboost_v_default'); print('Task:', h.task_id); print('Result:', wait(h, timeout=600))"
 
 pipeline-full: ## Trigger full_pipeline (train → predict) via Celery broker  [T-198]
-	$(UV) --directory apps/ml_pipeline run python -c "from app.celery_app import celery_app; r = celery_app.send_task('ml_pipeline.full_pipeline'); print('Task ID:', r.id); print('Waiting for result (timeout=1800s)...'); print('Result:', r.get(timeout=1800))"
+	$(UV) run python -c "from mlops.dags._celery_client import send, wait; h = send('full_pipeline'); print('Task ID:', h.task_id); print('Waiting for result (timeout=1800s)...'); print('Result:', wait(h, timeout=1800))"
+
+pipeline-script: ## Run allowlisted ml script via worker: make pipeline-script SCRIPT=mlflow_ingest
+	$(UV) run python -c "from mlops.dags._celery_client import send, wait; h = send('run_ml_script', script='$(SCRIPT)'); print('Task:', h.task_id); print('Result:', wait(h, timeout=900))"
 
 pipeline-status: ## Show active Celery tasks (ml-pipeline worker status)  [T-198]
 	@$(DC) exec ml-pipeline celery -A app.celery_app:celery_app inspect active 2>/dev/null || echo "ml-pipeline worker not running"
