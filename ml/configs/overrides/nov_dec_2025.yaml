@@ -1,0 +1,89 @@
+# Профили schedule-overrides для submission-периода ноябрь–декабрь 2025 (T-235).
+#
+# Источник: манифесты лучших сабмитов F-083
+#   predictions/submission_route_baseline_v1_20251101_20251231_20260926T171106Z.json  (A)
+#   predictions/submission_route_baseline_v1_20251101_20251231_20260926T171140Z.json  (B)
+# Код применения: ml/transit_ai/calibration/overrides_config.py → schedule_overrides.py
+#
+# ВАЖНО: overrides применимы ТОЛЬКО к submission-периоду (ноя–дек 2025) — на holdout
+# (сен–окт) они untestable (см. docstring schedule_overrides.py). Это постобработка,
+# а не часть модели.
+
+version: 1
+default_profile: a_conservative
+
+profiles:
+  # Submission A (conservative) → platform WAPE-score 0.83455 (F-083)
+  a_conservative:
+    description: "Праздники (03.11 ×0.5, 04.11 ×0.5, 31.12 ×0.7) + холодный период 23–31.12 ×0.92"
+    holiday_overrides:
+      - date: 2025-11-03
+        multiplier: 0.5
+      - date: 2025-11-04
+        multiplier: 0.5
+      - date: 2025-12-31
+        multiplier: 0.7
+    period_multipliers:
+      - name: cold_snap
+        start_date: 2025-12-23
+        end_date: 2025-12-31
+        multiplier: 0.92
+
+  # Submission B (aggressive) = A + каникулы + события → 0.83348–0.83455 (F-083, neutral)
+  b_aggressive:
+    description: "A + школьные каникулы ×0.85 + 5 событий (матчи/ярмарка)"
+    holiday_overrides:
+      - date: 2025-11-03
+        multiplier: 0.5
+      - date: 2025-11-04
+        multiplier: 0.5
+      - date: 2025-12-31
+        multiplier: 0.7
+    period_multipliers:
+      - name: cold_snap
+        start_date: 2025-12-23
+        end_date: 2025-12-31
+        multiplier: 0.92
+    vacation_multipliers:
+      # school_hours: утро + после уроков (в манифесте B часы не зафиксированы —
+      # это допущение, зафиксировано в F-130)
+      - name: vacation_autumn
+        start_date: 2025-11-01
+        end_date: 2025-11-04
+        school_hours: [7, 8, 9, 13, 14, 15, 16]
+        multiplier: 0.85
+      - name: vacation_winter
+        start_date: 2025-12-29
+        end_date: 2025-12-31
+        school_hours: [7, 8, 9, 13, 14, 15, 16]
+        multiplier: 0.85
+    event_multipliers:
+      - name: spartak_cska
+        date: 2025-11-22
+        routes: [7, 11, 12, 50]
+        start_hour: 15
+        end_hour: 20
+        multiplier: 1.10
+      - name: slay
+        date: 2025-12-03
+        routes: [50]
+        start_hour: 18
+        end_hour: 23
+        multiplier: 1.05
+      - name: spartak_dinamo
+        date: 2025-12-06
+        routes: [7, 11, 12, 50]
+        start_hour: 15
+        end_hour: 20
+        multiplier: 1.10
+      - name: averbukh
+        date: 2025-12-28
+        routes: [50]
+        start_hour: 18
+        end_hour: 23
+        multiplier: 1.05
+      - name: vdnh_fair
+        start_date: 2025-12-25
+        end_date: 2025-12-31
+        routes: [17]
+        multiplier: 1.15

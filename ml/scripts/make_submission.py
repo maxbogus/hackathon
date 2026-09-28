@@ -25,6 +25,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from transit_ai.calibration.overrides_config import apply_overrides, load_overrides
 from transit_ai.calibration.route_bias import apply_route_bias, compute_route_bias
 from transit_ai.data.base import DateRange
 from transit_ai.data.real import RealSource
@@ -173,6 +174,16 @@ def main() -> int:
         nargs="+",
         default=None,
         help="F-060: hours where --pred-cap applies. Default: 0 1 2 3 4 (h0-4). Used with --pred-cap.",
+    )
+    p.add_argument(
+        "--overrides-file",
+        default=None,
+        help="T-235: YAML с профилями schedule-overrides (например ml/configs/overrides/nov_dec_2025.yaml)",
+    )
+    p.add_argument(
+        "--overrides-profile",
+        default=None,
+        help="T-235: имя профиля в --overrides-file (default: default_profile из файла)",
     )
     args = p.parse_args()
 
@@ -330,6 +341,20 @@ def main() -> int:
             preds[cap_mask] = 0.0
             print(f"F-060: zeroed {n_cap:,} rows where pred<={args.pred_cap} in hours={cap_hours}")
 
+    # T-235: schedule overrides (праздники / cold snap / каникулы / события) из YAML-профиля.
+    # Порядок как в манифесте эталона A (F-083): после pred_cap и zero_route.
+    # Раньше этот шаг выполнялся ad-hoc вызовом schedule_overrides (F-127).
+    override_labels: list[str] = []
+    if args.overrides_file:
+        overrides_profile = load_overrides(args.overrides_file, args.overrides_profile)
+        preds, override_labels = apply_overrides(preds, grid, overrides_profile)
+        print(
+            f"T-235: applied {len(override_labels)} override(s) from "
+            f"{args.overrides_file} (profile={args.overrides_profile or 'default'})"
+        )
+        for label in override_labels:
+            print(f"  - {label}")
+
     # T-180: zero weekends (Sat=5, Sun=6) and/or holidays
     grid_dates = pd.to_datetime(grid["date"])
     weekday = grid_dates.dt.weekday  # 0=Mon, 6=Sun
@@ -409,6 +434,7 @@ def main() -> int:
     if args.pred_cap is not None:
         cap_hours = args.cap_hours if args.cap_hours else [0, 1, 2, 3, 4]
         post_processing.append(f"pred_cap_{args.pred_cap}_hours_{cap_hours}_F-060")
+    post_processing.extend(override_labels)
 
     model_uri = f"ml/artifacts/{args.model_id}/model.pkl"
     manifest_path = write_manifest(
