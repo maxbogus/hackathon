@@ -26,22 +26,37 @@
 - `scripts/ledger.py` — `resolve_id()` против коллизий id (F-128) + `tests/test_ledger_ids.py` (7 кейсов).
 - Тикет T-235 (status: in-progress), ledger F-125..F-129, D-047.
 
-**Метрики:** `ml/tests` 419 passed / 22 skipped (было «448 collected, 1 error»);
-`make mlops-test` 8 passed / 2 skipped за 0.16 с; `make airflow-test` 7 passed (Airflow 3.3.2);
-backend 284 / assistant 13 / mcp 9 — зелёные; `make test-root` 142 passed / **6 failed**
-(пре-существующие, F-129).
+**Метрики:** `ml/tests` 433 passed / 22 skipped (было «448 collected, 1 error»);
+`make mlops-test` 18 passed / 2 skipped; `make airflow-test` 7 passed (Airflow 3.3.2);
+`apps/ml_pipeline` 27 passed; backend 284 / assistant 13 / mcp 9 — зелёные;
+`make test-root` 142 passed / **6 failed** (пре-существующие, F-129).
 
-**Не в объёме Фазы 0 (пре-существующее, зафиксировано):**
-`make lint` красный на 191 ruff-замечании вне mlops (F-126), `yarn lint`/vitest без
-`node_modules` невозможны (F-122), 6 падений test-root (F-129).
+**Фазы 1–2 (сделано в этой же сессии):**
+- **Фаза 1** — рецепт best-сабмита стал данными: `ml/transit_ai/calibration/overrides_config.py`
+  (pydantic-схема + `apply_overrides`) + `ml/configs/overrides/nov_dec_2025.yaml`
+  (профили `a_conservative` / `b_aggressive`) + `--overrides-file/--overrides-profile`
+  в `make_submission.py` (после `pred_cap`, labels в `post_processing`). 14 новых тестов.
+- **Фаза 2** — `mlops/dags/_celery_client.py` (send/wait по имени, ноль импортов `app.*`),
+  allowlist-таск `ml_pipeline.run_ml_script`, `make pipeline-*` переведены на клиент,
+  `pipeline-script SCRIPT=...`. Проверено end-to-end: `lineage_snapshot` из воркера,
+  SUCCESS за 25.9 s, sha256 `train.csv` совпал с эталонным snapshot.
 
-**Следующая задача:** T-235 Фаза 1 → `--overrides-file` в `ml/scripts/make_submission.py`
-(врезка после `pred_cap`, строка ~331) + `ml/configs/overrides/nov_dec_2025.yaml` (профили
-`a_conservative` / `b_aggressive`) + `ml/tests/test_overrides_config.py`.
+**Блокеры, найденные по ходу (требуют решения владельца):**
+- 🔴 **F-127**: справочник организаторов (`Хакатон_справочники_трамвай_10_маршрутов.xlsx`)
+  отсутствует на машине → `xgboost_route` (train/predict) невыполним; baseline-путь работает.
+  Нужно: восстановить файл **или** принять Tier A на `route_baseline`.
+- 🟠 **F-132**: `wheels/` + `requirements.txt` воркеров уехали в `docs/apps/**`, `.dockerignore`
+  исключает `docs/` → образ воркера не пересобрать; обход — `make pipeline-worker-dev`.
+- 🟠 **F-133**: в образе не было `pyyaml` и uv-окружения → ML-шаги в Docker не работали;
+  исправлено (`pyyaml` в `ml/pyproject.toml`, `ML_PIPELINE_ML_RUNNER=python`). D-048.
 
-**Открытые вопросы:** (1) тег образа MLflow для профиля `mlops`; (2) судьба 191 ruff-замечания —
-батч-фикс, per-file-ignores или отдельный тикет; (3) обновлять ли Dockerfile до multi-stage
-под test_dockerfile_hardening (F-129).
+**Следующая задача:** T-235 Фаза 3 → MLflow-сервис в профиле `mlops`
+(Postgres-БД `mlflow`, порт 5001 — 5000 занят `registry:2`) + теги `airflow_dag_run_id`.
+
+**Открытые вопросы:** (1) восстанавливаем xlsx или Tier A на baseline (F-127);
+(2) восстанавливать wheels/requirements в `apps/*/` или править Dockerfile+.dockerignore (F-132);
+(3) судьба 191 ruff-замечания — батч-фикс, per-file-ignores или отдельный тикет (F-126);
+(4) обновлять ли Dockerfile до multi-stage под test_dockerfile_hardening (F-129).
 
 ## Сессия 2026-09-28T12:00:00Z — docs/blog: серия постов «ИИ-скепсис» (F-124)
 
