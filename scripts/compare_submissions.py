@@ -90,23 +90,33 @@ def compare(left_path: Path, right_path: Path) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Сверка двух submission CSV (T-235)")
-    parser.add_argument("--left", required=True, type=Path, help="первый CSV (например, новый прогон)")
+    parser.add_argument(
+        "--left", required=True, type=Path, help="первый CSV (например, новый прогон)"
+    )
     parser.add_argument("--right", required=True, type=Path, help="второй CSV (эталон)")
     parser.add_argument("--json", type=Path, default=None, help="куда сохранить JSON-отчёт")
     args = parser.parse_args()
 
     report = compare(args.left, args.right)
 
-    print(f"left  : {report['left']['path']} sha256={report['left']['sha256'][:16]} rows={report['left']['rows']}")
-    print(f"right : {report['right']['path']} sha256={report['right']['sha256'][:16]} rows={report['right']['rows']}")
+    print(
+        f"left  : {report['left']['path']} sha256={report['left']['sha256'][:16]} rows={report['left']['rows']}"
+    )
+    print(
+        f"right : {report['right']['path']} sha256={report['right']['sha256'][:16]} rows={report['right']['rows']}"
+    )
     print(f"identical bytes        : {report['same_sha256']}")
     print(f"structure ok           : {report['left']['rows_ok'] and report['right']['rows_ok']}")
     print(f"routes                 : {report['left']['routes']} vs {report['right']['routes']}")
     print(f"zeros                  : {report['left']['zeros']} vs {report['right']['zeros']}")
-    print(f"sum                    : {report['left']['sum']:.2f} vs {report['right']['sum']:.2f} (Δ {report['sum_delta']:.2f})")
+    print(
+        f"sum                    : {report['left']['sum']:.2f} vs {report['right']['sum']:.2f} (Δ {report['sum_delta']:.2f})"
+    )
     print(f"keys left/right only   : {report['keys_left_only']} / {report['keys_right_only']}")
     print(f"keys differing         : {report['keys_differing']} из {report['keys_both']}")
-    print(f"max|Δ| / mean|Δ|       : {report['max_abs_delta']:.4f} / {report['mean_abs_delta']:.4f}")
+    print(
+        f"max|Δ| / mean|Δ|       : {report['max_abs_delta']:.4f} / {report['mean_abs_delta']:.4f}"
+    )
     print(f"negatives              : {report['left']['negatives']} (должно быть 0)")
 
     if args.json is not None:
